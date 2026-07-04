@@ -1,0 +1,13 @@
+node_modules
+dist
+.output
+.vinxi
+.solid
+.panda
+.env
+.env.*
+!.env.example
+data/private
+
+*.log
+.DS_Store

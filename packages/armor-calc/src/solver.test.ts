@@ -1,0 +1,326 @@
+import { describe, expect, test } from 'bun:test';
+
+import { type ArmorItem, type ArmorSlot, createDefaultStatModOptions, createTierFiveTuningOptions, type StatVector, solveArmor } from '.';
+
+const slots: ArmorSlot[] = ['helmet', 'arms', 'chest', 'legs', 'classItem'];
+const baseStats: StatVector = {
+    health: 10,
+    melee: 10,
+    grenade: 10,
+    super: 10,
+    class: 10,
+    weapons: 10
+};
+
+function item(slot: ArmorSlot, overrides: Partial<ArmorItem> = {}): ArmorItem {
+    const armor: ArmorItem = {
+        itemInstanceId: `${slot}-${overrides.name ?? 'item'}`,
+        itemHash: Math.floor(Math.random() * 1_000_000),
+        name: `${slot} item`,
+        slot,
+        classType: 'hunter',
+        isExotic: false,
+        baseStats,
+        statModOptions: [{ id: 'none', name: 'No mod', deltas: {} }],
+        tuningOptions: [{ id: 'none', name: 'No tuning', deltas: {} }],
+        ...overrides
+    };
+
+    return armor;
+}
+
+function inventory(items = slots.map((slot) => item(slot))) {
+    return {
+        helmet: items.filter((armor) => armor.slot === 'helmet'),
+        arms: items.filter((armor) => armor.slot === 'arms'),
+        chest: items.filter((armor) => armor.slot === 'chest'),
+        legs: items.filter((armor) => armor.slot === 'legs'),
+        classItem: items.filter((armor) => armor.slot === 'classItem')
+    };
+}
+
+describe('solveArmor', () => {
+    test('matches exact stat targets', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { health: 50, melee: 50, grenade: 50, super: 50, class: 50, weapons: 50 },
+            setRequirements: [],
+            armor: inventory()
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.health).toBe(50);
+    });
+
+    test('uses stat mods to reach requested targets', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { health: 60 },
+            setRequirements: [],
+            armor: inventory([
+                item('helmet', { statModOptions: createDefaultStatModOptions() }),
+                ...slots.slice(1).map((slot) => item(slot))
+            ])
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(60);
+    });
+
+    test('does not use tier five tuning without a dump stat', () => {
+        const tuned = item('helmet', { tier: 5 });
+        tuned.tuningOptions = createTierFiveTuningOptions(tuned);
+
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            allowBalancedTuning: true,
+            statTargets: { health: 55 },
+            setRequirements: [],
+            armor: inventory([tuned, ...slots.slice(1).map((slot) => item(slot))])
+        });
+
+        expect(result.ok).toBe(false);
+    });
+
+    test('uses tier five tuning to reach requested targets when a dump stat is selected', () => {
+        const tuned = item('helmet', { tier: 5 });
+        tuned.tuningOptions = createTierFiveTuningOptions(tuned);
+
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'melee',
+            statTargets: { health: 55 },
+            setRequirements: [],
+            armor: inventory([tuned, ...slots.slice(1).map((slot) => item(slot))])
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(55);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
+    });
+
+    test('uses balanced tuning only when explicitly allowed', () => {
+        const balancedOnly = item('helmet', {
+            tier: 5,
+            tuningOptions: [
+                { id: 'tuning:none', name: 'No tuning', deltas: {} },
+                { id: 'tuning:balanced', name: 'Balanced Tuning', deltas: { health: 1, melee: 1, grenade: 1 } }
+            ]
+        });
+        const armor = inventory([balancedOnly, ...slots.slice(1).map((slot) => item(slot))]);
+        const withoutBalanced = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            statTargets: { health: 51 },
+            setRequirements: [],
+            armor
+        });
+        const withBalanced = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            allowBalancedTuning: true,
+            statTargets: { health: 51 },
+            setRequirements: [],
+            armor
+        });
+
+        expect(withoutBalanced.ok).toBe(false);
+        expect(withBalanced.ok).toBe(true);
+        expect(withBalanced.ok && withBalanced.builds[0]?.pieces.helmet.tuning?.id).toBe('tuning:balanced');
+    });
+
+    test('does not select zero-effect balanced tuning as a no-op', () => {
+        const zeroBalanced = item('helmet', {
+            tier: 5,
+            statModOptions: createDefaultStatModOptions(),
+            tuningOptions: [
+                { id: 'tuning:none', name: 'No tuning', deltas: {} },
+                { id: 'tuning:balanced-zero', name: 'Balanced Tuning', deltas: {} }
+            ]
+        });
+        const nonSimpleArms = item('arms', { statModOptions: [{ id: 'none', name: 'No mod', deltas: {} }] });
+
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            allowBalancedTuning: true,
+            statTargets: { health: 60 },
+            setRequirements: [],
+            armor: inventory([zeroBalanced, nonSimpleArms, ...slots.slice(2).map((slot) => item(slot))])
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.pieces.helmet.statMod?.deltas.health).toBe(10);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.id).toBe('tuning:none');
+    });
+
+    test('uses pair tuning only when it subtracts the selected dump stat', () => {
+        const wrongPenaltyOnly = item('helmet', {
+            tier: 5,
+            tuningOptions: [
+                { id: 'tuning:none', name: 'No tuning', deltas: {} },
+                { id: 'tuning:health:minus-melee', name: '+Health / -Melee', deltas: { health: 5, melee: -5 } }
+            ]
+        });
+        const correctPenalty = item('helmet', {
+            tier: 5,
+            tuningOptions: [
+                { id: 'tuning:none', name: 'No tuning', deltas: {} },
+                { id: 'tuning:health:minus-class', name: '+Health / -Class', deltas: { health: 5, class: -5 } }
+            ]
+        });
+        const wrongPenaltyResult = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            statTargets: { health: 55 },
+            setRequirements: [],
+            armor: inventory([wrongPenaltyOnly, ...slots.slice(1).map((slot) => item(slot))])
+        });
+        const correctPenaltyResult = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            statTargets: { health: 55 },
+            setRequirements: [],
+            armor: inventory([correctPenalty, ...slots.slice(1).map((slot) => item(slot))])
+        });
+
+        expect(wrongPenaltyResult.ok).toBe(false);
+        expect(correctPenaltyResult.ok).toBe(true);
+        expect(correctPenaltyResult.ok && correctPenaltyResult.builds[0]?.pieces.helmet.tuning?.id).toBe('tuning:health:minus-class');
+    });
+
+    test('uses the dump stat as the preferred tuning penalty', () => {
+        const tuned = item('helmet', { tier: 5 });
+        tuned.tuningOptions = createTierFiveTuningOptions(tuned);
+
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'health',
+            statTargets: { health: 50, melee: 50, grenade: 50, super: 50, class: 50, weapons: 55 },
+            setRequirements: [],
+            armor: inventory([tuned, ...slots.slice(1).map((slot) => item(slot))])
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBe(55);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas).toEqual({ weapons: 5, health: -5 });
+    });
+
+    test('enforces set requirements', () => {
+        const set = { id: 'set-a', name: 'Set A' };
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: {},
+            setRequirements: [{ setId: set.id, requiredPieces: 4 }],
+            armor: inventory(slots.map((slot, index) => item(slot, index < 4 ? { set } : {})))
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.activeSetBonuses[0]?.activeBonuses).toEqual([2, 4]);
+    });
+
+    test('enforces chosen exotic type and tries each roll', () => {
+        const exoticHash = 12345;
+        const weakerExotic = item('helmet', {
+            itemInstanceId: 'chosen-exotic-weak',
+            itemHash: exoticHash,
+            isExotic: true,
+            baseStats: { ...baseStats, health: 10 }
+        });
+        const strongerExotic = item('helmet', {
+            itemInstanceId: 'chosen-exotic-strong',
+            itemHash: exoticHash,
+            isExotic: true,
+            baseStats: { ...baseStats, health: 40 }
+        });
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            selectedExoticItemHash: exoticHash,
+            statTargets: { health: 80 },
+            setRequirements: [],
+            armor: inventory([weakerExotic, strongerExotic, ...slots.slice(1).map((slot) => item(slot))])
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.pieces.helmet.item.itemInstanceId).toBe('chosen-exotic-strong');
+    });
+
+    test('retains the top capped results for the requested sort', () => {
+        const lowerHealth = item('helmet', {
+            itemInstanceId: 'first-low-health',
+            baseStats: { ...baseStats, health: 10 }
+        });
+        const higherHealth = item('helmet', {
+            itemInstanceId: 'second-high-health',
+            baseStats: { ...baseStats, health: 40 }
+        });
+
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: {},
+            setRequirements: [],
+            armor: inventory([lowerHealth, higherHealth, ...slots.slice(1).map((slot) => item(slot))]),
+            maxResults: 1,
+            resultSort: { key: 'health', direction: 'desc' }
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.validBuildCount).toBe(2);
+        expect(result.returnedBuildCount).toBe(1);
+        expect(result.ok && result.builds[0]?.pieces.helmet.item.itemInstanceId).toBe('second-high-health');
+    });
+
+    test('keeps valid build counts stable across result sorts', () => {
+        const tuned = item('helmet', { tier: 5 });
+        tuned.tuningOptions = createTierFiveTuningOptions(tuned);
+        const armor = inventory([tuned, ...slots.slice(1).map((slot) => item(slot))]);
+        const descending = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'health',
+            statTargets: { super: 55 },
+            setRequirements: [],
+            armor,
+            resultSort: { key: 'super', direction: 'desc' }
+        });
+        const ascending = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'health',
+            statTargets: { super: 55 },
+            setRequirements: [],
+            armor,
+            resultSort: { key: 'super', direction: 'asc' }
+        });
+
+        expect(descending.ok).toBe(true);
+        expect(ascending.ok).toBe(true);
+        expect(descending.validBuildCount).toBe(ascending.validBuildCount);
+        expect(descending.searchedCombinations).toBe(ascending.searchedCombinations);
+    });
+
+    test('returns no solution when targets are impossible', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { health: 200 },
+            setRequirements: [],
+            armor: inventory()
+        });
+
+        expect(result.ok).toBe(false);
+    });
+});

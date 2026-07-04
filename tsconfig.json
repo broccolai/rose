@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "strict": true,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "types": ["@solidjs/start/env", "vite/client", "node"],
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"],
+            "@armor-calc": ["packages/armor-calc/src/index.ts"],
+            "@panda/*": [".panda/*"]
+        }
+    },
+    "include": ["src", "packages", "vite.config.ts", "panda.config.ts"],
+    "exclude": ["dist", ".panda", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
+}
