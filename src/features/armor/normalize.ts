@@ -18,7 +18,10 @@ import {
 
 import { CLASS_BY_BUNGIE_CLASS_TYPE, CLASS_LABELS, STAT_BY_HASH } from '@/features/armor/stat-hashes';
 import type {
+    ArmorSetBonusInfo,
+    ArmorSetCatalogEntry,
     DestinyProfileItem,
+    ManifestEquipableItemSetDefinition,
     ManifestInventoryItemDefinition,
     ManifestResolver,
     NormalizedArmorProfile,
@@ -31,6 +34,7 @@ const EXOTIC_TIER_TYPE = 6;
 const ARMOR_STATS_PLUG_CATEGORY = 'armor_stats';
 const TUNING_PLUG_CATEGORY = 'core.gear_systems.armor_tiering.plugs.tuning.mods';
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
+const BUNGIE_ORIGIN = 'https://www.bungie.net';
 
 const BUCKET_SLOT_BY_HASH: Record<number, ArmorSlot> = {
     3448274439: 'helmet',
@@ -53,6 +57,7 @@ export async function normalizeVaultExport(
             characters: [],
             armor: [],
             armorBySlot: emptyArmorBySlot(),
+            armorSetCatalog: [],
             warnings: ['No profile response found in vault export.']
         };
     }
@@ -99,6 +104,7 @@ export async function normalizeVaultExport(
         characters,
         armor: dedupedArmor,
         armorBySlot: groupArmorBySlot(dedupedArmor),
+        armorSetCatalog: await buildArmorSetCatalog(manifest, dedupedArmor),
         warnings
     };
 }
@@ -190,6 +196,7 @@ async function normalizeArmorItem(
         itemInstanceId,
         itemHash: item.itemHash,
         name: definition.displayProperties?.name || `Item ${item.itemHash}`,
+        iconUrl: absoluteBungieAssetUrl(definition.displayProperties?.icon),
         slot,
         classType: normalizeClass(definition.classType),
         isExotic: definition.inventory?.tierType === EXOTIC_TIER_TYPE || definition.inventory?.tierTypeName === 'Exotic',
@@ -210,6 +217,121 @@ async function normalizeArmorItem(
     }
 
     return normalizedItem;
+}
+
+function absoluteBungieAssetUrl(path?: string) {
+    if (!path) {
+        return undefined;
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+
+    return `${BUNGIE_ORIGIN}${path}`;
+}
+
+async function buildArmorSetCatalog(manifest: ManifestResolver, ownedArmor: ArmorItem[]): Promise<ArmorSetCatalogEntry[]> {
+    const setDefinitions = manifest.getEquipableItemSetDefinitions?.() ?? [];
+    if (setDefinitions.length === 0) {
+        return [];
+    }
+
+    const ownedNamesBySetId = new Map<string, string>();
+    for (const item of ownedArmor) {
+        if (item.set) {
+            ownedNamesBySetId.set(item.set.id, item.set.name);
+        }
+    }
+
+    const catalog: ArmorSetCatalogEntry[] = [];
+    for (const { hash, definition } of setDefinitions) {
+        if (definition.redacted) {
+            continue;
+        }
+
+        const setHash = definition.hash ?? hash;
+        if (!Number.isFinite(setHash)) {
+            continue;
+        }
+
+        const itemHashes = [...new Set(definition.setItems ?? [])].filter(Number.isFinite);
+        const itemDefinitions = await Promise.all(itemHashes.map((itemHash) => manifest.getInventoryItem(itemHash)));
+        const armorDefinitions = itemDefinitions
+            .map((itemDefinition, index) => ({
+                itemHash: itemHashes[index],
+                definition: itemDefinition,
+                slot: itemDefinition ? getArmorSlot(itemDefinition) : null
+            }))
+            .filter(
+                (
+                    item
+                ): item is {
+                    itemHash: number;
+                    definition: ManifestInventoryItemDefinition;
+                    slot: ArmorSlot;
+                } => item.definition?.itemType === ARMOR_ITEM_TYPE && item.slot !== null
+            );
+
+        if (armorDefinitions.length === 0) {
+            continue;
+        }
+
+        const id = `equipable:${setHash}`;
+        const name =
+            definition.displayProperties?.name ||
+            ownedNamesBySetId.get(id) ||
+            deriveArmorSetNameFromNames(armorDefinitions.map((item) => item.definition.displayProperties?.name ?? '')) ||
+            `Armor Set ${setHash}`;
+        const classTypes = uniqueArmorClasses(armorDefinitions.map((item) => normalizeClass(item.definition.classType)));
+        const slots = uniqueArmorSlots(armorDefinitions.map((item) => item.slot));
+        const bonuses = await readArmorSetBonuses(definition, manifest);
+
+        catalog.push({
+            id,
+            name,
+            equipableItemSetHash: setHash,
+            iconUrl: absoluteBungieAssetUrl(definition.displayProperties?.icon),
+            itemHashes,
+            classTypes,
+            slots,
+            bonuses
+        });
+    }
+
+    return catalog.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+async function readArmorSetBonuses(definition: ManifestEquipableItemSetDefinition, manifest: ManifestResolver) {
+    const bonuses: ArmorSetBonusInfo[] = [];
+
+    for (const setPerk of definition.setPerks ?? []) {
+        const requiredPieces = setPerk.requiredSetCount;
+        if (!requiredPieces || requiredPieces < 1) {
+            continue;
+        }
+
+        const perk = setPerk.sandboxPerkHash ? await manifest.getSandboxPerk?.(setPerk.sandboxPerkHash) : null;
+        const fallbackName = `${requiredPieces}-piece bonus`;
+
+        bonuses.push({
+            requiredPieces,
+            sandboxPerkHash: setPerk.sandboxPerkHash,
+            name: perk?.displayProperties?.name || fallbackName,
+            description: perk?.displayProperties?.description,
+            iconUrl: absoluteBungieAssetUrl(perk?.displayProperties?.icon)
+        });
+    }
+
+    return bonuses.sort((left, right) => left.requiredPieces - right.requiredPieces || left.name.localeCompare(right.name));
+}
+
+function uniqueArmorClasses(classTypes: DestinyClass[]) {
+    return [...new Set(classTypes)].sort((left, right) => left.localeCompare(right));
+}
+
+function uniqueArmorSlots(slots: ArmorSlot[]) {
+    return ARMOR_SLOTS.filter((slot) => slots.includes(slot));
 }
 
 function readItemStats(stats: Record<string, { value?: number }>): StatVector {
@@ -494,7 +616,11 @@ function applyArmorSetNames(armor: ArmorItem[]) {
 }
 
 function deriveArmorSetName(items: ArmorItem[]) {
-    const tokenizedNames = items.map((item) => tokenizeArmorName(item.name)).filter((tokens) => tokens.length > 0);
+    return deriveArmorSetNameFromNames(items.map((item) => item.name));
+}
+
+function deriveArmorSetNameFromNames(names: string[]) {
+    const tokenizedNames = names.map((name) => tokenizeArmorName(name)).filter((tokens) => tokens.length > 0);
     const first = tokenizedNames[0];
 
     if (!first) {
@@ -565,7 +691,7 @@ export function getArmorForClass(armor: ArmorItem[], classType: DestinyClass) {
 }
 
 export function getAvailableArmorSets(armor: ArmorItem[], classType: DestinyClass) {
-    const counts = new Map<string, { id: string; name: string; count: number }>();
+    const counts = new Map<string, { id: string; name: string; count: number; slotCounts: Record<ArmorSlot, number> }>();
 
     for (const item of getArmorForClass(armor, classType)) {
         if (!item.set) {
@@ -573,10 +699,20 @@ export function getAvailableArmorSets(armor: ArmorItem[], classType: DestinyClas
         }
 
         const current = counts.get(item.set.id);
+        const slotCounts = current?.slotCounts ?? {
+            helmet: 0,
+            arms: 0,
+            chest: 0,
+            legs: 0,
+            classItem: 0
+        };
+        slotCounts[item.slot] += 1;
+
         counts.set(item.set.id, {
             id: item.set.id,
             name: item.set.name,
-            count: (current?.count ?? 0) + 1
+            count: (current?.count ?? 0) + 1,
+            slotCounts
         });
     }
 

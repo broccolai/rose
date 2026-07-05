@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 
-import { type ArmorItem, type ArmorSlot, createDefaultStatModOptions, createTierFiveTuningOptions, type StatVector, solveArmor } from '.';
+import {
+    type ArmorItem,
+    type ArmorSlot,
+    calculateArmorStatTargetCap,
+    calculateArmorStatTargetCaps,
+    createDefaultStatModOptions,
+    createTierFiveTuningOptions,
+    type StatVector,
+    solveArmor
+} from '.';
 
 const slots: ArmorSlot[] = ['helmet', 'arms', 'chest', 'legs', 'classItem'];
 const baseStats: StatVector = {
@@ -322,5 +331,61 @@ describe('solveArmor', () => {
         });
 
         expect(result.ok).toBe(false);
+    });
+
+    test('calculates target caps with the same balanced tuning rules as solving', () => {
+        const balancedOnly = item('helmet', {
+            tier: 5,
+            tuningOptions: [
+                { id: 'tuning:none', name: 'No tuning', deltas: {} },
+                { id: 'tuning:balanced', name: 'Balanced Tuning', deltas: { health: 1, melee: 1, grenade: 1 } }
+            ]
+        });
+        const armor = inventory([balancedOnly, ...slots.slice(1).map((slot) => item(slot))]);
+        const withoutBalancedInput = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            statTargets: {},
+            setRequirements: [],
+            armor
+        } as const;
+        const withBalancedInput = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            allowBalancedTuning: true,
+            statTargets: {},
+            setRequirements: [],
+            armor
+        } as const;
+        const withoutBalanced = calculateArmorStatTargetCaps(withoutBalancedInput);
+        const withBalanced = calculateArmorStatTargetCaps(withBalancedInput);
+
+        expect(withoutBalanced.health).toBe(50);
+        expect(calculateArmorStatTargetCap(withoutBalancedInput, 'health')).toBe(withoutBalanced.health);
+        expect(withoutBalanced.class).toBe(0);
+        expect(withBalanced.health).toBe(51);
+    });
+
+    test('target caps report final displayed stat values instead of threshold values', () => {
+        const armor = inventory([
+            item('helmet', { baseStats: { ...baseStats, melee: 0 }, statModOptions: createDefaultStatModOptions() }),
+            ...slots.slice(1).map((slot) => item(slot, { baseStats: { ...baseStats, melee: 0 } }))
+        ]);
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { melee: 9 },
+            setRequirements: [],
+            armor
+        } as const;
+        const result = solveArmor({
+            ...input,
+            maxResults: 1
+        });
+
+        expect(result.ok && result.builds[0]?.stats.melee).toBe(10);
+        expect(calculateArmorStatTargetCap(input, 'melee')).toBe(10);
     });
 });

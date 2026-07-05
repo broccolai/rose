@@ -1,4 +1,4 @@
-import type { ArmorInventoryBySlot, ArmorItem, DestinyClass } from '@armor-calc';
+import type { ArmorInventoryBySlot, ArmorItem, ArmorSlot, DestinyClass } from '@armor-calc';
 
 export type VaultExportSnapshot = {
     metadata?: {
@@ -60,6 +60,7 @@ export type ManifestInventoryItemDefinition = {
     displayProperties?: {
         name?: string;
         description?: string;
+        icon?: string;
     };
     itemType?: number;
     itemSubType?: number;
@@ -98,6 +99,32 @@ export type ManifestInventoryItemDefinition = {
     [key: string]: unknown;
 };
 
+export type ManifestEquipableItemSetDefinition = {
+    hash?: number;
+    displayProperties?: {
+        name?: string;
+        description?: string;
+        icon?: string;
+    };
+    setItems?: number[];
+    setPerks?: Array<{
+        requiredSetCount?: number;
+        sandboxPerkHash?: number;
+    }>;
+    redacted?: boolean;
+    [key: string]: unknown;
+};
+
+export type ManifestSandboxPerkDefinition = {
+    hash?: number;
+    displayProperties?: {
+        name?: string;
+        description?: string;
+        icon?: string;
+    };
+    [key: string]: unknown;
+};
+
 export type ManifestResponse<T> = {
     Response?: T;
     ErrorCode?: number;
@@ -114,11 +141,18 @@ export type DestinyManifest = {
 
 export type ManifestResolver = {
     getInventoryItem(hash: number): Promise<ManifestInventoryItemDefinition | null>;
+    getEquipableItemSetDefinitions?(): LoadedManifestEquipableItemSetDefinition[];
+    getSandboxPerk?(hash: number): Promise<ManifestSandboxPerkDefinition | null>;
 };
 
 export type LoadedManifestDefinition = {
     hash: number;
     definition: ManifestInventoryItemDefinition;
+};
+
+export type LoadedManifestEquipableItemSetDefinition = {
+    hash: number;
+    definition: ManifestEquipableItemSetDefinition;
 };
 
 export type LoadedManifestResolver = ManifestResolver & {
@@ -127,6 +161,8 @@ export type LoadedManifestResolver = ManifestResolver & {
         version?: string;
         cachedAt?: string;
         definitionCount: number;
+        equipableItemSetDefinitionCount?: number;
+        sandboxPerkDefinitionCount?: number;
         fullCacheAvailable: boolean;
     };
 };
@@ -142,7 +178,27 @@ export type NormalizedArmorProfile = {
     characters: NormalizedCharacter[];
     armor: ArmorItem[];
     armorBySlot: ArmorInventoryBySlot;
+    armorSetCatalog: ArmorSetCatalogEntry[];
     warnings: string[];
+};
+
+export type ArmorSetBonusInfo = {
+    requiredPieces: number;
+    sandboxPerkHash?: number;
+    name: string;
+    description?: string;
+    iconUrl?: string;
+};
+
+export type ArmorSetCatalogEntry = {
+    id: string;
+    name: string;
+    equipableItemSetHash: number;
+    iconUrl?: string;
+    itemHashes: number[];
+    classTypes: DestinyClass[];
+    slots: ArmorSlot[];
+    bonuses: ArmorSetBonusInfo[];
 };
 
 export type NormalizeProgress = {

@@ -24,6 +24,7 @@ export type ArmorItem = {
     equivalentItemInstanceIds?: string[];
     itemHash: number;
     name: string;
+    iconUrl?: string;
     slot: ArmorSlot;
     classType: DestinyClass;
     isExotic: boolean;
@@ -70,6 +71,8 @@ export type SolveArmorInput = {
      */
     resultSort?: ArmorBuildSort;
 };
+
+export type ArmorStatTargetCapsInput = Omit<SolveArmorInput, 'maxResults' | 'resultSort'>;
 
 export type BuildArmorPiece = {
     item: ArmorItem;

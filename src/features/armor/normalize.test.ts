@@ -178,7 +178,14 @@ describe('loaded benchmark bundle input', () => {
         const profile = await normalizeVaultExport(...syntheticArmorSetFixture([9001, 9001]));
         const sets = getAvailableArmorSets(profile.armor, 'hunter');
 
-        expect(sets).toEqual([{ id: 'equipable:9001', name: 'Roseshard', count: 2 }]);
+        expect(sets).toEqual([
+            {
+                id: 'equipable:9001',
+                name: 'Roseshard',
+                count: 2,
+                slotCounts: { helmet: 1, arms: 1, chest: 0, legs: 0, classItem: 0 }
+            }
+        ]);
         expect(profile.armor.every((item) => item.set?.equipableItemSetHash === 9001)).toBe(true);
     });
 
@@ -186,15 +193,71 @@ describe('loaded benchmark bundle input', () => {
         const profile = await normalizeVaultExport(...syntheticArmorSetFixture([9002, 9002, 9002, 9002]));
         const sets = getAvailableArmorSets(profile.armor, 'hunter');
 
-        expect(sets).toEqual([{ id: 'equipable:9002', name: 'Roseshard', count: 4 }]);
+        expect(sets).toEqual([
+            {
+                id: 'equipable:9002',
+                name: 'Roseshard',
+                count: 4,
+                slotCounts: { helmet: 1, arms: 1, chest: 1, legs: 1, classItem: 0 }
+            }
+        ]);
     });
 
     test('omits armor pieces without equipable item set hash from selectable sets', async () => {
         const profile = await normalizeVaultExport(...syntheticArmorSetFixture([undefined, undefined, 9003]));
         const sets = getAvailableArmorSets(profile.armor, 'hunter');
 
-        expect(sets).toEqual([{ id: 'equipable:9003', name: 'Roseshard Chest', count: 1 }]);
+        expect(sets).toEqual([
+            {
+                id: 'equipable:9003',
+                name: 'Roseshard Chest',
+                count: 1,
+                slotCounts: { helmet: 0, arms: 0, chest: 1, legs: 0, classItem: 0 }
+            }
+        ]);
         expect(sets.filter((set) => set.count >= 2)).toEqual([]);
+    });
+
+    test('builds an all-set catalog from manifest equipable item sets even when pieces are unowned', async () => {
+        const profile = await normalizeVaultExport(
+            {
+                profileResponse: {
+                    Response: {
+                        profileInventory: { data: { items: [] } },
+                        characters: { data: { character: { classType: 1 } } }
+                    }
+                }
+            },
+            syntheticCatalogManifest()
+        );
+
+        expect(profile.armorSetCatalog).toEqual([
+            {
+                id: 'equipable:9100',
+                name: 'Roseshard',
+                equipableItemSetHash: 9100,
+                itemHashes: [7100, 7101, 7102, 7103],
+                classTypes: ['hunter'],
+                slots: ['helmet', 'arms', 'chest', 'legs'],
+                bonuses: [
+                    {
+                        requiredPieces: 2,
+                        sandboxPerkHash: 8102,
+                        name: 'Roseshard Edge',
+                        description: 'Two-piece bonus.',
+                        iconUrl: 'https://www.bungie.net/img/theme/destiny/icons/icon.png'
+                    },
+                    {
+                        requiredPieces: 4,
+                        sandboxPerkHash: 8104,
+                        name: 'Roseshard Bloom',
+                        description: 'Four-piece bonus.',
+                        iconUrl: undefined
+                    }
+                ],
+                iconUrl: undefined
+            }
+        ]);
     });
 
     test('can read the saved private loaded bundle shape when present', async () => {
@@ -290,6 +353,69 @@ function syntheticArmorSetFixture(setHashes: Array<number | undefined>): [VaultE
     };
 
     return [snapshot, manifest];
+}
+
+function syntheticCatalogManifest(): ManifestResolver {
+    const buckets = [3448274439, 3551918588, 14239492, 20886954];
+    const definitions = new Map<number, ManifestInventoryItemDefinition>();
+
+    for (const [index, bucketTypeHash] of buckets.entries()) {
+        const itemHash = 7100 + index;
+        const names = ['Roseshard Helm', 'Roseshard Grips', 'Roseshard Vest', 'Roseshard Strides'];
+        definitions.set(itemHash, {
+            hash: itemHash,
+            itemType: 2,
+            classType: 1,
+            displayProperties: { name: names[index] ?? `Roseshard Item ${index}`, description: '' },
+            inventory: { bucketTypeHash, tierType: 5, tierTypeName: 'Legendary' }
+        });
+    }
+
+    return {
+        async getInventoryItem(hash) {
+            return definitions.get(hash) ?? null;
+        },
+        getEquipableItemSetDefinitions() {
+            return [
+                {
+                    hash: 9100,
+                    definition: {
+                        hash: 9100,
+                        displayProperties: { name: '', description: '' },
+                        setItems: [7100, 7101, 7102, 7103],
+                        setPerks: [
+                            { requiredSetCount: 2, sandboxPerkHash: 8102 },
+                            { requiredSetCount: 4, sandboxPerkHash: 8104 }
+                        ]
+                    }
+                }
+            ];
+        },
+        async getSandboxPerk(hash) {
+            if (hash === 8102) {
+                return {
+                    hash,
+                    displayProperties: {
+                        name: 'Roseshard Edge',
+                        description: 'Two-piece bonus.',
+                        icon: '/img/theme/destiny/icons/icon.png'
+                    }
+                };
+            }
+
+            if (hash === 8104) {
+                return {
+                    hash,
+                    displayProperties: {
+                        name: 'Roseshard Bloom',
+                        description: 'Four-piece bonus.'
+                    }
+                };
+            }
+
+            return null;
+        }
+    };
 }
 
 function plug(

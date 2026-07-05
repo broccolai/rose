@@ -10,6 +10,7 @@ import {
     type ArmorSetRequirement,
     type ArmorSlot,
     type ArmorStat,
+    type ArmorStatTargetCapsInput,
     type BuildArmorPiece,
     type DestinyClass,
     type SolveArmorInput,
@@ -50,6 +51,8 @@ type AddonState = {
 
 type CandidatePlan = {
     armor: PreparedArmorBySlot;
+    suffixMaxPotential: StatTuple[];
+    supportsSimpleAddons: boolean;
 };
 
 type SearchCounters = {
@@ -69,6 +72,8 @@ type SearchContext = {
     setRequirements: ArmorSetRequirement[];
     builds: ArmorBuild[];
     counters: SearchCounters;
+    stopAfterFirstValid: boolean;
+    foundValid: boolean;
 };
 
 export function solveArmor(input: SolveArmorInput): SolveArmorResult {
@@ -109,7 +114,9 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         resultSort: input.resultSort,
         setRequirements: input.setRequirements,
         builds,
-        counters
+        counters,
+        stopAfterFirstValid: false,
+        foundValid: false
     };
 
     for (const plan of plans) {
@@ -147,6 +154,147 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     };
 }
 
+export function calculateArmorStatTargetCaps(input: ArmorStatTargetCapsInput): StatVector {
+    const caps = emptyStats();
+
+    for (const stat of ARMOR_STATS) {
+        caps[stat] = calculateArmorStatTargetCap(input, stat);
+    }
+
+    return caps;
+}
+
+export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, stat: ArmorStat): number {
+    if (stat === input.dumpStat) {
+        return 0;
+    }
+
+    const baseTargets = normalizeTargets(input.statTargets);
+    const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
+    const tuningMode: TuningMode = input.dumpStat ? (input.allowBalancedTuning ? 'all' : 'pair') : 'off';
+    const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
+
+    if (plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0))) {
+        return 0;
+    }
+
+    if (input.dumpStat) {
+        baseTargets[input.dumpStat] = 0;
+    }
+
+    const bestTarget = calculatePreparedArmorStatTargetCap(
+        plans,
+        baseTargets,
+        stat,
+        input.dumpStat,
+        dumpStatIndex,
+        tuningMode,
+        input.setRequirements
+    );
+    const statTargets = {
+        ...baseTargets,
+        [stat]: bestTarget
+    };
+    const result = solveArmor({
+        ...input,
+        statTargets,
+        maxResults: 1
+    });
+
+    if (!result.ok) {
+        return 0;
+    }
+
+    return result.builds[0]?.stats[stat] ?? 0;
+}
+
+function calculatePreparedArmorStatTargetCap(
+    plans: CandidatePlan[],
+    baseTargets: StatVector,
+    stat: ArmorStat,
+    dumpStat: ArmorStat | undefined,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    setRequirements: ArmorSetRequirement[]
+) {
+    let low = 0;
+    let high = 200;
+    let best = 0;
+
+    while (low <= high) {
+        const midpoint = Math.floor((low + high) / 2);
+        const targets = {
+            ...baseTargets,
+            [stat]: midpoint
+        };
+
+        if (canReachPreparedArmorStatTargets(plans, targets, dumpStat, dumpStatIndex, tuningMode, setRequirements)) {
+            best = midpoint;
+            low = midpoint + 1;
+        } else {
+            high = midpoint - 1;
+        }
+    }
+
+    return best;
+}
+
+export function canReachArmorStatTargets(input: ArmorStatTargetCapsInput) {
+    const targets = normalizeTargets(input.statTargets);
+    const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
+    const tuningMode: TuningMode = input.dumpStat ? (input.allowBalancedTuning ? 'all' : 'pair') : 'off';
+    const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
+    const missingSlot = plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0));
+
+    if (missingSlot) {
+        return false;
+    }
+
+    return canReachPreparedArmorStatTargets(plans, targets, input.dumpStat, dumpStatIndex, tuningMode, input.setRequirements);
+}
+
+function canReachPreparedArmorStatTargets(
+    plans: CandidatePlan[],
+    targets: StatVector,
+    dumpStat: ArmorStat | undefined,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    setRequirements: ArmorSetRequirement[]
+) {
+    const context: SearchContext = {
+        targets,
+        targetValues: toStatTuple(targets),
+        dumpStat,
+        dumpStatIndex,
+        tuningMode,
+        maxResults: 0,
+        resultSort: undefined,
+        setRequirements,
+        builds: [],
+        counters: {
+            searchedCombinations: 0,
+            rejectedCombinations: 0,
+            validBuildCount: 0
+        },
+        stopAfterFirstValid: true,
+        foundValid: false
+    };
+
+    for (const plan of plans) {
+        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
+            continue;
+        }
+
+        searchPlan(plan, context);
+
+        if (context.foundValid) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function createCandidatePlans(
     armor: ArmorInventoryBySlot,
     classType: DestinyClass,
@@ -168,7 +316,7 @@ function createCandidatePlans(
     }
 
     if (!selectedExoticItemHash) {
-        return [{ armor: legendaryOnly }];
+        return [createCandidatePlan(legendaryOnly)];
     }
 
     const plans: CandidatePlan[] = [];
@@ -183,10 +331,18 @@ function createCandidatePlans(
         }
 
         const planArmor = { ...legendaryOnly, [exoticSlot]: exoticCandidates } as PreparedArmorBySlot;
-        plans.push({ armor: planArmor });
+        plans.push(createCandidatePlan(planArmor));
     }
 
     return plans;
+}
+
+function createCandidatePlan(armor: PreparedArmorBySlot): CandidatePlan {
+    return {
+        armor,
+        suffixMaxPotential: createSuffixMaxPotential(armor),
+        supportsSimpleAddons: armorSupportsSimpleAddons(armor)
+    };
 }
 
 function prepareArmorItem(item: ArmorItem, tuningMode: TuningMode, dumpStat: ArmorStat | undefined): PreparedArmorItem {
@@ -210,26 +366,26 @@ function prepareArmorItem(item: ArmorItem, tuningMode: TuningMode, dumpStat: Arm
 }
 
 function searchPlan(plan: CandidatePlan, context: SearchContext) {
-    const suffixMaxPotential = createSuffixMaxPotential(plan.armor);
-    const supportsSimpleAddons = armorSupportsSimpleAddons(plan.armor);
     const selectedPieces = {} as Partial<Record<ArmorSlot, PreparedArmorItem>>;
     const selectedList: PreparedArmorItem[] = [];
 
-    searchSlot(plan, context, suffixMaxPotential, supportsSimpleAddons, selectedPieces, selectedList, 0, zeroTuple(), zeroTuple());
+    searchSlot(plan, context, selectedPieces, selectedList, 0, zeroTuple(), zeroTuple());
 }
 
 function searchSlot(
     plan: CandidatePlan,
     context: SearchContext,
-    suffixMaxPotential: StatTuple[],
-    supportsSimpleAddons: boolean,
     selectedPieces: Partial<Record<ArmorSlot, PreparedArmorItem>>,
     selectedList: PreparedArmorItem[],
     slotIndex: number,
     baseStats: StatTuple,
     potentialStats: StatTuple
 ) {
-    if (!canStillReachTargets(potentialStats, suffixMaxPotential[slotIndex], context.targetValues, context.dumpStatIndex)) {
+    if (context.stopAfterFirstValid && context.foundValid) {
+        return;
+    }
+
+    if (!canStillReachTargets(potentialStats, plan.suffixMaxPotential[slotIndex], context.targetValues, context.dumpStatIndex)) {
         context.counters.rejectedCombinations += productRemainingSlots(plan.armor, slotIndex);
         return;
     }
@@ -258,7 +414,7 @@ function searchSlot(
             context.dumpStatIndex,
             context.tuningMode,
             shouldRetainBuild,
-            supportsSimpleAddons
+            plan.supportsSimpleAddons
         );
 
         if (!bestAddonState.valid) {
@@ -267,6 +423,7 @@ function searchSlot(
         }
 
         context.counters.validBuildCount += 1;
+        context.foundValid = true;
 
         if (shouldRetainBuild && bestAddonState.state) {
             retainBuild(context, createBuild(unpreparePieces(pieces), bestAddonState.state, context.targets, context.dumpStat));
@@ -282,17 +439,15 @@ function searchSlot(
         addTupleInPlace(baseStats, item.base, 1);
         addTupleInPlace(potentialStats, item.max, 1);
 
-        searchSlot(
-            plan,
-            context,
-            suffixMaxPotential,
-            supportsSimpleAddons,
-            selectedPieces,
-            selectedList,
-            slotIndex + 1,
-            baseStats,
-            potentialStats
-        );
+        searchSlot(plan, context, selectedPieces, selectedList, slotIndex + 1, baseStats, potentialStats);
+
+        if (context.stopAfterFirstValid && context.foundValid) {
+            addTupleInPlace(baseStats, item.base, -1);
+            addTupleInPlace(potentialStats, item.max, -1);
+            selectedList.pop();
+            delete selectedPieces[slot];
+            return;
+        }
 
         addTupleInPlace(baseStats, item.base, -1);
         addTupleInPlace(potentialStats, item.max, -1);
