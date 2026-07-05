@@ -70,6 +70,12 @@ export type SolveArmorInput = {
      * every valid build, not "first N found by search order".
      */
     resultSort?: ArmorBuildSort;
+    /**
+     * Stop searching as soon as maxResults valid builds have been found. This is
+     * useful for interactive UIs where responsiveness matters more than an exact
+     * total count.
+     */
+    stopWhenResultLimitReached?: boolean;
 };
 
 export type ArmorStatTargetCapsInput = Omit<SolveArmorInput, 'maxResults' | 'resultSort'>;

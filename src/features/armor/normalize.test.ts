@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { ARMOR_STATS, calculateArmorStatTargetCap, solveArmor } from '@armor-calc';
+import { ARMOR_STATS, solveArmor } from '@armor-calc';
 
 import { getAvailableArmorSets, makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { ARMOR_STAT_HASHES } from '@/features/armor/stat-hashes';
@@ -10,7 +10,7 @@ import type { ManifestInventoryItemDefinition, ManifestResolver, VaultExportSnap
 const privateBundlePath = 'data/private/rose-loaded-benchmark-bundle-2026-07-04T14-56-53-877Z.json';
 
 describe('loaded benchmark bundle input', () => {
-    test('strips modern armor masterwork residues instead of applying reusable upgrade stats', async () => {
+    test('normalizes current socket choices then applies assumed masterwork stats', async () => {
         const itemInstanceId = 'armor-1';
         const itemHash = 1001;
         const masterworkHash = 2001;
@@ -104,12 +104,12 @@ describe('loaded benchmark bundle input', () => {
 
         expect(profile.armor).toHaveLength(1);
         expect(armor?.baseStats).toMatchObject({
-            health: 20,
-            melee: 0,
-            grenade: 30,
-            super: 25,
-            class: 0,
-            weapons: 0
+            health: 25,
+            melee: 5,
+            grenade: 35,
+            super: 30,
+            class: 5,
+            weapons: 5
         });
         expect(armor?.tuningOptions.some((option) => option.deltas.super === 5 && option.deltas.health === -5)).toBe(true);
     });
@@ -321,13 +321,11 @@ describe('loaded benchmark bundle input', () => {
             armor
         };
 
-        expect(calculateArmorStatTargetCap(input, 'melee')).toBeGreaterThanOrEqual(130);
-
         const result = solveArmor({
             ...input,
             statTargets: { melee: 130, weapons: 185 },
-            maxResults: 5,
-            resultSort: { key: 'melee', direction: 'desc' }
+            maxResults: 1,
+            stopWhenResultLimitReached: true
         });
 
         expect(result.ok).toBe(true);

@@ -24,12 +24,13 @@ type SolverWorkerClient = {
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ): Promise<StatVector>;
     solve(input: SolveArmorInput): Promise<SolveArmorResult>;
+    cancelPending(): void;
     dispose(): void;
 };
 
 class BrowserSolverWorkerClient implements SolverWorkerClient {
     private nextId = 1;
-    private readonly workers: Worker[];
+    private workers: Worker[];
     private readonly pending = new Map<number, PendingRequest>();
 
     constructor(workerCount: number) {
@@ -59,6 +60,10 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
 
     solve(input: SolveArmorInput) {
         return this.request<SolveArmorResult>({ id: 0, type: 'solve', input }, this.workers[0]);
+    }
+
+    cancelPending() {
+        this.resetWorkers('Armor solver request superseded.');
     }
 
     dispose() {
@@ -99,6 +104,19 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         };
 
         return worker;
+    }
+
+    private resetWorkers(reason: string) {
+        for (const worker of this.workers) {
+            worker.terminate();
+        }
+
+        for (const request of this.pending.values()) {
+            request.reject(new Error(reason));
+        }
+
+        this.pending.clear();
+        this.workers = Array.from({ length: this.workers.length }, () => this.createWorker());
     }
 
     private request<T>(request: SolverWorkerRequest, worker: Worker | undefined) {
@@ -145,6 +163,8 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
     async solve(input: SolveArmorInput) {
         return solveArmor(input);
     }
+
+    cancelPending() {}
 
     dispose() {}
 }

@@ -195,6 +195,10 @@ export default function Home() {
                 setTargetCaps({ ...nextCaps });
             });
         } catch (error) {
+            if (error instanceof Error && error.message === 'Armor solver request superseded.') {
+                return;
+            }
+
             if (requestId !== targetCapRequestId) {
                 return;
             }
@@ -205,6 +209,7 @@ export default function Home() {
 
     function invalidateSolve() {
         solveRequestId += 1;
+        armorSolver.cancelPending();
         setSolveResult(null);
     }
 
@@ -513,7 +518,8 @@ export default function Home() {
             statTargets: targets(),
             setRequirements: selectedSetRequirements(),
             armor: makeArmorBySlotForClass(profile.armor, character.classType),
-            maxResults: SOLVER_RESULT_POOL_LIMIT
+            maxResults: SOLVER_RESULT_POOL_LIMIT,
+            stopWhenResultLimitReached: true
         };
     }
 

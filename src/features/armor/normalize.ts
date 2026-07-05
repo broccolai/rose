@@ -35,6 +35,7 @@ const ARMOR_STATS_PLUG_CATEGORY = 'armor_stats';
 const TUNING_PLUG_CATEGORY = 'core.gear_systems.armor_tiering.plugs.tuning.mods';
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
+const ASSUMED_MASTERWORK_STAT_BONUS = 5;
 
 const BUCKET_SLOT_BY_HASH: Record<number, ArmorSlot> = {
     3448274439: 'helmet',
@@ -182,9 +183,10 @@ async function normalizeArmorItem(
     const socketAdjustments = await readSocketedStatAdjustments(sockets, manifest);
     const statsWithoutChosenPlugs = socketAdjustments.reduce((stats, adjustment) => subtractStats(stats, adjustment.deltas), baseStats);
     const currentMasterwork = await readSocketedMasterworkAdjustment(sockets, manifest);
-    const normalizedBaseStats = currentMasterwork
+    const unmasterworkedBaseStats = currentMasterwork
         ? subtractStats(statsWithoutChosenPlugs, currentMasterwork.deltas)
         : statsWithoutChosenPlugs;
+    const normalizedBaseStats = addAssumedMasterworkStats(unmasterworkedBaseStats);
     if (!hasModernArmorStatShape(normalizedBaseStats)) {
         return null;
     }
@@ -345,6 +347,16 @@ function readItemStats(stats: Record<string, { value?: number }>): StatVector {
     }
 
     return normalized;
+}
+
+function addAssumedMasterworkStats(stats: StatVector): StatVector {
+    const next = emptyStats();
+
+    for (const stat of ARMOR_STATS) {
+        next[stat] = stats[stat] + ASSUMED_MASTERWORK_STAT_BONUS;
+    }
+
+    return next;
 }
 
 function readGearTier(profile: NonNullable<VaultExportSnapshot['profileResponse']>['Response'] | undefined, itemInstanceId: string) {

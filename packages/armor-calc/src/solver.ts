@@ -73,6 +73,8 @@ type SearchContext = {
     builds: ArmorBuild[];
     counters: SearchCounters;
     stopAfterFirstValid: boolean;
+    stopWhenResultLimitReached: boolean;
+    resultLimitReached: boolean;
     foundValid: boolean;
 };
 
@@ -116,11 +118,13 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         builds,
         counters,
         stopAfterFirstValid: false,
+        stopWhenResultLimitReached: input.stopWhenResultLimitReached === true && input.resultSort === undefined,
+        resultLimitReached: false,
         foundValid: false
     };
 
     for (const plan of plans) {
-        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
+        if (context.resultLimitReached || ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
             continue;
         }
 
@@ -147,7 +151,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         builds,
         validBuildCount: counters.validBuildCount,
         returnedBuildCount: builds.length,
-        resultLimitReached: counters.validBuildCount > builds.length,
+        resultLimitReached: context.resultLimitReached || counters.validBuildCount > builds.length,
         searchedCombinations: counters.searchedCombinations,
         rejectedCombinations: counters.rejectedCombinations,
         warnings
@@ -277,6 +281,8 @@ function canReachPreparedArmorStatTargets(
             validBuildCount: 0
         },
         stopAfterFirstValid: true,
+        stopWhenResultLimitReached: false,
+        resultLimitReached: false,
         foundValid: false
     };
 
@@ -381,7 +387,7 @@ function searchSlot(
     baseStats: StatTuple,
     potentialStats: StatTuple
 ) {
-    if (context.stopAfterFirstValid && context.foundValid) {
+    if ((context.stopAfterFirstValid && context.foundValid) || context.resultLimitReached) {
         return;
     }
 
@@ -428,6 +434,9 @@ function searchSlot(
         if (shouldRetainBuild && bestAddonState.state) {
             retainBuild(context, createBuild(unpreparePieces(pieces), bestAddonState.state, context.targets, context.dumpStat));
         }
+        if (context.stopWhenResultLimitReached && context.counters.validBuildCount >= context.maxResults) {
+            context.resultLimitReached = true;
+        }
         return;
     }
 
@@ -441,7 +450,7 @@ function searchSlot(
 
         searchSlot(plan, context, selectedPieces, selectedList, slotIndex + 1, baseStats, potentialStats);
 
-        if (context.stopAfterFirstValid && context.foundValid) {
+        if ((context.stopAfterFirstValid && context.foundValid) || context.resultLimitReached) {
             addTupleInPlace(baseStats, item.base, -1);
             addTupleInPlace(potentialStats, item.max, -1);
             selectedList.pop();
