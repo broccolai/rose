@@ -7,7 +7,7 @@
         "prebuild": "bun run panda",
         "dev": "bun x --bun vite --host 0.0.0.0",
         "dev:http": "ROSE_DEV_HTTPS=0 bun x --bun vite --host 127.0.0.1 --strictPort",
-        "build": "bun x --bun vite build",
+        "build": "bun x --bun vite build && bun scripts/emit-static-shell.mjs",
         "preview": "bun x --bun vite preview --host 0.0.0.0",
         "postinstall": "bun run panda",
         "check": "bun x --bun tsc --noEmit",
