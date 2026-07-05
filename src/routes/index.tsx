@@ -145,7 +145,7 @@ export default function Home() {
         return sortArmorBuildsForDisplay(result.builds, resultSort());
     });
     const resultFailure = createMemo(() => getResultFailure(solveResult()));
-    const showTuningResults = createMemo(() => Boolean(dumpStat()));
+    const showTuningResults = createMemo(() => true);
     const bungieUser = createMemo(() => readBungieUser(loadedSnapshot()));
     const avatarUrl = createMemo(() => absoluteBungieAssetUrl(bungieUser()?.profilePicturePath));
     const avatarLabel = createMemo(

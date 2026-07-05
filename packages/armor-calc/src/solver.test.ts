@@ -78,20 +78,21 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(60);
     });
 
-    test('does not use tier five tuning without a dump stat', () => {
+    test('uses pair tuning without a dump stat', () => {
         const tuned = item('helmet', { tier: 5 });
         tuned.tuningOptions = createTierFiveTuningOptions(tuned);
 
         const result = solveArmor({
             characterId: 'hunter',
             classType: 'hunter',
-            allowBalancedTuning: true,
             statTargets: { health: 55 },
             setRequirements: [],
             armor: inventory([tuned, ...slots.slice(1).map((slot) => item(slot))])
         });
 
-        expect(result.ok).toBe(false);
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(55);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
     });
 
     test('uses tier five tuning to reach requested targets when a dump stat is selected', () => {

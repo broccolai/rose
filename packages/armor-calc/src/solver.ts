@@ -80,7 +80,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     const warnings: string[] = [];
     const targets = normalizeTargets(input.statTargets);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
-    const tuningMode: TuningMode = input.dumpStat ? (input.allowBalancedTuning ? 'all' : 'pair') : 'off';
+    const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const maxResults = input.maxResults ?? DEFAULT_MAX_RESULTS;
     const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
     const missingSlot = plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0));
@@ -171,7 +171,7 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
 
     const baseTargets = normalizeTargets(input.statTargets);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
-    const tuningMode: TuningMode = input.dumpStat ? (input.allowBalancedTuning ? 'all' : 'pair') : 'off';
+    const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
 
     if (plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0))) {
@@ -242,7 +242,7 @@ function calculatePreparedArmorStatTargetCap(
 export function canReachArmorStatTargets(input: ArmorStatTargetCapsInput) {
     const targets = normalizeTargets(input.statTargets);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
-    const tuningMode: TuningMode = input.dumpStat ? (input.allowBalancedTuning ? 'all' : 'pair') : 'off';
+    const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
     const missingSlot = plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0));
 
@@ -663,7 +663,7 @@ function tuningOptionsForMode(item: Pick<ArmorItem, 'tuningOptions'>, tuningMode
     }
 
     return item.tuningOptions.filter(
-        (option) => isNoTuningAdjustment(option) || (dumpStat ? subtractsOnlyDumpStat(option, dumpStat) : false)
+        (option) => isNoTuningAdjustment(option) || (dumpStat ? subtractsOnlyDumpStat(option, dumpStat) : isPairTuningAdjustment(option))
     );
 }
 
@@ -684,6 +684,13 @@ function subtractsOnlyDumpStat(adjustment: StatAdjustment, dumpStat: ArmorStat) 
     const hasPositiveStat = ARMOR_STATS.some((stat) => (adjustment.deltas[stat] ?? 0) > 0);
 
     return hasPositiveStat && negativeStats.length === 1 && negativeStats[0] === dumpStat && !isBalancedTuningAdjustment(adjustment);
+}
+
+function isPairTuningAdjustment(adjustment: StatAdjustment) {
+    const negativeStats = ARMOR_STATS.filter((stat) => (adjustment.deltas[stat] ?? 0) < 0);
+    const positiveStats = ARMOR_STATS.filter((stat) => (adjustment.deltas[stat] ?? 0) > 0);
+
+    return positiveStats.length === 1 && negativeStats.length === 1 && !isBalancedTuningAdjustment(adjustment);
 }
 
 function tuningCacheKey(tuningMode: TuningMode, dumpStat: ArmorStat | undefined) {
