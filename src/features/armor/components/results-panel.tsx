@@ -10,14 +10,16 @@ import {
 import { css } from '@panda/css';
 import { createSignal, For, Show } from 'solid-js';
 
+import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
 import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
-import { MONO_FONT_FAMILY, muted, sectionTitle } from '@/features/armor/components/ui-styles';
+import { MONO_FONT_FAMILY, muted } from '@/features/armor/components/ui-styles';
 import { SLOT_LABELS } from '@/features/armor/display-metadata';
 import { buildExpansionKey } from '@/features/armor/result-display';
 
 type ResultsPanelProps = {
     result: SolveArmorResult | null;
     builds: ArmorBuild[];
+    armorSets: AvailableArmorSet[];
     resultFailure: string | null;
     sort: ArmorBuildSort;
     dumpStat: ArmorStat | '';
@@ -42,6 +44,15 @@ const resultsHeader = css({
     alignItems: 'center',
     gap: '0.65rem 1rem',
     mb: '0.8rem'
+});
+
+const resultsTitle = css({
+    m: 0,
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '1.05rem',
+    lineHeight: 1,
+    fontWeight: 780,
+    color: 'var(--rose-text)'
 });
 
 const headerTools = css({
@@ -108,53 +119,48 @@ const progressBar = css({
 });
 
 const detailPanel = css({
-    display: 'grid',
-    gap: '0.85rem',
-    border: '1px solid var(--rose-border)',
-    borderRadius: '0.85rem',
     bg: 'var(--rose-surface)',
-    p: '1rem'
+    p: 0
 });
 
-const detailHeader = css({
-    display: 'flex',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: '1rem',
-    '& h3': {
-        m: 0,
-        fontSize: '0.98rem',
-        fontWeight: 780,
-        color: 'var(--rose-text)'
-    }
+const detailTableWrap = css({
+    w: '100%',
+    maxW: '100%',
+    overflowX: 'auto',
+    borderTop: '1px solid var(--rose-border)'
 });
 
-const detailGrid = css({
-    display: 'grid',
-    gridTemplateColumns: { base: 'minmax(0, 1fr)', xl: 'minmax(0, 1.5fr) minmax(17rem, 0.8fr)' },
-    gap: '1rem',
-    alignItems: 'start',
-    minW: 0
-});
-
-const pieceList = css({
-    display: 'grid',
-    gap: '0.45rem'
-});
-
-const pieceRow = css({
-    display: 'grid',
-    gridTemplateColumns: { base: 'minmax(0, 1fr)', md: '5.5rem minmax(0, 1fr) minmax(8rem, 0.7fr)' },
-    gap: { base: '0.28rem', md: '0.7rem' },
-    alignItems: 'center',
-    minH: '38px',
-    border: '1px solid var(--rose-border)',
-    borderRadius: '0.55rem',
-    bg: 'var(--rose-surface-soft)',
-    px: '0.65rem',
-    py: '0.45rem',
-    '&[data-exotic="true"]': {
-        borderColor: 'color-mix(in srgb, var(--rose-exotic) 58%, var(--rose-border))'
+const detailTable = css({
+    w: '100%',
+    minW: '660px',
+    tableLayout: 'fixed',
+    borderCollapse: 'collapse',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.74rem',
+    '& th': {
+        p: '7px 10px',
+        color: 'var(--rose-muted)',
+        bg: '#0a0a0c',
+        borderBottom: '1px solid var(--rose-border)',
+        textAlign: 'left',
+        fontWeight: 720,
+        lineHeight: 1.15
+    },
+    '& td': {
+        p: '8px 10px',
+        borderBottom: '1px solid var(--rose-border)',
+        bg: 'color-mix(in srgb, var(--rose-surface-soft) 62%, transparent)',
+        lineHeight: 1.2,
+        verticalAlign: 'middle'
+    },
+    '& tbody tr:last-child td': {
+        borderBottom: 0
+    },
+    '& tr[data-exotic="true"] td:first-child': {
+        boxShadow: 'inset 3px 0 0 var(--rose-exotic)'
+    },
+    '& td[data-muted]': {
+        color: 'var(--rose-muted)'
     }
 });
 
@@ -162,45 +168,7 @@ const pieceName = css({
     minW: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: { base: 'normal', md: 'nowrap' },
-    fontWeight: 700
-});
-
-const sideCards = css({
-    display: 'grid',
-    gap: '0.65rem'
-});
-
-const detailCard = css({
-    display: 'grid',
-    gap: '0.45rem',
-    border: '1px solid var(--rose-border)',
-    borderRadius: '0.65rem',
-    bg: 'var(--rose-surface-soft)',
-    p: '0.75rem',
-    '& h4': {
-        m: 0,
-        fontSize: '0.82rem',
-        fontWeight: 760
-    }
-});
-
-const chipList = css({
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '0.35rem'
-});
-
-const greenChip = css({
-    display: 'inline-flex',
-    minH: '22px',
-    alignItems: 'center',
-    px: '0.5rem',
-    borderRadius: '999px',
-    border: '1px solid color-mix(in srgb, var(--rose-success) 52%, var(--rose-border))',
-    color: 'var(--rose-success)',
-    bg: 'color-mix(in srgb, var(--rose-success) 10%, var(--rose-surface))',
-    fontSize: '0.72rem',
+    whiteSpace: 'nowrap',
     fontWeight: 720
 });
 
@@ -215,64 +183,54 @@ function addonName(build: ArmorBuild, slot: ArmorSlot, addonKey: 'statMod' | 'tu
     return addon && ARMOR_STATS.some((stat) => (addon.deltas[stat] ?? 0) !== 0) ? addon.name : '-';
 }
 
-function BuildDetail(props: { build: ArmorBuild; index: number; showTuningResults: boolean }) {
-    const activeBonuses = () =>
-        props.build.activeSetBonuses.map((bonus) => `${bonus.activeBonuses.includes(4) ? '4pc' : '2pc'} ${bonus.name}`);
-    const tuningChoices = () =>
-        ARMOR_SLOTS.map((slot) => ({ slot, name: addonName(props.build, slot, 'tuning') })).filter((choice) => choice.name !== '-');
-
+function BuildDetail(props: { build: ArmorBuild; showTuningResults: boolean }) {
     return (
         <div class={detailPanel}>
-            <div class={detailHeader}>
-                <h3>Build #{props.index + 1}</h3>
-                <span class={tinyMuted}>Total {props.build.score.totalStats}</span>
-            </div>
-            <div class={detailGrid}>
-                <div class={pieceList}>
-                    <For each={ARMOR_SLOTS}>
-                        {(slot) => {
-                            const piece = () => props.build.pieces[slot];
-                            return (
-                                <div class={pieceRow} data-exotic={piece().item.isExotic}>
-                                    <span class={tinyMuted}>{SLOT_LABELS[slot]}</span>
-                                    <span class={pieceName} title={piece().item.name}>
-                                        {piece().item.name}{' '}
-                                        <Show when={piece().item.isExotic}>
-                                            <span class={exoticTag}>Exotic</span>
-                                        </Show>
-                                    </span>
-                                    <span class={tinyMuted}>{addonName(props.build, slot, 'statMod')}</span>
-                                </div>
-                            );
-                        }}
-                    </For>
-                </div>
-                <div class={sideCards}>
-                    <Show when={props.showTuningResults}>
-                        <div class={detailCard}>
-                            <h4>Tuning</h4>
-                            <Show when={tuningChoices().length > 0} fallback={<p class={muted}>No tuning used.</p>}>
-                                <div class={chipList}>
-                                    <For each={tuningChoices()}>
-                                        {(choice) => (
-                                            <span class={tinyMuted}>
-                                                {SLOT_LABELS[choice.slot]}: {choice.name}
-                                            </span>
-                                        )}
-                                    </For>
-                                </div>
-                            </Show>
-                        </div>
-                    </Show>
-                    <div class={detailCard}>
-                        <h4>Active bonuses</h4>
-                        <Show when={activeBonuses().length > 0} fallback={<p class={muted}>No active set bonuses.</p>}>
-                            <div class={chipList}>
-                                <For each={activeBonuses()}>{(bonus) => <span class={greenChip}>{bonus}</span>}</For>
-                            </div>
+            <div class={detailTableWrap}>
+                <table class={detailTable}>
+                    <colgroup>
+                        <col style={{ width: '108px' }} />
+                        <col style={{ width: 'auto' }} />
+                        <col style={{ width: '150px' }} />
+                        <Show when={props.showTuningResults}>
+                            <col style={{ width: '180px' }} />
                         </Show>
-                    </div>
-                </div>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Slot</th>
+                            <th>Armor</th>
+                            <th>Mod</th>
+                            <Show when={props.showTuningResults}>
+                                <th>Tuning</th>
+                            </Show>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <For each={ARMOR_SLOTS}>
+                            {(slot) => {
+                                const piece = () => props.build.pieces[slot];
+                                return (
+                                    <tr data-exotic={piece().item.isExotic}>
+                                        <td data-muted>{SLOT_LABELS[slot]}</td>
+                                        <td>
+                                            <span class={pieceName} title={piece().item.name}>
+                                                {piece().item.name}{' '}
+                                                <Show when={piece().item.isExotic}>
+                                                    <span class={exoticTag}>Exotic</span>
+                                                </Show>
+                                            </span>
+                                        </td>
+                                        <td data-muted>{addonName(props.build, slot, 'statMod')}</td>
+                                        <Show when={props.showTuningResults}>
+                                            <td data-muted>{addonName(props.build, slot, 'tuning')}</td>
+                                        </Show>
+                                    </tr>
+                                );
+                            }}
+                        </For>
+                    </tbody>
+                </table>
             </div>
         </div>
     );
@@ -298,7 +256,7 @@ export function ResultsPanel(props: ResultsPanelProps) {
     return (
         <div class={resultsShell}>
             <div class={resultsHeader}>
-                <h2 class={sectionTitle}>Results</h2>
+                <h2 class={resultsTitle}>Results</h2>
                 <div class={headerTools}>
                     <Show when={props.result?.ok}>
                         <span class={tinyMuted}>{resultCountLabel()}</span>
@@ -346,15 +304,14 @@ export function ResultsPanel(props: ResultsPanelProps) {
                     >
                         <ResultsTable
                             builds={props.builds}
+                            armorSets={props.armorSets}
                             dumpStat={props.dumpStat}
                             expandedBuildKey={expandedBuildKey()}
                             sort={props.sort}
                             visibleLimit={props.visibleLimit}
                             onSort={props.onSort}
                             onToggleBuild={toggleExpandedBuild}
-                            renderExpandedBuild={(build, index) => (
-                                <BuildDetail build={build} index={index} showTuningResults={props.showTuningResults} />
-                            )}
+                            renderExpandedBuild={(build) => <BuildDetail build={build} showTuningResults={props.showTuningResults} />}
                         />
                     </Show>
                 </Show>

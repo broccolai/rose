@@ -94,6 +94,7 @@ const setGrid = css({
 
 const setRow = css({
     position: 'relative',
+    overflow: 'hidden',
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr)',
     gridTemplateRows: 'auto auto',
@@ -106,9 +107,28 @@ const setRow = css({
     border: '1px solid transparent',
     borderRadius: '0.5rem',
     bg: 'color-mix(in srgb, var(--rose-surface-soft) 86%, #000 14%)',
+    '&[data-op="true"]': {
+        bg: 'linear-gradient(135deg, color-mix(in srgb, var(--rose-op) 14%, var(--rose-surface-soft)) 0%, color-mix(in srgb, var(--rose-surface-soft) 88%, #000 12%) 56%)',
+        boxShadow:
+            'inset 2px 0 0 color-mix(in srgb, var(--rose-op) 74%, transparent), inset 0 1px 0 color-mix(in srgb, var(--rose-op) 20%, transparent)'
+    },
+    '&[data-op="true"]::before': {
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        bg: 'radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--rose-op) 20%, transparent), transparent 48%)',
+        opacity: 0.9
+    },
     '&[data-unavailable="true"]': {
         bg: 'color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%)',
-        opacity: 0.58
+        '& > span': {
+            color: 'color-mix(in srgb, var(--rose-muted) 74%, #000 26%)'
+        }
+    },
+    '&[data-op="true"][data-unavailable="true"]': {
+        bg: 'linear-gradient(135deg, color-mix(in srgb, var(--rose-op) 10%, var(--rose-surface-soft)) 0%, color-mix(in srgb, var(--rose-surface-soft) 58%, #000 42%) 62%)',
+        boxShadow: 'inset 2px 0 0 color-mix(in srgb, var(--rose-op) 58%, transparent)'
     }
 });
 
@@ -158,6 +178,7 @@ const segmentedControl = css({
 });
 
 const segmentButton = css({
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -168,6 +189,7 @@ const segmentButton = css({
     border: 0,
     borderInlineEnd: '1px solid var(--rose-border)',
     appearance: 'none',
+    overflow: 'hidden',
     bg: 'transparent',
     color: 'var(--rose-muted)',
     fontFamily: MONO_FONT_FAMILY,
@@ -183,13 +205,29 @@ const segmentButton = css({
         color: 'var(--rose-text)'
     },
     '&[data-op="true"]': {
-        color: 'var(--rose-op)',
-        bg: 'color-mix(in srgb, var(--rose-op) 12%, transparent)',
-        boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 36%, transparent)'
+        color: 'color-mix(in srgb, var(--rose-op) 88%, var(--rose-text) 12%)',
+        bg: 'linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 18%, transparent), color-mix(in srgb, var(--rose-op) 8%, transparent))',
+        boxShadow:
+            'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 22%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--rose-op) 76%, transparent)'
+    },
+    '&[data-op="true"]::after': {
+        content: '""',
+        position: 'absolute',
+        inset: '0 18%',
+        pointerEvents: 'none',
+        bg: 'linear-gradient(90deg, transparent, color-mix(in srgb, var(--rose-op) 24%, transparent), transparent)',
+        opacity: 0.72
     },
     '&[data-disabled="true"]': {
-        opacity: 0.22,
+        opacity: 0.34,
         cursor: 'not-allowed'
+    },
+    '&[data-disabled="true"][data-op="true"]': {
+        opacity: 0.72,
+        color: 'color-mix(in srgb, var(--rose-op) 58%, var(--rose-muted) 42%)',
+        bg: 'linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 10%, transparent), color-mix(in srgb, var(--rose-op) 5%, transparent))',
+        boxShadow:
+            'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 16%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--rose-op) 54%, transparent)'
     },
     '&[data-disabled="false"]': {
         cursor: 'pointer'
@@ -200,9 +238,10 @@ const segmentButton = css({
         boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
     },
     '&[data-selected="true"][data-op="true"]': {
-        bg: 'color-mix(in srgb, var(--rose-op) 82%, #f7f1df 18%)',
-        color: '#15110a',
-        boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 72%, #fff 28%)'
+        bg: 'linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 88%, #fff 12%), color-mix(in srgb, var(--rose-op) 72%, #000 28%))',
+        color: '#100d07',
+        boxShadow:
+            'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 66%, #fff 34%), 0 0 16px color-mix(in srgb, var(--rose-op) 16%, transparent)'
     }
 });
 
@@ -224,7 +263,7 @@ export function ExoticPicker(
                 value={props.selectedExoticItemHash}
                 onChange={(event) => props.onExoticChange(event.currentTarget.value)}
             >
-                <option value="">No exotic</option>
+                <option value="">None</option>
                 <For each={props.availableExotics}>{(exotic) => <option value={String(exotic.itemHash)}>{exotic.name}</option>}</For>
             </select>
         </label>
@@ -289,7 +328,7 @@ export function ArmorSetFields(props: Pick<GearSettingsProps, 'onSetRequirementC
         };
 
         return (
-            <div class={setRow} data-unavailable={set.count < 2}>
+            <div class={setRow} data-op={set.opBonuses.length > 0} data-unavailable={set.count < 2}>
                 <span class={setName} title={set.name}>
                     <span class={setNameText}>{set.name}</span>
                 </span>

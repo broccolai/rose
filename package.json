@@ -16,7 +16,9 @@
         "panda": "bun x --bun panda codegen && bun x --bun panda cssgen \"src/**/*.{ts,tsx}\" -o src/app/styles/panda.css",
         "test": "bun test",
         "test:bench": "bun test packages/armor-bench/src",
-        "bench:d2ap": "bun packages/armor-bench/src/cli.ts"
+        "bench:d2ap": "bun packages/armor-bench/src/cli.ts",
+        "hooks:install": "git config core.hooksPath .githooks",
+        "version:bump": "bun scripts/bump-version.ts"
     },
     "dependencies": {
         "@solidjs/router": "^0.15.3",

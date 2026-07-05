@@ -311,7 +311,7 @@ export function TuningFields(
             <label class={field}>
                 <span class={label}>Dump Stat</span>
                 <select class={input} value={props.dumpStat} onChange={(event) => props.onDumpStatChange(event.currentTarget.value)}>
-                    <option value="">No dump stat</option>
+                    <option value="">None</option>
                     <For each={ARMOR_STATS}>{(stat) => <option value={stat}>{STAT_LABELS[stat]}</option>}</For>
                 </select>
             </label>

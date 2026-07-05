@@ -1,6 +1,7 @@
 import { css } from '@panda/css';
 import { Show } from 'solid-js';
 
+import { APP_VERSION } from '@/app-version';
 import { button, MONO_FONT_FAMILY, row, UI_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
 export type LoadProgress = {
@@ -66,6 +67,17 @@ const titleProduct = css({
     letterSpacing: '0.055em'
 });
 
+const versionBadge = css({
+    alignSelf: 'center',
+    color: 'var(--rose-muted)',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    letterSpacing: 0,
+    lineHeight: 1,
+    transform: 'translateY(1px)'
+});
+
 const actions = css({
     justifySelf: { base: 'stretch', md: 'end' },
     alignItems: 'center',
@@ -103,6 +115,7 @@ function BrandMark() {
             <h1 class={title}>
                 <img class={canvasMark} src="/canvas.png" alt="rose" />
                 <span class={titleProduct}>ARMOR</span>
+                <span class={versionBadge}>{APP_VERSION}</span>
             </h1>
         </div>
     );

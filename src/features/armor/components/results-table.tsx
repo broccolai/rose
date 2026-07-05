@@ -3,13 +3,14 @@ import { css } from '@panda/css';
 import { For, type JSX, Show } from 'solid-js';
 
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
-import { COMPACT_STAT_LABELS, STAT_LABELS } from '@/features/armor/display-metadata';
-import { buildExpansionKey } from '@/features/armor/result-display';
+import { STAT_LABELS } from '@/features/armor/display-metadata';
+import { type ArmorBonusDefinitionSet, buildExpansionKey, getArmorBonusDisplays } from '@/features/armor/result-display';
 
 export type VisibleResultSortKey = ArmorStat | 'totalStats';
 
 type ResultsTableProps = {
     builds: ArmorBuild[];
+    armorSets: ArmorBonusDefinitionSet[];
     dumpStat: ArmorStat | '';
     expandedBuildKey: string | null;
     sort: ArmorBuildSort;
@@ -60,7 +61,7 @@ const sortButton = css({
 
 const table = css({
     w: '100%',
-    minW: '620px',
+    minW: '930px',
     tableLayout: 'fixed',
     borderCollapse: 'collapse',
     fontFamily: MONO_FONT_FAMILY,
@@ -124,7 +125,7 @@ const expandedDetailCell = css({
 });
 
 const expandedDetailInner = css({
-    p: { base: '0.65rem', md: '0.8rem' },
+    p: 0,
     bg: 'var(--rose-surface)'
 });
 
@@ -149,7 +150,13 @@ const bonusChip = css({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     fontSize: '0.68rem',
-    fontWeight: 720
+    fontWeight: 720,
+    '&[data-op="true"]': {
+        borderColor: 'color-mix(in srgb, #d9b45f 62%, var(--rose-border))',
+        color: '#e5c36d',
+        bg: 'color-mix(in srgb, #d9b45f 12%, var(--rose-surface))',
+        boxShadow: 'inset 0 0 12px color-mix(in srgb, #d9b45f 12%, transparent)'
+    }
 });
 
 const mutedDash = css({
@@ -167,19 +174,32 @@ function SortableHeader(props: { label: string; mark: string; numeric?: boolean;
     );
 }
 
-function BonusSummary(props: { build: ArmorBuild }) {
-    const bonuses = () => props.build.activeSetBonuses.map((bonus) => `${bonus.activeBonuses.includes(4) ? '4pc' : '2pc'} ${bonus.name}`);
+function BonusSummary(props: { build: ArmorBuild; armorSets: ArmorBonusDefinitionSet[] }) {
+    const bonuses = () => getArmorBonusDisplays(props.build, props.armorSets);
 
     return (
         <div class={bonusText}>
             <Show when={bonuses().length > 0} fallback={<span class={mutedDash}>-</span>}>
-                <For each={bonuses()}>{(bonus) => <span class={bonusChip}>{bonus}</span>}</For>
+                <For each={bonuses()}>
+                    {(bonus) => (
+                        <span class={bonusChip} data-op={bonus.isOp} title={bonus.title}>
+                            {bonus.label}
+                        </span>
+                    )}
+                </For>
             </Show>
         </div>
     );
 }
 
-function ResultRow(props: { build: ArmorBuild; dumpStat: ArmorStat | ''; expanded: boolean; index: number; onToggle: () => void }) {
+function ResultRow(props: {
+    build: ArmorBuild;
+    armorSets: ArmorBonusDefinitionSet[];
+    dumpStat: ArmorStat | '';
+    expanded: boolean;
+    index: number;
+    onToggle: () => void;
+}) {
     return (
         <tr
             data-clickable="true"
@@ -203,7 +223,7 @@ function ResultRow(props: { build: ArmorBuild; dumpStat: ArmorStat | ''; expande
             </For>
             <td data-numeric>{props.build.score.totalStats}</td>
             <td data-text-cell>
-                <BonusSummary build={props.build} />
+                <BonusSummary build={props.build} armorSets={props.armorSets} />
             </td>
         </tr>
     );
@@ -215,7 +235,7 @@ export function ResultsTable(props: ResultsTableProps) {
             return '';
         }
 
-        return props.sort.direction === 'asc' ? ' asc' : ' desc';
+        return '';
     }
 
     return (
@@ -223,9 +243,9 @@ export function ResultsTable(props: ResultsTableProps) {
             <table class={table}>
                 <colgroup>
                     <col style={{ width: '42px' }} />
-                    <For each={ARMOR_STATS}>{() => <col style={{ width: '46px' }} />}</For>
+                    <For each={ARMOR_STATS}>{() => <col style={{ width: '78px' }} />}</For>
                     <col style={{ width: '58px' }} />
-                    <col style={{ width: '220px' }} />
+                    <col style={{ width: '310px' }} />
                 </colgroup>
                 <thead>
                     <tr>
@@ -233,7 +253,7 @@ export function ResultsTable(props: ResultsTableProps) {
                         <For each={ARMOR_STATS}>
                             {(stat) => (
                                 <SortableHeader
-                                    label={COMPACT_STAT_LABELS[stat]}
+                                    label={STAT_LABELS[stat]}
                                     mark={sortMark(stat)}
                                     numeric
                                     title={STAT_LABELS[stat]}
@@ -257,6 +277,7 @@ export function ResultsTable(props: ResultsTableProps) {
                             <>
                                 <ResultRow
                                     build={build}
+                                    armorSets={props.armorSets}
                                     dumpStat={props.dumpStat}
                                     expanded={props.expandedBuildKey === buildExpansionKey(build)}
                                     index={index()}

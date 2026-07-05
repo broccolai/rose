@@ -2,7 +2,13 @@ import { describe, expect, test } from 'bun:test';
 
 import { ARMOR_SLOTS, type ArmorBuild } from '@armor-calc';
 
-import { buildExpansionKey, DEFAULT_RESULT_SORT, formatArmorBonusSummary } from '@/features/armor/result-display';
+import {
+    type ArmorBonusDefinitionSet,
+    buildExpansionKey,
+    DEFAULT_RESULT_SORT,
+    formatArmorBonusSummary,
+    getArmorBonusDisplays
+} from '@/features/armor/result-display';
 
 describe('result display helpers', () => {
     test('defaults to total descending instead of visible waste sorting', () => {
@@ -21,6 +27,34 @@ describe('result display helpers', () => {
                 })
             )
         ).toBe('Wormlore 2pc / Seraph 4pc');
+    });
+
+    test('uses manifest perk names for active armor bonuses when available', () => {
+        const armorSets: ArmorBonusDefinitionSet[] = [
+            {
+                id: 'set:seraph',
+                bonuses: [
+                    { requiredPieces: 2, name: 'Warmind Network', description: 'Two piece text.' },
+                    { requiredPieces: 4, name: 'Rasputin Protocol', description: 'Four piece text.' }
+                ],
+                opBonuses: [{ requiredPieces: 4, source: 'Test', category: 'DPS', trigger: 'Trigger.', effect: 'Effect.' }]
+            }
+        ];
+        const displays = getArmorBonusDisplays(
+            build({
+                bonuses: [{ setId: 'set:seraph', name: 'Seventh Seraph', pieces: 4, activeBonuses: [2, 4] }]
+            }),
+            armorSets
+        );
+
+        expect(displays.map((bonus) => bonus.label)).toEqual(['Warmind Network', 'Rasputin Protocol']);
+        expect(displays.map((bonus) => bonus.isOp)).toEqual([false, true]);
+        expect(
+            formatArmorBonusSummary(
+                build({ bonuses: [{ setId: 'set:seraph', name: 'Seventh Seraph', pieces: 4, activeBonuses: [4] }] }),
+                armorSets
+            )
+        ).toBe('Rasputin Protocol');
     });
 
     test('keys expansion state by armor pieces and selected addons', () => {

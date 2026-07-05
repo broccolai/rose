@@ -693,6 +693,7 @@ export default function Home() {
                 <ResultsPanel
                     result={solveResult()}
                     builds={resultBuilds()}
+                    armorSets={selectableSets()}
                     resultFailure={resultFailure()}
                     sort={resultSort()}
                     dumpStat={dumpStat()}
