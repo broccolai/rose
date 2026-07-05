@@ -20,7 +20,7 @@ type ResultsTableProps = {
     renderExpandedBuild: (build: ArmorBuild, index: number) => JSX.Element;
 };
 
-const RESULT_COLUMN_COUNT = 9;
+const RESULT_COLUMN_COUNT = 8;
 
 const tableWrap = css({
     w: '100%',
@@ -197,7 +197,6 @@ function ResultRow(props: {
     armorSets: ArmorBonusDefinitionSet[];
     dumpStat: ArmorStat | '';
     expanded: boolean;
-    index: number;
     onToggle: () => void;
 }) {
     return (
@@ -213,7 +212,6 @@ function ResultRow(props: {
                 }
             }}
         >
-            <td data-numeric>{props.index + 1}</td>
             <For each={ARMOR_STATS}>
                 {(stat) => (
                     <td data-numeric class={props.dumpStat === stat ? tinyMuted : undefined}>
@@ -242,14 +240,12 @@ export function ResultsTable(props: ResultsTableProps) {
         <div class={tableWrap}>
             <table class={table}>
                 <colgroup>
-                    <col style={{ width: '42px' }} />
                     <For each={ARMOR_STATS}>{() => <col style={{ width: '78px' }} />}</For>
                     <col style={{ width: '58px' }} />
                     <col style={{ width: '310px' }} />
                 </colgroup>
                 <thead>
                     <tr>
-                        <th data-numeric>#</th>
                         <For each={ARMOR_STATS}>
                             {(stat) => (
                                 <SortableHeader
@@ -280,7 +276,6 @@ export function ResultsTable(props: ResultsTableProps) {
                                     armorSets={props.armorSets}
                                     dumpStat={props.dumpStat}
                                     expanded={props.expandedBuildKey === buildExpansionKey(build)}
-                                    index={index()}
                                     onToggle={() => props.onToggleBuild(build)}
                                 />
                                 <Show when={props.expandedBuildKey === buildExpansionKey(build)}>

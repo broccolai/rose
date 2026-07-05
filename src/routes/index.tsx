@@ -52,6 +52,7 @@ type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 const SOLVER_RESULT_POOL_LIMIT = 30_000;
 const VISIBLE_RESULT_LIMIT = 25;
 const BALANCED_TUNING_ENABLED = false;
+const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
 const MAX_STAT_TARGET_CAPS: StatVector = {
     health: 200,
     melee: 200,
@@ -104,6 +105,14 @@ function isEditableKeyboardTarget(target: EventTarget | null) {
     );
 }
 
+function isLocalDevHost() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
 export default function Home() {
     let targetCapRequestId = 0;
     let solveRequestId = 0;
@@ -146,6 +155,7 @@ export default function Home() {
     });
     const resultFailure = createMemo(() => getResultFailure(solveResult()));
     const showTuningResults = createMemo(() => true);
+    const calculatorLocked = createMemo(() => !AUTH_LOCK_DISABLED && !isLocalDevHost() && !authenticated());
     const bungieUser = createMemo(() => readBungieUser(loadedSnapshot()));
     const avatarUrl = createMemo(() => absoluteBungieAssetUrl(bungieUser()?.profilePicturePath));
     const avatarLabel = createMemo(
@@ -649,6 +659,7 @@ export default function Home() {
 
     return (
         <ArmorAppShell
+            locked={calculatorLocked()}
             toolbar={
                 <AppToolbar
                     authenticated={authenticated()}
@@ -671,7 +682,7 @@ export default function Home() {
                     setSelections={setSelections()}
                     availableExotics={availableExotics()}
                     selectableSets={selectableSets()}
-                    canSolve={Boolean(normalizedProfile()) && status() !== 'loading'}
+                    canSolve={!calculatorLocked() && Boolean(normalizedProfile()) && status() !== 'loading'}
                     solving={status() === 'loading' || status() === 'solving'}
                     onCharacterSelect={selectCharacter}
                     onExoticChange={(itemHash) => {

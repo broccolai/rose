@@ -10,6 +10,7 @@ type ManualFrameProps = {
 type ManualPaneProps = {
     area: 'toolbar' | 'controls' | 'results';
     children: JSX.Element;
+    lockable?: boolean;
 };
 
 const pageFrame = css({
@@ -73,5 +74,9 @@ export function ManualSurface(props: ManualFrameProps) {
 }
 
 export function ManualPane(props: ManualPaneProps) {
-    return <section class={`${panel} ${paneAreas[props.area]}`}>{props.children}</section>;
+    return (
+        <section class={`${panel} ${paneAreas[props.area]}`} data-lockable-pane={props.lockable}>
+            {props.children}
+        </section>
+    );
 }

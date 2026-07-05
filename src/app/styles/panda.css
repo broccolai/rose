@@ -655,6 +655,10 @@
     background: var(--edNtiq);
 }
 
+  .ftGlla\! {
+    background: color-mix(in srgb, #d8b15f 10%, transparent) !important;
+}
+
   .kWIjhW {
     font: inherit;
 }
@@ -697,6 +701,10 @@
 
   .dQjxqB {
     background: var(--rose-button);
+}
+
+  .bSlexM {
+    background: color-mix(in srgb, var(--rose-bg) 34%, transparent);
 }
 
   .fNCCNu {
@@ -897,6 +905,18 @@
 
   .gMtwij {
     gap: 0.32rem;
+}
+
+  .eioztc {
+    grid-column: 1 / -1;
+}
+
+  .cuNEzi {
+    grid-row: 2 / -1;
+}
+
+  .eUwWlI {
+    place-items: start center;
 }
 
   .dlDteq {
@@ -1281,6 +1301,22 @@
     color: var(--rose-button-text);
 }
 
+  .hKujQS {
+    display: contents;
+}
+
+  .iHMUDJ {
+    align-self: stretch;
+}
+
+  .Axhzr {
+    z-index: 5;
+}
+
+  .hLsNni {
+    pointer-events: auto;
+}
+
   .jRXFuD {
     font-weight: 600;
 }
@@ -1461,6 +1497,10 @@
     padding-bottom: 0.76rem;
 }
 
+  .dnRYAO {
+    padding-top: 4rem;
+}
+
   .fNBEbg {
     height: 44px;
 }
@@ -1505,48 +1545,24 @@
     background: var(--rose-border);
 }
 
-  .gNfgLj[data-op="true"] {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--rose-op) 14%, var(--rose-surface-soft)) 0%, color-mix(in srgb, var(--rose-surface-soft) 88%, #000 12%) 56%);
-}
-
-  .kfFlfV[data-op="true"]::before {
-    inset: var(--fcTUxn);
-}
-
-  .iPXpYX[data-op="true"]::before {
-    background: radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--rose-op) 20%, transparent), transparent 48%);
-}
-
   .cKJxSI[data-unavailable="true"] {
     background: color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%);
 }
 
-  .mIBWK[data-op="true"][data-unavailable="true"] {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--rose-op) 10%, var(--rose-surface-soft)) 0%, color-mix(in srgb, var(--rose-surface-soft) 58%, #000 42%) 62%);
+  .fhvrRp[data-op="true"] {
+    background: color-mix(in srgb, var(--rose-op) 10%, transparent);
 }
 
-  .iqSvwR[data-op="true"] {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 18%, transparent), color-mix(in srgb, var(--rose-op) 8%, transparent));
-}
-
-  .Befen[data-op="true"]::after {
-    inset: 0 18%;
-}
-
-  .cFqoB[data-op="true"]::after {
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rose-op) 24%, transparent), transparent);
-}
-
-  .cqdrcE[data-disabled="true"][data-op="true"] {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 10%, transparent), color-mix(in srgb, var(--rose-op) 5%, transparent));
+  .kxxLSn[data-disabled="true"][data-op="true"] {
+    background: color-mix(in srgb, var(--rose-op) 7%, transparent);
 }
 
   .kVRWFC[data-selected="true"] {
     background: var(--rose-button);
 }
 
-  .dagvTn[data-selected="true"][data-op="true"] {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--rose-op) 88%, #fff 12%), color-mix(in srgb, var(--rose-op) 72%, #000 28%));
+  .ljNCfu[data-selected="true"][data-op="true"] {
+    background: color-mix(in srgb, var(--rose-op) 18%, var(--rose-button));
 }
 
   .czzEyT th {
@@ -1701,52 +1717,8 @@
     color: var(--rose-op);
 }
 
-  .ceaxro[data-op="true"] {
-    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--rose-op) 74%, transparent), inset 0 1px 0 color-mix(in srgb, var(--rose-op) 20%, transparent);
-}
-
-  .kyiTEx[data-op="true"]::before {
-    content: "";
-}
-
-  .kwiwsf[data-op="true"]::before {
-    position: absolute;
-}
-
-  .kjgkef[data-op="true"]::before {
-    pointer-events: none;
-}
-
-  .SfHcw[data-op="true"]::before {
-    opacity: 0.9;
-}
-
-  .eQmnKZ[data-op="true"][data-unavailable="true"] {
-    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--rose-op) 58%, transparent);
-}
-
-  .irtYxq[data-op="true"] {
-    color: color-mix(in srgb, var(--rose-op) 88%, var(--rose-text) 12%);
-}
-
-  .jNZYOW[data-op="true"] {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 22%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--rose-op) 76%, transparent);
-}
-
-  .kQvDDo[data-op="true"]::after {
-    content: "";
-}
-
-  .kmCkXC[data-op="true"]::after {
-    position: absolute;
-}
-
-  .coQqWi[data-op="true"]::after {
-    pointer-events: none;
-}
-
-  .dnRYOp[data-op="true"]::after {
-    opacity: 0.72;
+  .cRlUsK[data-op="true"] {
+    color: color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%);
 }
 
   .fTULHI[data-disabled="true"] {
@@ -1757,16 +1729,12 @@
     cursor: not-allowed;
 }
 
-  .frWjTx[data-disabled="true"][data-op="true"] {
-    opacity: 0.72;
+  .daMrGC[data-disabled="true"][data-op="true"] {
+    opacity: 0.46;
 }
 
-  .eKBZvq[data-disabled="true"][data-op="true"] {
-    color: color-mix(in srgb, var(--rose-op) 58%, var(--rose-muted) 42%);
-}
-
-  .bQDKTZ[data-disabled="true"][data-op="true"] {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 16%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--rose-op) 54%, transparent);
+  .llFWIe[data-disabled="true"][data-op="true"] {
+    color: color-mix(in srgb, var(--rose-op) 46%, var(--rose-muted) 54%);
 }
 
   .bUnuEc[data-disabled="false"] {
@@ -1781,12 +1749,12 @@
     box-shadow: inset 0 0 0 1px var(--rose-accent);
 }
 
-  .WhhkS[data-selected="true"][data-op="true"] {
-    color: #100d07;
+  .zUCDn[data-selected="true"][data-op="true"] {
+    color: var(--rose-button-text);
 }
 
-  .iknIDp[data-selected="true"][data-op="true"] {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 66%, #fff 34%), 0 0 16px color-mix(in srgb, var(--rose-op) 16%, transparent);
+  .iLslCI[data-selected="true"][data-op="true"] {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 32%, var(--rose-accent));
 }
 
   .fGpUpm th {
@@ -2052,6 +2020,23 @@
 
   .dUAGrF[data-unavailable="true"] > span {
     color: color-mix(in srgb, var(--rose-muted) 74%, #000 26%);
+}
+
+  .lgUFtK[data-locked="true"] section[data-lockable-pane="true"] {
+    opacity: 0.32;
+}
+
+  .kTotpB[data-locked="true"] section[data-lockable-pane="true"] {
+    filter: grayscale(0.85);
+}
+
+  .fBpOZx[data-locked="true"] section[data-lockable-pane="true"] {
+    pointer-events: none;
+}
+
+  .gXVNdW[data-locked="true"] section[data-lockable-pane="true"] {
+    -webkit-user-select: none;
+    user-select: none;
 }
 
   @media screen and (min-width: 40rem) {
