@@ -301,14 +301,6 @@ export function ResultsPanel(props: ResultsPanelProps) {
         return `${result.validBuildCount} builds found · ${result.returnedBuildCount} retained after pruning`;
     }
 
-    function loadingLabel() {
-        if (props.progress.active && props.progress.label) {
-            return props.progress.label;
-        }
-
-        return 'Solving compatible armor combinations';
-    }
-
     return (
         <div class={resultsShell}>
             <div class={resultsHeader}>
@@ -329,8 +321,7 @@ export function ResultsPanel(props: ResultsPanelProps) {
             </div>
             <Show when={props.loading}>
                 <div class={stateCard}>
-                    <h3>{loadingLabel()}</h3>
-                    <p class={muted}>Keeping the current layout visible while the profile or solver updates.</p>
+                    <h3>Loading</h3>
                     <Show when={props.progress.active}>
                         <div class={progressTrack}>
                             <div class={progressBar} style={{ width: `${props.progress.percent}%` }} />

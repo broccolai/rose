@@ -18,8 +18,7 @@ export function getMissingConfigKeys(config = getBungieConfig()) {
     return [
         ['VITE_BUNGIE_API_KEY', config.apiKey],
         ['VITE_BUNGIE_CLIENT_ID', config.clientId],
-        ['VITE_BUNGIE_AUTH_URL', config.authUrl],
-        ['VITE_BUNGIE_REDIRECT_URI', config.redirectUri]
+        ['VITE_BUNGIE_AUTH_URL', config.authUrl]
     ]
         .filter(([, value]) => !value)
         .map(([key]) => key);
