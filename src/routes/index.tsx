@@ -8,7 +8,7 @@ import {
     type StatVector,
     solveArmor
 } from '@armor-calc';
-import { createEffect, createMemo, createSignal, onMount, untrack } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
 import {
     type CalculatorPreferences,
@@ -43,7 +43,7 @@ import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
-import { exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
+import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
 import { createAuthorizationUrl, getTokenDebugState, readToken } from '@/features/bungie/oauth';
 
@@ -102,8 +102,22 @@ function absoluteBungieAssetUrl(path?: string) {
     return `${BUNGIE_ORIGIN}${path}`;
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null) {
+    if (!(target instanceof HTMLElement)) {
+        return false;
+    }
+
+    return (
+        target.isContentEditable ||
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+    );
+}
+
 export default function Home() {
     let targetCapRequestId = 0;
+    let debugExportChordActive = false;
     const [status, setStatus] = createSignal<Status>('idle');
     const [_message, setMessage] = createSignal('Checking local token...');
     const [authenticated, setAuthenticated] = createSignal(false);
@@ -116,7 +130,7 @@ export default function Home() {
     });
     const [normalizedProfile, setNormalizedProfile] = createSignal<NormalizedArmorProfile | null>(null);
     const [loadedSnapshot, setLoadedSnapshot] = createSignal<VaultExportSnapshot | null>(null);
-    const [, setLoadedManifestDefinitions] = createSignal<LoadedManifestDefinition[]>([]);
+    const [loadedManifestDefinitions, setLoadedManifestDefinitions] = createSignal<LoadedManifestDefinition[]>([]);
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
@@ -205,11 +219,76 @@ export default function Home() {
         setMessage(debugState.authenticated ? `Signed in. Token expires at ${debugState.expiresAt}.` : 'Signed out.');
     }
 
+    function downloadDebugVaultExport() {
+        downloadJsonFile(
+            {
+                metadata: {
+                    app: 'rose-debug-vault-export',
+                    exportVersion: 1,
+                    exportedAt: new Date().toISOString(),
+                    location: window.location.href
+                },
+                auth: {
+                    authenticated: authenticated()
+                },
+                calculator: {
+                    status: status(),
+                    selectedCharacterId: selectedCharacterId(),
+                    selectedCharacter: selectedCharacter(),
+                    selectedExoticItemHash: selectedExoticItemHash(),
+                    dumpStat: dumpStat(),
+                    allowBalancedTuning: effectiveAllowBalancedTuning(),
+                    targets: targets(),
+                    targetCaps: targetCaps(),
+                    setSelections: setSelections(),
+                    selectedSetRequirements: selectedSetRequirements(),
+                    resultSort: resultSort()
+                },
+                vaultSnapshot: loadedSnapshot(),
+                normalizedProfile: normalizedProfile(),
+                loadedManifestDefinitions: loadedManifestDefinitions(),
+                solveResult: solveResult()
+            },
+            'rose-debug-vault-export'
+        );
+        setMessage('Debug vault export downloaded.');
+    }
+
     onMount(() => {
         refreshAuthState();
         applyCalculatorPreferences(readCalculatorPreferences());
         setPreferencesLoaded(true);
         void loadCachedCalculatorData({ silentMissing: true });
+
+        const pressedKeys = new Set<string>();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (isEditableKeyboardTarget(event.target)) {
+                return;
+            }
+
+            pressedKeys.add(event.key.toLowerCase());
+            const shouldExport = pressedKeys.has('k') && pressedKeys.has('o');
+            if (!shouldExport || debugExportChordActive) {
+                return;
+            }
+
+            debugExportChordActive = true;
+            event.preventDefault();
+            downloadDebugVaultExport();
+        };
+        const handleKeyUp = (event: KeyboardEvent) => {
+            pressedKeys.delete(event.key.toLowerCase());
+            if (!pressedKeys.has('k') || !pressedKeys.has('o')) {
+                debugExportChordActive = false;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        onCleanup(() => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        });
     });
 
     createEffect(() => {

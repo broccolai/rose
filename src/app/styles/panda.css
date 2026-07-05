@@ -1071,10 +1071,6 @@
     justify-content: flex-start;
 }
 
-  .dMjnTq {
-    font-size: 0.78rem;
-}
-
   .dloidA {
     color: var(--rose-muted);
 }
@@ -1210,6 +1206,10 @@
   .kFYoXn {
     appearance: none;
     -webkit-appearance: none;
+}
+
+  .dMjnTq {
+    font-size: 0.78rem;
 }
 
   .ijkkDF {
@@ -1391,10 +1391,6 @@
 
   .jrJXQX {
     margin-bottom: 0.8rem;
-}
-
-  .OpwUI {
-    min-height: 34px;
 }
 
   .hOBFnJ {
@@ -1989,9 +1985,6 @@
   @media screen and (min-width: 40rem) {
     .dDKdEQ {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-    .dRnBGb {
-      width: 13rem;
 }
 }
 

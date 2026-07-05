@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { ARMOR_STATS } from '@armor-calc';
+import { ARMOR_STATS, calculateArmorStatTargetCap, solveArmor } from '@armor-calc';
 
-import { getAvailableArmorSets, normalizeVaultExport } from '@/features/armor/normalize';
+import { getAvailableArmorSets, makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { ARMOR_STAT_HASHES } from '@/features/armor/stat-hashes';
 import type { ManifestInventoryItemDefinition, ManifestResolver, VaultExportSnapshot } from '@/features/armor/types';
 
@@ -289,6 +289,50 @@ describe('loaded benchmark bundle input', () => {
         });
 
         expect(profile.armor.every((item) => ARMOR_STATS.every((stat) => item.baseStats[stat] % 5 === 0))).toBe(true);
+    });
+
+    test('finds the saved Warlock Nezarec melee and weapons build when present', async () => {
+        if (!existsSync(privateBundlePath)) {
+            return;
+        }
+
+        const bundle = JSON.parse(readFileSync(privateBundlePath, 'utf8')) as {
+            vaultSnapshot?: VaultExportSnapshot;
+            manifest?: { inventoryItemDefinitions?: Record<string, unknown> };
+        };
+        const definitions = new Map(
+            Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => [
+                Number(hash),
+                definition as ManifestInventoryItemDefinition
+            ])
+        );
+        const profile = await normalizeVaultExport(bundle.vaultSnapshot as VaultExportSnapshot, {
+            async getInventoryItem(hash) {
+                return definitions.get(hash) ?? null;
+            }
+        });
+        const armor = makeArmorBySlotForClass(profile.armor, 'warlock');
+        const input = {
+            characterId: 'warlock',
+            classType: 'warlock' as const,
+            selectedExoticItemHash: 925466716,
+            statTargets: { weapons: 185 },
+            setRequirements: [],
+            armor
+        };
+
+        expect(calculateArmorStatTargetCap(input, 'melee')).toBeGreaterThanOrEqual(130);
+
+        const result = solveArmor({
+            ...input,
+            statTargets: { melee: 130, weapons: 185 },
+            maxResults: 5,
+            resultSort: { key: 'melee', direction: 'desc' }
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.melee).toBeGreaterThanOrEqual(130);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBeGreaterThanOrEqual(185);
     });
 });
 

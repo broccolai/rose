@@ -11,8 +11,8 @@ import { css } from '@panda/css';
 import { createSignal, For, Show } from 'solid-js';
 
 import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
-import { input, MONO_FONT_FAMILY, muted, sectionTitle } from '@/features/armor/components/ui-styles';
-import { SLOT_LABELS, STAT_LABELS } from '@/features/armor/display-metadata';
+import { MONO_FONT_FAMILY, muted, sectionTitle } from '@/features/armor/components/ui-styles';
+import { SLOT_LABELS } from '@/features/armor/display-metadata';
 import { buildExpansionKey } from '@/features/armor/result-display';
 
 type ResultsPanelProps = {
@@ -51,12 +51,6 @@ const headerTools = css({
     flexWrap: 'wrap',
     justifyContent: { base: 'flex-start', lg: 'flex-end' },
     minW: 0
-});
-
-const sortSelect = css({
-    w: { base: '100%', sm: '13rem' },
-    minH: '34px',
-    fontSize: '0.78rem'
 });
 
 const emptyState = css({
@@ -308,14 +302,6 @@ export function ResultsPanel(props: ResultsPanelProps) {
                 <div class={headerTools}>
                     <Show when={props.result?.ok}>
                         <span class={tinyMuted}>{resultCountLabel()}</span>
-                        <select
-                            class={`${input} ${sortSelect}`}
-                            value={props.sort.key === 'wastedStats' ? 'totalStats' : props.sort.key}
-                            onChange={(event) => props.onSort(event.currentTarget.value as VisibleResultSortKey)}
-                        >
-                            <option value="totalStats">Sort by total</option>
-                            <For each={ARMOR_STATS}>{(stat) => <option value={stat}>Sort by {STAT_LABELS[stat]}</option>}</For>
-                        </select>
                     </Show>
                 </div>
             </div>
