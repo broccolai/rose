@@ -3,10 +3,9 @@ import {
     type ArmorBuildSort,
     type ArmorStat,
     type ArmorStatTargetCapsInput,
-    calculateArmorStatTargetCap,
+    type SolveArmorInput,
     type SolveArmorResult,
-    type StatVector,
-    solveArmor
+    type StatVector
 } from '@armor-calc';
 import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
@@ -42,6 +41,7 @@ import { ResultsPanel } from '@/features/armor/components/results-panel';
 import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
+import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
 import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
 import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
@@ -75,17 +75,6 @@ type CachedMembershipsResponse = {
     };
 };
 
-function waitForNextFrame() {
-    return new Promise<void>((resolve) => {
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => resolve());
-            return;
-        }
-
-        setTimeout(resolve, 0);
-    });
-}
-
 function readBungieUser(snapshot: VaultExportSnapshot | null): CachedBungieUser | undefined {
     return (snapshot?.membershipsResponse as CachedMembershipsResponse | undefined)?.Response?.bungieNetUser;
 }
@@ -117,7 +106,9 @@ function isEditableKeyboardTarget(target: EventTarget | null) {
 
 export default function Home() {
     let targetCapRequestId = 0;
+    let solveRequestId = 0;
     let debugExportChordActive = false;
+    const armorSolver = createArmorSolverClient();
     const [status, setStatus] = createSignal<Status>('idle');
     const [_message, setMessage] = createSignal('Checking local token...');
     const [authenticated, setAuthenticated] = createSignal(false);
@@ -194,23 +185,34 @@ export default function Home() {
 
     async function calculateTargetCapsIncrementally(input: ArmorStatTargetCapsInput, requestId: number, initialCaps: StatVector) {
         const nextCaps = { ...initialCaps };
-        for (const stat of ARMOR_STATS) {
-            await waitForNextFrame();
+        try {
+            await armorSolver.calculateStatCaps(input, ARMOR_STATS, (stat, cap) => {
+                if (requestId !== targetCapRequestId) {
+                    return;
+                }
 
+                nextCaps[stat] = cap;
+                setTargetCaps({ ...nextCaps });
+            });
+        } catch (error) {
             if (requestId !== targetCapRequestId) {
                 return;
             }
 
-            nextCaps[stat] = calculateArmorStatTargetCap(input, stat);
-            setTargetCaps({ ...nextCaps });
+            setMessage(error instanceof Error ? error.message : 'Unknown armor stat cap worker failure.');
         }
+    }
+
+    function invalidateSolve() {
+        solveRequestId += 1;
+        setSolveResult(null);
     }
 
     function selectCharacter(characterId: string) {
         setSelectedCharacterId(characterId);
         setSelectedExoticItemHash('');
         setSetSelections({});
-        setSolveResult(null);
+        invalidateSolve();
     }
 
     function refreshAuthState() {
@@ -291,6 +293,10 @@ export default function Home() {
         });
     });
 
+    onCleanup(() => {
+        armorSolver.dispose();
+    });
+
     createEffect(() => {
         if (!preferencesLoaded()) {
             return;
@@ -331,7 +337,7 @@ export default function Home() {
         });
 
         if (changed) {
-            setSolveResult(null);
+            invalidateSolve();
         }
     });
 
@@ -428,7 +434,7 @@ export default function Home() {
     async function applyLoadedCalculatorData(nextSnapshot: VaultExportSnapshot, sourceLabel: string) {
         setLoadedSnapshot(null);
         setLoadedManifestDefinitions([]);
-        setSolveResult(null);
+        invalidateSolve();
 
         const manifest = await createBungieManifestResolver({
             onStatus: (label) => {
@@ -494,18 +500,11 @@ export default function Home() {
         );
     }
 
-    function solveCurrentBuilds() {
-        const profile = normalizedProfile();
-        const character = selectedCharacter();
-
-        if (!profile || !character) {
-            setStatus('error');
-            setMessage('Load calculator data before solving.');
-            return;
-        }
-
-        setStatus('solving');
-        const result = solveArmor({
+    function createSolveInput(
+        profile: NormalizedArmorProfile,
+        character: NonNullable<ReturnType<typeof selectedCharacter>>
+    ): SolveArmorInput {
+        return {
             characterId: character.characterId,
             classType: character.classType,
             selectedExoticItemHash: selectedExoticItemHash() ? Number(selectedExoticItemHash()) : undefined,
@@ -515,10 +514,50 @@ export default function Home() {
             setRequirements: selectedSetRequirements(),
             armor: makeArmorBySlotForClass(profile.armor, character.classType),
             maxResults: SOLVER_RESULT_POOL_LIMIT
+        };
+    }
+
+    async function solveCurrentBuilds() {
+        const profile = normalizedProfile();
+        const character = selectedCharacter();
+
+        if (!profile || !character) {
+            setStatus('error');
+            setMessage('Load calculator data before solving.');
+            return;
+        }
+
+        const requestId = solveRequestId + 1;
+        solveRequestId = requestId;
+        setStatus('solving');
+        setLoadProgress({
+            active: true,
+            label: 'Solving builds',
+            current: 0,
+            total: 0,
+            percent: 35
         });
+        let result: SolveArmorResult;
+        try {
+            result = await armorSolver.solve(createSolveInput(profile, character));
+        } catch (error) {
+            if (requestId !== solveRequestId) {
+                return;
+            }
+
+            setStatus('error');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(error instanceof Error ? error.message : 'Unknown armor solver worker failure.');
+            return;
+        }
+
+        if (requestId !== solveRequestId) {
+            return;
+        }
 
         setSolveResult(result);
         setStatus(result.ok ? 'done' : 'error');
+        setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
         setMessage(
             result.ok
                 ? [
@@ -533,25 +572,20 @@ export default function Home() {
     }
 
     function updateTarget(stat: ArmorStat, value: string) {
-        const input = targetCapInput();
-        const cap = input ? calculateArmorStatTargetCap(input, stat) : targetCaps()[stat];
+        const cap = targetCaps()[stat];
         const numericValue = Math.min(clampTarget(Number(value) || 0), cap);
 
-        setTargetCaps((current) => ({
-            ...current,
-            [stat]: cap
-        }));
         setTargets((current) => ({
             ...current,
             [stat]: numericValue
         }));
-        setSolveResult(null);
+        invalidateSolve();
     }
 
     function updateDumpStat(value: string) {
         const nextDumpStat = isArmorStat(value) ? value : '';
         setDumpStat(nextDumpStat);
-        setSolveResult(null);
+        invalidateSolve();
 
         if (!nextDumpStat) {
             setAllowBalancedTuning(false);
@@ -570,7 +604,7 @@ export default function Home() {
             ...current,
             [setId]: value === '2' || value === '4' ? value : '0'
         }));
-        setSolveResult(null);
+        invalidateSolve();
     }
 
     function applyCalculatorPreferences(preferences: CalculatorPreferences | null) {
@@ -602,7 +636,7 @@ export default function Home() {
         setTargets({ ...EMPTY_STAT_TARGETS });
         setSetSelections({});
         setResultSort(DEFAULT_RESULT_SORT);
-        setSolveResult(null);
+        invalidateSolve();
         setStatus('idle');
         setMessage('Calculator choices cleared.');
     }
@@ -636,12 +670,12 @@ export default function Home() {
                     onCharacterSelect={selectCharacter}
                     onExoticChange={(itemHash) => {
                         setSelectedExoticItemHash(itemHash);
-                        setSolveResult(null);
+                        invalidateSolve();
                     }}
                     onDumpStatChange={updateDumpStat}
                     onBalancedTuningChange={(enabled) => {
                         setAllowBalancedTuning(BALANCED_TUNING_ENABLED && enabled);
-                        setSolveResult(null);
+                        invalidateSolve();
                     }}
                     onTargetChange={updateTarget}
                     onSetRequirementChange={updateSetRequirement}
