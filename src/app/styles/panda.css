@@ -963,8 +963,16 @@
     gap: 0.65rem;
 }
 
+  .ebUtRS {
+    padding-inline: 0.68rem;
+}
+
   .iJxZKk {
     border-radius: 0.55rem;
+}
+
+  .dAOqJc {
+    transition: background-color 120ms ease, border-color 120ms ease;
 }
 
   .hUKEnS {
@@ -1401,6 +1409,10 @@
     font-size: 0.95rem;
 }
 
+  .jmaQla {
+    font-size: 0.7rem;
+}
+
   .cjbdHl {
     font-size: 0.62rem;
 }
@@ -1639,6 +1651,10 @@
 
   .OpwUI {
     min-height: 34px;
+}
+
+  .imfYCh {
+    min-height: 28px;
 }
 
   .jLPTbh {
@@ -2157,6 +2173,10 @@
     outline: 2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent);
 }
 
+  .fxxHOW:is(:focus-visible, [data-focus-visible]) {
+    outline: 2px solid color-mix(in srgb, var(--rose-accent) 42%, transparent);
+}
+
   .bFXeJS:is(:focus-visible, [data-focus-visible]) {
     outline-offset: 2px;
 }
@@ -2189,6 +2209,10 @@
     background: #c292ff;
 }
 
+  .irTnAR:is(:hover, [data-hover]) {
+    background: color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft));
+}
+
   .jRIdMi:is(:hover, [data-hover]) {
     border-color: color-mix(in srgb, var(--rose-accent) 52%, var(--rose-border));
 }
@@ -2199,6 +2223,10 @@
 
   .ieoCEF:is(:hover, [data-hover]) {
     border-color: #c292ff;
+}
+
+  .fCsajd:is(:hover, [data-hover]) {
+    border-color: color-mix(in srgb, var(--rose-accent) 44%, var(--rose-border));
 }
 
   .hvKMKj[data-disabled="false"][data-selected="false"]:hover {

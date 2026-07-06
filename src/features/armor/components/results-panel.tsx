@@ -28,6 +28,8 @@ type ResultsPanelProps = {
     progress: { active: boolean; label: string; current: number; total: number; percent: number };
     showTuningResults: boolean;
     visibleLimit: number;
+    expandedBuildKey: string | null;
+    onExpandedBuildKeyChange: (key: string | null) => void;
     onSort: (key: VisibleResultSortKey) => void;
 };
 
@@ -331,11 +333,9 @@ function BuildDetail(props: { build: ArmorBuild; showTuningResults: boolean }) {
 }
 
 export function ResultsPanel(props: ResultsPanelProps) {
-    const [expandedBuildKey, setExpandedBuildKey] = createSignal<string | null>(null);
-
     function toggleExpandedBuild(build: ArmorBuild) {
         const key = buildExpansionKey(build);
-        setExpandedBuildKey((current) => (current === key ? null : key));
+        props.onExpandedBuildKeyChange(props.expandedBuildKey === key ? null : key);
     }
 
     function resultCountLabel() {
@@ -401,7 +401,7 @@ export function ResultsPanel(props: ResultsPanelProps) {
                             armorSets={props.armorSets}
                             armorSetDisplayMode={props.armorSetDisplayMode}
                             dumpStat={props.dumpStat}
-                            expandedBuildKey={expandedBuildKey()}
+                            expandedBuildKey={props.expandedBuildKey}
                             sort={props.sort}
                             visibleLimit={props.visibleLimit}
                             onSort={props.onSort}

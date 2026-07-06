@@ -80,6 +80,16 @@ export const SUBCLASS_FRAGMENTS: SubclassFragment[] = [
 ];
 
 const FRAGMENTS_BY_ID = new Map(SUBCLASS_FRAGMENTS.map((fragment) => [fragment.id, fragment]));
+const FRAGMENTS_BY_HASH = new Map(SUBCLASS_FRAGMENTS.map((fragment) => [fragment.hash, fragment]));
+
+const SUBCLASS_NAME_MATCHERS: Array<{ subclass: SubclassType; names: string[] }> = [
+    { subclass: 'Prismatic', names: ['prismatic'] },
+    { subclass: 'Arc', names: ['arcstrider', 'striker', 'stormcaller'] },
+    { subclass: 'Solar', names: ['gunslinger', 'sunbreaker', 'dawnblade'] },
+    { subclass: 'Void', names: ['nightstalker', 'sentinel', 'voidwalker'] },
+    { subclass: 'Stasis', names: ['revenant', 'behemoth', 'shadebinder'] },
+    { subclass: 'Strand', names: ['threadrunner', 'berserker', 'broodweaver'] }
+];
 
 export function isSubclassType(value: string): value is SubclassType {
     return (SUBCLASS_TYPES as readonly string[]).includes(value);
@@ -107,6 +117,22 @@ export function sanitizeFragmentIds(ids: unknown, subclass: SubclassType) {
 
 export function fragmentsForSubclass(subclass: SubclassType) {
     return SUBCLASS_FRAGMENTS.filter((fragment) => fragment.subclass === subclass);
+}
+
+export function getFragmentByHash(hash: number) {
+    return FRAGMENTS_BY_HASH.get(hash) ?? null;
+}
+
+export function inferSubclassTypeFromName(name: string | undefined) {
+    const normalizedName = name?.toLowerCase() ?? '';
+
+    for (const matcher of SUBCLASS_NAME_MATCHERS) {
+        if (matcher.names.some((knownName) => normalizedName.includes(knownName))) {
+            return matcher.subclass;
+        }
+    }
+
+    return null;
 }
 
 export function sumFragmentBonuses(fragmentIds: readonly string[]): StatVector {

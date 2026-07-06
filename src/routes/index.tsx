@@ -1,5 +1,6 @@
 import {
     ARMOR_STATS,
+    type ArmorBuild,
     type ArmorBuildSort,
     type ArmorStat,
     type ArmorStatTargetCapsInput,
@@ -42,10 +43,18 @@ import { CalculatorControls } from '@/features/armor/components/calculator-contr
 import { ResultsPanel } from '@/features/armor/components/results-panel';
 import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
-import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
+import { type ArmorSetDisplayMode, buildExpansionKey, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
 import { STAT_BY_HASH } from '@/features/armor/stat-hashes';
-import { type SubclassType, sanitizeFragmentIds, sumFragmentBonuses } from '@/features/armor/subclass-fragments';
+import {
+    formatFragmentBonus,
+    fragmentsForSubclass,
+    getFragmentByHash,
+    inferSubclassTypeFromName,
+    type SubclassType,
+    sanitizeFragmentIds,
+    sumFragmentBonuses
+} from '@/features/armor/subclass-fragments';
 import {
     applyVerifiedTargetCap,
     clampTargetsToCaps,
@@ -74,6 +83,7 @@ const DEV_TIMING = import.meta.env.DEV;
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
+const SUBCLASS_BUCKET_HASH = 3284755031;
 
 type CachedBungieUser = {
     cachedBungieGlobalDisplayName?: string;
@@ -100,6 +110,14 @@ type LoadedBenchmarkBundle = {
 type DebugStatComponents = Record<string, { stats?: Record<string, { value?: number }> }>;
 type DebugSocketComponents = Record<string, { sockets?: Array<{ plugHash?: number }> }>;
 type DebugInstanceComponents = Record<string, { gearTier?: number; [key: string]: unknown }>;
+type EquippedSubclassImport = {
+    subclass: SubclassType;
+    fragmentIds: string[];
+    missingFragmentPlugHashes: number[];
+    subclassItemName: string;
+    subclassItemHash: number;
+    subclassItemInstanceId: string;
+};
 
 function readBungieUser(snapshot: VaultExportSnapshot | null): CachedBungieUser | undefined {
     return (snapshot?.membershipsResponse as CachedMembershipsResponse | undefined)?.Response?.bungieNetUser;
@@ -315,6 +333,96 @@ function statTotalDebug(stats: StatVector) {
     return ARMOR_STATS.reduce((total, stat) => total + stats[stat], 0);
 }
 
+function createDebugExpandedResultReport(builds: ArmorBuild[], expandedBuildKey: string | null) {
+    if (!expandedBuildKey) {
+        return {
+            available: false,
+            reason: 'No result row is expanded.'
+        };
+    }
+
+    const buildIndex = builds.findIndex((build) => buildExpansionKey(build) === expandedBuildKey);
+    if (buildIndex < 0) {
+        return {
+            available: false,
+            expandedBuildKey,
+            reason: 'The expanded result is no longer present in the retained result list.'
+        };
+    }
+
+    const build = builds[buildIndex];
+
+    return {
+        available: true,
+        expandedBuildKey,
+        retainedResultIndex: buildIndex,
+        displayRank: buildIndex + 1,
+        stats: build.stats,
+        totalStats: build.score.totalStats,
+        build
+    };
+}
+
+async function readEquippedSubclassImport(
+    snapshot: VaultExportSnapshot,
+    characterId: string,
+    definitions: LoadedManifestDefinition[],
+    loadDefinition: (hash: number) => Promise<ManifestInventoryItemDefinition | null>
+): Promise<EquippedSubclassImport | null> {
+    const profile = snapshot.profileResponse?.Response;
+    const equippedItems = profile?.characterEquipment?.data?.[characterId]?.items ?? [];
+    const definitionsByHash = new Map(definitions.map(({ hash, definition }) => [hash, definition]));
+    const subclassItem =
+        equippedItems.find((item) => item.bucketHash === SUBCLASS_BUCKET_HASH) ??
+        equippedItems.find((item) => definitionsByHash.get(item.itemHash)?.inventory?.bucketTypeHash === SUBCLASS_BUCKET_HASH);
+
+    if (!subclassItem?.itemInstanceId) {
+        return null;
+    }
+
+    const subclassDefinition = definitionsByHash.get(subclassItem.itemHash) ?? (await loadDefinition(subclassItem.itemHash));
+    const subclass = inferSubclassTypeFromName(subclassDefinition?.displayProperties?.name);
+    if (!subclass) {
+        return null;
+    }
+
+    const sockets = profile?.itemComponents?.sockets?.data?.[subclassItem.itemInstanceId]?.sockets ?? [];
+    const fragmentIds: string[] = [];
+    const missingFragmentPlugHashes: number[] = [];
+    const seen = new Set<string>();
+
+    for (const socket of sockets) {
+        const plugHash = socket.plugHash;
+        if (!plugHash) {
+            continue;
+        }
+
+        const fragment = getFragmentByHash(plugHash);
+        if (!fragment) {
+            continue;
+        }
+
+        if (fragment.subclass !== subclass) {
+            missingFragmentPlugHashes.push(plugHash);
+            continue;
+        }
+
+        if (!seen.has(fragment.id)) {
+            seen.add(fragment.id);
+            fragmentIds.push(fragment.id);
+        }
+    }
+
+    return {
+        subclass,
+        fragmentIds,
+        missingFragmentPlugHashes,
+        subclassItemName: subclassDefinition?.displayProperties?.name ?? `Subclass ${subclassItem.itemHash}`,
+        subclassItemHash: subclassItem.itemHash,
+        subclassItemInstanceId: subclassItem.itemInstanceId
+    };
+}
+
 export default function Home() {
     let targetCapRequestId = 0;
     let solveRequestId = 0;
@@ -348,6 +456,7 @@ export default function Home() {
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
+    const [expandedBuildKey, setExpandedBuildKey] = createSignal<string | null>(null);
     const [preferencesLoaded, setPreferencesLoaded] = createSignal(false);
     const selectedCharacter = createMemo(() => getSelectedCharacter(normalizedProfile(), selectedCharacterId()));
     const characterButtons = createMemo(() => getCharacterButtonOptions(normalizedProfile()));
@@ -373,6 +482,20 @@ export default function Home() {
     const selectedSetRequirements = createMemo(() => getSelectedSetRequirements(selectableSets(), setSelections()));
     const effectiveAllowBalancedTuning = createMemo(() => BALANCED_TUNING_ENABLED && allowBalancedTuning());
     const selectedFragmentBonuses = createMemo(() => sumFragmentBonuses(selectedFragmentIds()));
+    const selectedFragmentDetails = createMemo(() => {
+        const selectedIds = new Set(selectedFragmentIds());
+
+        return fragmentsForSubclass(selectedSubclass())
+            .filter((fragment) => selectedIds.has(fragment.id))
+            .map((fragment) => ({
+                id: fragment.id,
+                name: fragment.name,
+                subclass: fragment.subclass,
+                hash: fragment.hash,
+                bonuses: fragment.bonuses,
+                label: formatFragmentBonus(fragment)
+            }));
+    });
     const targetCapInput = createMemo(() => {
         const profile = normalizedProfile();
         const character = selectedCharacter();
@@ -516,6 +639,7 @@ export default function Home() {
     function invalidateSolve() {
         solveRequestId += 1;
         setSolveResult(null);
+        setExpandedBuildKey(null);
     }
 
     function resetBuildChoices() {
@@ -574,6 +698,7 @@ export default function Home() {
                     armorSetDisplayMode: armorSetDisplayMode(),
                     selectedSubclass: selectedSubclass(),
                     selectedFragmentIds: selectedFragmentIds(),
+                    selectedFragments: selectedFragmentDetails(),
                     selectedFragmentBonuses: selectedFragmentBonuses(),
                     dumpStat: dumpStat(),
                     allowBalancedTuning: effectiveAllowBalancedTuning(),
@@ -588,6 +713,13 @@ export default function Home() {
                 normalizedProfile: normalizedProfile(),
                 loadedManifestDefinitions: loadedManifestDefinitions(),
                 debug: {
+                    fragments: {
+                        selectedSubclass: selectedSubclass(),
+                        selectedFragmentIds: selectedFragmentIds(),
+                        selectedFragments: selectedFragmentDetails(),
+                        selectedFragmentBonuses: selectedFragmentBonuses()
+                    },
+                    maximizedResult: createDebugExpandedResultReport(resultBuilds(), expandedBuildKey()),
                     armor: createDebugArmorReport(loadedSnapshot(), normalizedProfile(), loadedManifestDefinitions())
                 },
                 solveResult: solveResult()
@@ -749,7 +881,33 @@ export default function Home() {
             return;
         }
 
-        await loadCachedCalculatorData({ silentMissing: true });
+        const token = await getValidToken();
+        if (!token) {
+            await loadCachedCalculatorData({ silentMissing: true });
+            return;
+        }
+
+        setAuthenticated(true);
+        try {
+            setStatus('loading');
+            setMessage('Refreshing profile from Bungie...');
+            setLoadProgress({
+                active: true,
+                label: 'Refreshing Bungie profile',
+                current: 0,
+                total: 0,
+                percent: 8
+            });
+            const nextSnapshot = (await exportVaultSnapshot(token)) as VaultExportSnapshot;
+            await applyLoadedCalculatorData(nextSnapshot, 'Bungie refresh');
+        } catch (error) {
+            await loadCachedCalculatorData({ silentMissing: true });
+            setMessage(
+                error instanceof Error
+                    ? `Refresh failed; loaded cache if available. ${error.message}`
+                    : 'Refresh failed; loaded cache if available.'
+            );
+        }
     }
 
     async function loadLocalTestCalculatorData(options: { silentMissing?: boolean } = {}) {
@@ -1067,6 +1225,67 @@ export default function Home() {
         });
     }
 
+    async function importFragmentsFromGame() {
+        try {
+            setStatus('loading');
+            setMessage('Importing equipped subclass fragments from Bungie...');
+            setLoadProgress({
+                active: true,
+                label: 'Importing equipped subclass',
+                current: 0,
+                total: 0,
+                percent: 35
+            });
+
+            const token = await getValidToken();
+            const freshSnapshot = token ? ((await exportVaultSnapshot(token)) as VaultExportSnapshot) : loadedSnapshot();
+            if (token) {
+                setAuthenticated(true);
+            }
+
+            if (!freshSnapshot) {
+                setStatus(normalizedProfile() ? 'done' : 'idle');
+                setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+                setMessage('No loaded profile is available to import fragments from.');
+                return;
+            }
+
+            const manifest = await createBungieManifestResolver();
+            const imported = await readEquippedSubclassImport(freshSnapshot, selectedCharacterId(), loadedManifestDefinitions(), (hash) =>
+                manifest.getInventoryItem(hash)
+            );
+
+            if (!imported) {
+                setStatus(normalizedProfile() ? 'done' : 'idle');
+                setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+                setMessage('Could not read an equipped subclass for the selected character.');
+                return;
+            }
+
+            setLoadedSnapshot(freshSnapshot);
+            setSelectedSubclass(imported.subclass);
+            setSelectedFragmentIds(sanitizeFragmentIds(imported.fragmentIds, imported.subclass));
+            setTargetCapPriorityStat(null);
+            invalidateSolve();
+            setStatus('done');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(
+                [
+                    `Imported ${imported.subclassItemName}: ${imported.fragmentIds.length} known fragments selected.`,
+                    imported.missingFragmentPlugHashes.length > 0
+                        ? `Ignored ${imported.missingFragmentPlugHashes.length} fragment plug(s) that are not in rose yet.`
+                        : null
+                ]
+                    .filter(Boolean)
+                    .join(' ')
+            );
+        } catch (error) {
+            setStatus('error');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(error instanceof Error ? error.message : 'Unknown equipped subclass import failure.');
+        }
+    }
+
     function updateTarget(stat: ArmorStat, value: string) {
         const cap = dumpStat() === stat ? 0 : clampTarget(targetCaps()[stat]);
         const numericValue = snapStatTarget(Number(value) || 0, cap, effectiveAllowBalancedTuning());
@@ -1197,6 +1416,7 @@ export default function Home() {
                     onArmorSetDisplayModeChange={setArmorSetDisplayMode}
                     onSubclassChange={updateSubclass}
                     onFragmentToggle={toggleFragment}
+                    onImportFragmentsFromGame={importFragmentsFromGame}
                     onExoticChange={(itemHash) => {
                         setSelectedExoticItemHash(itemHash);
                         invalidateSolve();
@@ -1225,6 +1445,8 @@ export default function Home() {
                     progress={loadProgress()}
                     showTuningResults={showTuningResults()}
                     visibleLimit={VISIBLE_RESULT_LIMIT}
+                    expandedBuildKey={expandedBuildKey()}
+                    onExpandedBuildKeyChange={setExpandedBuildKey}
                     onSort={toggleResultSort}
                 />
             }

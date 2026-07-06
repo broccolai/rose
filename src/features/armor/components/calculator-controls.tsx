@@ -33,6 +33,7 @@ type CalculatorControlsProps = {
     onArmorSetDisplayModeChange: (mode: ArmorSetDisplayMode) => void;
     onSubclassChange: (subclass: SubclassType) => void;
     onFragmentToggle: (fragmentId: string) => void;
+    onImportFragmentsFromGame: () => void;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
     onTargetChange: (stat: ArmorStat, value: string) => void;
@@ -182,6 +183,14 @@ const fragmentHeader = css({
     alignItems: 'center'
 });
 
+const fragmentHeaderActions = css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '0.5rem',
+    flexWrap: 'wrap'
+});
+
 const fragmentSubclassSelect = css({
     h: '34px',
     minH: '34px',
@@ -194,6 +203,29 @@ const fragmentCount = css({
     fontSize: '0.72rem',
     fontVariantNumeric: 'tabular-nums',
     whiteSpace: 'nowrap'
+});
+
+const fragmentImportButton = css({
+    minH: '28px',
+    px: '0.68rem',
+    border: '1px solid var(--rose-border)',
+    borderRadius: '0.55rem',
+    bg: 'var(--rose-surface-soft)',
+    color: 'var(--rose-text)',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.7rem',
+    fontWeight: 720,
+    lineHeight: 1,
+    cursor: 'pointer',
+    transition: 'background-color 120ms ease, border-color 120ms ease',
+    _hover: {
+        bg: 'color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft))',
+        borderColor: 'color-mix(in srgb, var(--rose-accent) 44%, var(--rose-border))'
+    },
+    _focusVisible: {
+        outline: '2px solid color-mix(in srgb, var(--rose-accent) 42%, transparent)',
+        outlineOffset: '2px'
+    }
 });
 
 const fragmentWipTag = css({
@@ -308,7 +340,10 @@ function DumpControls(props: Pick<CalculatorControlsProps, 'dumpStat' | 'onDumpS
 }
 
 function FragmentControls(
-    props: Pick<CalculatorControlsProps, 'onFragmentToggle' | 'onSubclassChange' | 'selectedFragmentIds' | 'selectedSubclass'>
+    props: Pick<
+        CalculatorControlsProps,
+        'onFragmentToggle' | 'onImportFragmentsFromGame' | 'onSubclassChange' | 'selectedFragmentIds' | 'selectedSubclass'
+    >
 ) {
     const selectedIds = () => new Set(props.selectedFragmentIds);
     const fragments = () => fragmentsForSubclass(props.selectedSubclass);
@@ -319,7 +354,12 @@ function FragmentControls(
                 <h2 class={sectionTitle}>
                     Fragments <span class={fragmentWipTag}>(WIP UI)</span>
                 </h2>
-                <span class={fragmentCount}>{props.selectedFragmentIds.length} selected</span>
+                <div class={fragmentHeaderActions}>
+                    <button class={fragmentImportButton} type="button" onClick={props.onImportFragmentsFromGame}>
+                        Import from game
+                    </button>
+                    <span class={fragmentCount}>{props.selectedFragmentIds.length} selected</span>
+                </div>
             </div>
             <select
                 class={`${input} ${fragmentSubclassSelect}`}
@@ -457,6 +497,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                     selectedFragmentIds={props.selectedFragmentIds}
                     onSubclassChange={props.onSubclassChange}
                     onFragmentToggle={props.onFragmentToggle}
+                    onImportFragmentsFromGame={props.onImportFragmentsFromGame}
                 />
 
                 <section class={section} aria-label="Sets">
