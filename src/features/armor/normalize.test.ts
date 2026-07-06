@@ -191,6 +191,100 @@ describe('loaded benchmark bundle input', () => {
         expect(profile.armor[0] && ARMOR_STATS.reduce((total, stat) => total + profile.armor[0].baseStats[stat], 0)).toBe(90);
     });
 
+    test('keeps already-masterworked displayed stats when the masterwork plug definition is broader than the live effect', async () => {
+        const itemInstanceId = 'already-masterworked-armor';
+        const itemHash = 1201;
+        const masterworkHash = 1202;
+        const weaponsModHash = 1203;
+        const weaponsMinusHealthHash = 1204;
+        const weaponsStatHash = 1205;
+        const superStatHash = 1206;
+        const classStatHash = 1207;
+        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+            [
+                itemHash,
+                {
+                    hash: itemHash,
+                    itemType: 2,
+                    classType: 1,
+                    displayProperties: { name: 'Already Masterworked Boots', description: '' },
+                    inventory: { bucketTypeHash: 20886954, tierType: 6, tierTypeName: 'Exotic' }
+                }
+            ],
+            [masterworkHash, plug(masterworkHash, 'Upgrade Armor', 'v460.plugs.armor.masterworks', allArmorStats(5))],
+            [
+                weaponsModHash,
+                plug(weaponsModHash, 'Weapons Mod', 'enhancements.v2_general', [{ statTypeHash: ARMOR_STAT_HASHES.weapons, value: 10 }])
+            ],
+            [
+                weaponsMinusHealthHash,
+                plug(weaponsMinusHealthHash, '+Weapons / -Health', 'core.gear_systems.armor_tiering.plugs.tuning.mods', [
+                    { statTypeHash: ARMOR_STAT_HASHES.weapons, value: 5 },
+                    { statTypeHash: ARMOR_STAT_HASHES.health, value: -5 }
+                ])
+            ],
+            [weaponsStatHash, plug(weaponsStatHash, '', 'armor_stats', [{ statTypeHash: ARMOR_STAT_HASHES.weapons, value: 30 }])],
+            [superStatHash, plug(superStatHash, '', 'armor_stats', [{ statTypeHash: ARMOR_STAT_HASHES.super, value: 25 }])],
+            [classStatHash, plug(classStatHash, '', 'armor_stats', [{ statTypeHash: ARMOR_STAT_HASHES.class, value: 20 }])]
+        ]);
+        const profile = await normalizeVaultExport(
+            {
+                profileResponse: {
+                    Response: {
+                        profileInventory: { data: { items: [{ itemHash, itemInstanceId }] } },
+                        characters: { data: { character: { classType: 1 } } },
+                        itemComponents: {
+                            instances: { data: { [itemInstanceId]: { gearTier: 5 } } },
+                            stats: {
+                                data: {
+                                    [itemInstanceId]: {
+                                        stats: {
+                                            [ARMOR_STAT_HASHES.health]: { value: 0 },
+                                            [ARMOR_STAT_HASHES.melee]: { value: 5 },
+                                            [ARMOR_STAT_HASHES.grenade]: { value: 5 },
+                                            [ARMOR_STAT_HASHES.super]: { value: 25 },
+                                            [ARMOR_STAT_HASHES.class]: { value: 20 },
+                                            [ARMOR_STAT_HASHES.weapons]: { value: 45 }
+                                        }
+                                    }
+                                }
+                            },
+                            sockets: {
+                                data: {
+                                    [itemInstanceId]: {
+                                        sockets: [
+                                            { plugHash: weaponsModHash },
+                                            { plugHash: masterworkHash },
+                                            { plugHash: weaponsStatHash },
+                                            { plugHash: superStatHash },
+                                            { plugHash: classStatHash },
+                                            { plugHash: weaponsMinusHealthHash }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                async getInventoryItem(hash) {
+                    return definitions.get(hash) ?? null;
+                }
+            }
+        );
+
+        expect(profile.armor[0]?.baseStats).toEqual({
+            health: 5,
+            melee: 5,
+            grenade: 5,
+            super: 25,
+            class: 20,
+            weapons: 30
+        });
+        expect(profile.armor[0] && ARMOR_STATS.reduce((total, stat) => total + profile.armor[0].baseStats[stat], 0)).toBe(90);
+    });
+
     test('excludes lower gear tiers even when they have modern sockets', async () => {
         const itemHash = 4001;
         const itemInstanceId = 'tier-3-armor';

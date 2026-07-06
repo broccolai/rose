@@ -184,10 +184,7 @@ async function normalizeArmorItem(
     const socketAdjustments = await readSocketedStatAdjustments(sockets, manifest);
     const statsWithoutChosenPlugs = socketAdjustments.reduce((stats, adjustment) => subtractStats(stats, adjustment.deltas), baseStats);
     const currentMasterwork = await readSocketedMasterworkAdjustment(sockets, manifest);
-    const unmasterworkedBaseStats = currentMasterwork
-        ? subtractStats(statsWithoutChosenPlugs, currentMasterwork.deltas)
-        : statsWithoutChosenPlugs;
-    const normalizedBaseStats = addAssumedMasterworkStats(unmasterworkedBaseStats);
+    const normalizedBaseStats = normalizeAssumedMasterworkStats(statsWithoutChosenPlugs, currentMasterwork);
     if (!hasModernArmorStatShape(normalizedBaseStats)) {
         return null;
     }
@@ -348,6 +345,18 @@ function readItemStats(stats: Record<string, { value?: number }>): StatVector {
     }
 
     return normalized;
+}
+
+function normalizeAssumedMasterworkStats(statsWithoutChosenPlugs: StatVector, currentMasterwork: StatAdjustment | null): StatVector {
+    if (statTotalLocal(statsWithoutChosenPlugs) >= TIER_FIVE_MASTERWORKED_MIN_TOTAL && hasModernArmorStatShape(statsWithoutChosenPlugs)) {
+        return { ...statsWithoutChosenPlugs };
+    }
+
+    const unmasterworkedBaseStats = currentMasterwork
+        ? subtractStats(statsWithoutChosenPlugs, currentMasterwork.deltas)
+        : statsWithoutChosenPlugs;
+
+    return addAssumedMasterworkStats(unmasterworkedBaseStats);
 }
 
 function addAssumedMasterworkStats(stats: StatVector): StatVector {
