@@ -36,6 +36,7 @@ const TUNING_PLUG_CATEGORY = 'core.gear_systems.armor_tiering.plugs.tuning.mods'
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const ASSUMED_MASTERWORK_STAT_BONUS = 5;
+const TIER_FIVE_MASTERWORKED_MIN_TOTAL = 88;
 
 const BUCKET_SLOT_BY_HASH: Record<number, ArmorSlot> = {
     3448274439: 'helmet',
@@ -350,13 +351,25 @@ function readItemStats(stats: Record<string, { value?: number }>): StatVector {
 }
 
 function addAssumedMasterworkStats(stats: StatVector): StatVector {
-    const next = emptyStats();
+    const currentTotal = statTotalLocal(stats);
+    if (currentTotal >= TIER_FIVE_MASTERWORKED_MIN_TOTAL) {
+        return { ...stats };
+    }
 
-    for (const stat of ARMOR_STATS) {
-        next[stat] = stats[stat] + ASSUMED_MASTERWORK_STAT_BONUS;
+    const next = { ...stats };
+    const masterworkStats = [...ARMOR_STATS]
+        .sort((left, right) => stats[left] - stats[right] || ARMOR_STATS.indexOf(left) - ARMOR_STATS.indexOf(right))
+        .slice(0, 3);
+
+    for (const stat of masterworkStats) {
+        next[stat] += ASSUMED_MASTERWORK_STAT_BONUS;
     }
 
     return next;
+}
+
+function statTotalLocal(stats: StatVector) {
+    return ARMOR_STATS.reduce((total, stat) => total + stats[stat], 0);
 }
 
 function readGearTier(profile: NonNullable<VaultExportSnapshot['profileResponse']>['Response'] | undefined, itemInstanceId: string) {

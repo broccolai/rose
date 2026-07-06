@@ -104,10 +104,10 @@ describe('loaded benchmark bundle input', () => {
 
         expect(profile.armor).toHaveLength(1);
         expect(armor?.baseStats).toMatchObject({
-            health: 25,
+            health: 20,
             melee: 5,
-            grenade: 35,
-            super: 30,
+            grenade: 30,
+            super: 25,
             class: 5,
             weapons: 5
         });
@@ -289,6 +289,7 @@ describe('loaded benchmark bundle input', () => {
         });
 
         expect(profile.armor.every((item) => ARMOR_STATS.every((stat) => item.baseStats[stat] % 5 === 0))).toBe(true);
+        expect(profile.armor.every((item) => ARMOR_STATS.reduce((total, stat) => total + item.baseStats[stat], 0) <= 90)).toBe(true);
     });
 
     test('finds the saved Warlock Nezarec melee and weapons build when present', async () => {
