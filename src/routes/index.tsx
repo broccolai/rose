@@ -44,6 +44,7 @@ import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
+import { STAT_BY_HASH } from '@/features/armor/stat-hashes';
 import { type SubclassType, sanitizeFragmentIds, sumFragmentBonuses } from '@/features/armor/subclass-fragments';
 import {
     applyVerifiedTargetCap,
@@ -72,6 +73,7 @@ const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test
 const DEV_TIMING = import.meta.env.DEV;
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
+const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 
 type CachedBungieUser = {
     cachedBungieGlobalDisplayName?: string;
@@ -94,6 +96,10 @@ type LoadedBenchmarkBundle = {
         inventoryItemDefinitions?: Record<string, ManifestInventoryItemDefinition>;
     };
 };
+
+type DebugStatComponents = Record<string, { stats?: Record<string, { value?: number }> }>;
+type DebugSocketComponents = Record<string, { sockets?: Array<{ plugHash?: number }> }>;
+type DebugInstanceComponents = Record<string, { gearTier?: number; [key: string]: unknown }>;
 
 function readBungieUser(snapshot: VaultExportSnapshot | null): CachedBungieUser | undefined {
     return (snapshot?.membershipsResponse as CachedMembershipsResponse | undefined)?.Response?.bungieNetUser;
@@ -150,6 +156,163 @@ function logDevTiming(label: string, details: Record<string, unknown>) {
 
 function armorSlotCounts(input: ArmorStatTargetCapsInput | SolveArmorInput) {
     return Object.fromEntries(Object.entries(input.armor).map(([slot, armor]) => [slot, armor.length]));
+}
+
+function createDebugArmorReport(
+    snapshot: VaultExportSnapshot | null,
+    profile: NormalizedArmorProfile | null,
+    definitions: LoadedManifestDefinition[]
+) {
+    if (!snapshot || !profile) {
+        return {
+            available: false,
+            reason: 'No loaded vault snapshot or normalized profile.'
+        };
+    }
+
+    const definitionByHash = new Map(definitions.map(({ hash, definition }) => [hash, definition]));
+    const profileResponse = snapshot.profileResponse?.Response;
+    const statComponents = profileResponse?.itemComponents?.stats?.data ?? {};
+    const socketComponents = profileResponse?.itemComponents?.sockets?.data ?? {};
+    const instanceComponents = profileResponse?.itemComponents?.instances?.data ?? {};
+
+    return {
+        available: true,
+        note: 'rose assumes every normalized armor item is fully masterworked. currentMasterwork describes only what Bungie reported as socketed right now.',
+        armor: profile.armor.map((item) => {
+            const instanceIds = [item.itemInstanceId, ...(item.equivalentItemInstanceIds ?? [])];
+
+            return {
+                itemInstanceId: item.itemInstanceId,
+                equivalentItemInstanceIds: item.equivalentItemInstanceIds ?? [],
+                itemHash: item.itemHash,
+                name: item.name,
+                slot: item.slot,
+                classType: item.classType,
+                tier: item.tier,
+                isExotic: item.isExotic,
+                normalizedBaseStats: item.baseStats,
+                normalizedBaseTotal: statTotalDebug(item.baseStats),
+                normalizedTuningOptions: item.tuningOptions.map((option) => ({
+                    id: option.id,
+                    name: option.name,
+                    deltas: option.deltas
+                })),
+                instances: instanceIds.map((itemInstanceId) =>
+                    createDebugArmorInstanceReport(itemInstanceId, statComponents, socketComponents, instanceComponents, definitionByHash)
+                )
+            };
+        })
+    };
+}
+
+function createDebugArmorInstanceReport(
+    itemInstanceId: string,
+    statComponents: DebugStatComponents,
+    socketComponents: DebugSocketComponents,
+    instanceComponents: DebugInstanceComponents,
+    definitionByHash: Map<number, ManifestInventoryItemDefinition>
+) {
+    const rawStats = readDebugStats(statComponents?.[itemInstanceId]?.stats ?? {});
+    const sockets = socketComponents?.[itemInstanceId]?.sockets ?? [];
+    const socketReports = sockets.map((socket, socketIndex) => createDebugSocketReport(socket.plugHash, socketIndex, definitionByHash));
+    const masterworkSockets = socketReports.filter((socket) => socket.plugCategory?.startsWith(MASTERWORK_PLUG_CATEGORY_PREFIX));
+    const currentMasterworkStats = sumDebugStats(masterworkSockets.map((socket) => socket.deltas));
+
+    return {
+        itemInstanceId,
+        gearTier: instanceComponents?.[itemInstanceId]?.gearTier,
+        rawDisplayedStats: rawStats,
+        rawDisplayedTotal: statTotalDebug(rawStats),
+        currentMasterwork: {
+            detected: masterworkSockets.length > 0,
+            plugCount: masterworkSockets.length,
+            total: statTotalDebug(currentMasterworkStats),
+            deltas: currentMasterworkStats,
+            plugs: masterworkSockets.map(({ socketIndex, plugHash, name, plugCategory, deltas }) => ({
+                socketIndex,
+                plugHash,
+                name,
+                plugCategory,
+                deltas
+            })),
+            roseAssumption:
+                masterworkSockets.length > 0
+                    ? 'socketed masterwork was detected in raw Bungie data'
+                    : 'no socketed masterwork plug detected; rose still assumes fully masterworked for solving'
+        },
+        sockets: socketReports
+    };
+}
+
+function createDebugSocketReport(
+    plugHash: number | undefined,
+    socketIndex: number,
+    definitionByHash: Map<number, ManifestInventoryItemDefinition>
+) {
+    const definition = plugHash ? definitionByHash.get(plugHash) : undefined;
+
+    return {
+        socketIndex,
+        plugHash,
+        name: definition?.displayProperties?.name,
+        description: definition?.displayProperties?.description,
+        plugCategory: definition?.plug?.plugCategoryIdentifier,
+        deltas: definition ? readDebugInvestmentStats(definition) : emptyDebugStats()
+    };
+}
+
+function readDebugStats(stats: Record<string, { value?: number }>): StatVector {
+    const normalized = emptyDebugStats();
+
+    for (const [statHash, statValue] of Object.entries(stats)) {
+        const stat = STAT_BY_HASH[statHash];
+        if (stat) {
+            normalized[stat] = statValue.value ?? 0;
+        }
+    }
+
+    return normalized;
+}
+
+function readDebugInvestmentStats(definition: ManifestInventoryItemDefinition): StatVector {
+    const normalized = emptyDebugStats();
+
+    for (const investmentStat of definition.investmentStats ?? []) {
+        const stat = STAT_BY_HASH[String(investmentStat.statTypeHash)];
+        if (stat) {
+            normalized[stat] += investmentStat.value;
+        }
+    }
+
+    return normalized;
+}
+
+function sumDebugStats(vectors: StatVector[]): StatVector {
+    const total = emptyDebugStats();
+
+    for (const vector of vectors) {
+        for (const stat of ARMOR_STATS) {
+            total[stat] += vector[stat];
+        }
+    }
+
+    return total;
+}
+
+function emptyDebugStats(): StatVector {
+    return {
+        health: 0,
+        melee: 0,
+        grenade: 0,
+        super: 0,
+        class: 0,
+        weapons: 0
+    };
+}
+
+function statTotalDebug(stats: StatVector) {
+    return ARMOR_STATS.reduce((total, stat) => total + stats[stat], 0);
 }
 
 export default function Home() {
@@ -421,6 +584,9 @@ export default function Home() {
                 vaultSnapshot: loadedSnapshot(),
                 normalizedProfile: normalizedProfile(),
                 loadedManifestDefinitions: loadedManifestDefinitions(),
+                debug: {
+                    armor: createDebugArmorReport(loadedSnapshot(), normalizedProfile(), loadedManifestDefinitions())
+                },
                 solveResult: solveResult()
             },
             'rose-debug-vault-export'

@@ -3,8 +3,10 @@ import { describe, expect, test } from 'bun:test';
 import {
     type ArmorItem,
     type ArmorSlot,
+    type ArmorStat,
     calculateArmorStatTargetCap,
     calculateArmorStatTargetCaps,
+    createAdjustment,
     createDefaultStatModOptions,
     createTierFiveTuningOptions,
     type StatVector,
@@ -48,6 +50,33 @@ function inventory(items = slots.map((slot) => item(slot))) {
     };
 }
 
+function mod(stat: ArmorStat, value: 5 | 10) {
+    return createAdjustment(`stat-mod:${stat}:${value}`, `+${value} ${stat}`, { [stat]: value });
+}
+
+function tuning(increased: ArmorStat, decreased: ArmorStat) {
+    return createAdjustment(`tuning:${increased}:plus5:${decreased}:minus5`, `+5 ${increased}, -5 ${decreased}`, {
+        [increased]: 5,
+        [decreased]: -5
+    });
+}
+
+function realBuildItem(
+    slot: ArmorSlot,
+    name: string,
+    baseStats: StatVector,
+    choices: [statMod: ReturnType<typeof mod>, tuning: ReturnType<typeof tuning>]
+) {
+    return item(slot, {
+        name,
+        classType: 'warlock',
+        tier: 5,
+        baseStats,
+        statModOptions: [{ id: 'none', name: 'No mod', deltas: {} }, choices[0]],
+        tuningOptions: [{ id: 'none', name: 'No tuning', deltas: {} }, choices[1]]
+    });
+}
+
 describe('solveArmor', () => {
     test('matches exact stat targets', () => {
         const result = solveArmor({
@@ -78,6 +107,13 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(60);
     });
 
+    test('offers minor and major stat mod choices', () => {
+        const options = createDefaultStatModOptions();
+
+        expect(options.some((option) => option.id === 'stat-mod:weapons:5' && option.deltas.weapons === 5)).toBe(true);
+        expect(options.some((option) => option.id === 'stat-mod:weapons:10' && option.deltas.weapons === 10)).toBe(true);
+    });
+
     test('applies selected fragment stat bonuses to final stats and target checks', () => {
         const result = solveArmor({
             characterId: 'hunter',
@@ -91,6 +127,63 @@ describe('solveArmor', () => {
         expect(result.ok).toBe(true);
         expect(result.ok && result.builds[0]?.stats.weapons).toBe(60);
         expect(result.ok && result.builds[0]?.stats.health).toBe(40);
+    });
+
+    test('matches a real tier five masterworked build with tuning mods and stasis fragments', () => {
+        const result = solveArmor({
+            characterId: 'warlock',
+            classType: 'warlock',
+            dumpStat: 'health',
+            statTargets: {
+                health: 20,
+                melee: 55,
+                grenade: 50,
+                super: 120,
+                class: 80,
+                weapons: 190
+            },
+            statBonuses: {
+                health: 20,
+                melee: -20,
+                super: 10,
+                class: 10
+            },
+            setRequirements: [],
+            armor: inventory([
+                realBuildItem('helmet', 'Real Helmet', { health: 5, melee: 5, grenade: 20, super: 25, class: 5, weapons: 30 }, [
+                    mod('weapons', 10),
+                    tuning('super', 'health')
+                ]),
+                realBuildItem('arms', 'Real Gauntlets', { health: 5, melee: 20, grenade: 5, super: 25, class: 5, weapons: 30 }, [
+                    mod('weapons', 10),
+                    tuning('grenade', 'health')
+                ]),
+                realBuildItem('chest', 'Real Chestpiece', { health: 5, melee: 20, grenade: 5, super: 25, class: 5, weapons: 30 }, [
+                    mod('weapons', 10),
+                    tuning('grenade', 'health')
+                ]),
+                realBuildItem('legs', 'Real Legs', { health: 5, melee: 20, grenade: 5, super: 5, class: 30, weapons: 25 }, [
+                    mod('weapons', 5),
+                    tuning('melee', 'health')
+                ]),
+                realBuildItem('classItem', 'Real Class Item', { health: 5, melee: 5, grenade: 5, super: 25, class: 20, weapons: 30 }, [
+                    mod('weapons', 10),
+                    tuning('class', 'health')
+                ])
+            ]),
+            maxResults: 1
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats).toEqual({
+            health: 20,
+            melee: 55,
+            grenade: 50,
+            super: 120,
+            class: 80,
+            weapons: 190
+        });
+        expect(result.ok && result.builds[0]?.score.totalStats).toBe(515);
     });
 
     test('uses pair tuning without a dump stat', () => {

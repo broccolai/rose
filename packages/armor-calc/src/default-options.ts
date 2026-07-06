@@ -5,7 +5,13 @@ export const NO_STAT_MOD: StatAdjustment = createAdjustment('stat-mod:none', 'No
 export const NO_TUNING: StatAdjustment = createAdjustment('tuning:none', 'No tuning', {});
 
 export function createDefaultStatModOptions() {
-    return [NO_STAT_MOD, ...ARMOR_STATS.map((stat) => createAdjustment(`stat-mod:${stat}:10`, `+10 ${stat}`, { [stat]: 10 }))];
+    return [
+        NO_STAT_MOD,
+        ...ARMOR_STATS.flatMap((stat) => [
+            createAdjustment(`stat-mod:${stat}:5`, `+5 ${stat}`, { [stat]: 5 }),
+            createAdjustment(`stat-mod:${stat}:10`, `+10 ${stat}`, { [stat]: 10 })
+        ])
+    ];
 }
 
 export function createTierFiveTuningOptions(item: Pick<ArmorItem, 'baseStats' | 'tier'>) {
