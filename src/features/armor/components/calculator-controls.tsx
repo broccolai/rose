@@ -269,6 +269,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                 <section class={section} aria-label="Targets">
                     <h2 class={sectionTitle}>Targets</h2>
                     <StatTargetFields
+                        allowBalancedTuning={props.allowBalancedTuning}
                         dumpStat={props.dumpStat}
                         onTargetChange={props.onTargetChange}
                         targetCapsPending={props.targetCapsPending}

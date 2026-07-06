@@ -6,6 +6,7 @@ import type { CharacterButtonClass, CharacterButtonOption } from '@/features/arm
 import { ControlSection } from '@/features/armor/components/control-section';
 import { field, input, label, MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
+import { snapStatTarget, statTargetMax, statTargetStep } from '@/features/armor/target-cap-state';
 
 const MAX_STAT_TARGET = 200;
 const STAT_SCALE_VALUES = [0, 25, 50, 75, 100, 125, 150, 175, 200] as const;
@@ -346,6 +347,7 @@ export function TuningControls(
 }
 
 function StatTargetSlider(props: {
+    allowBalancedTuning: boolean;
     cap: number;
     disabled: boolean;
     label: string;
@@ -354,7 +356,8 @@ function StatTargetSlider(props: {
     value: number;
     onCommit: (stat: ArmorStat, value: string) => void;
 }) {
-    const committedValue = () => Math.min(props.value, props.cap);
+    const maxValue = () => statTargetMax(props.cap, props.allowBalancedTuning);
+    const committedValue = () => snapStatTarget(props.value, props.cap, props.allowBalancedTuning);
     const [draftValue, setDraftValue] = createSignal(committedValue());
     const [draggingPointerId, setDraggingPointerId] = createSignal<number | null>(null);
 
@@ -363,7 +366,7 @@ function StatTargetSlider(props: {
     });
 
     function clampDraft(value: string | number) {
-        return Math.max(0, Math.min(props.cap, MAX_STAT_TARGET, Math.trunc(Number(value) || 0)));
+        return snapStatTarget(Number(value) || 0, props.cap, props.allowBalancedTuning);
     }
 
     function valueFromPointer(event: PointerEvent & { currentTarget: HTMLElement }) {
@@ -383,7 +386,7 @@ function StatTargetSlider(props: {
     }
 
     function startDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
-        if (props.disabled || props.pending || props.cap <= 0) {
+        if (props.disabled || props.pending || maxValue() <= 0) {
             return;
         }
 
@@ -429,17 +432,18 @@ function StatTargetSlider(props: {
     }
 
     function commitKeyboardChange(event: KeyboardEvent) {
-        if (props.disabled || props.pending || props.cap <= 0) {
+        if (props.disabled || props.pending || maxValue() <= 0) {
             return;
         }
 
+        const step = statTargetStep(props.allowBalancedTuning);
         const keyDeltas: Record<string, number> = {
-            ArrowDown: -1,
-            ArrowLeft: -1,
-            ArrowRight: 1,
-            ArrowUp: 1,
-            PageDown: -10,
-            PageUp: 10
+            ArrowDown: -step,
+            ArrowLeft: -step,
+            ArrowRight: step,
+            ArrowUp: step,
+            PageDown: -step * 5,
+            PageUp: step * 5
         };
         const currentValue = draftValue();
         let nextValue: number | null = null;
@@ -449,7 +453,7 @@ function StatTargetSlider(props: {
         } else if (event.key === 'Home') {
             nextValue = 0;
         } else if (event.key === 'End') {
-            nextValue = props.cap;
+            nextValue = maxValue();
         }
 
         if (nextValue !== null) {
@@ -469,17 +473,17 @@ function StatTargetSlider(props: {
                 <div
                     class={statSlider}
                     role="slider"
-                    style={`--stat-value-percent: ${percent(draftValue())}%; --stat-cap-percent: ${percent(props.cap)}%;`}
-                    aria-disabled={props.disabled || props.cap <= 0}
+                    style={`--stat-value-percent: ${percent(draftValue())}%; --stat-cap-percent: ${percent(maxValue())}%;`}
+                    aria-disabled={props.disabled || maxValue() <= 0}
                     aria-label={props.label}
-                    aria-valuemax={props.cap}
+                    aria-valuemax={maxValue()}
                     aria-valuemin={0}
                     aria-valuenow={draftValue()}
                     aria-busy={props.pending}
-                    data-disabled={props.disabled || props.pending || props.cap <= 0}
+                    data-disabled={props.disabled || props.pending || maxValue() <= 0}
                     data-dragging={draggingPointerId() !== null}
                     data-pending={props.pending}
-                    tabIndex={props.disabled || props.pending || props.cap <= 0 ? -1 : 0}
+                    tabIndex={props.disabled || props.pending || maxValue() <= 0 ? -1 : 0}
                     onBlur={() => {
                         setDraggingPointerId(null);
                         commit(draftValue());
@@ -494,14 +498,17 @@ function StatTargetSlider(props: {
                 </div>
             </div>
             <span class={statValue}>
-                {draftValue()} <span class={statCap}>/ {props.pending ? 'checking' : props.cap}</span>
+                {draftValue()} <span class={statCap}>/ {props.pending ? 'checking' : maxValue()}</span>
             </span>
         </div>
     );
 }
 
 export function StatTargetFields(
-    props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'>
+    props: Pick<
+        ClassStatSettingsProps,
+        'allowBalancedTuning' | 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'
+    >
 ) {
     function percent(value: number) {
         return Math.max(0, Math.min(100, (value / MAX_STAT_TARGET) * 100));
@@ -527,6 +534,7 @@ export function StatTargetFields(
 
                     return (
                         <StatTargetSlider
+                            allowBalancedTuning={props.allowBalancedTuning}
                             cap={cap()}
                             disabled={props.dumpStat === stat}
                             label={STAT_LABELS[stat]}
@@ -543,12 +551,16 @@ export function StatTargetFields(
 }
 
 export function StatTargetControls(
-    props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'>
+    props: Pick<
+        ClassStatSettingsProps,
+        'allowBalancedTuning' | 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'
+    >
 ) {
     return (
         <ControlSection title="Stat targets">
             <StatTargetFields
                 dumpStat={props.dumpStat}
+                allowBalancedTuning={props.allowBalancedTuning}
                 onTargetChange={props.onTargetChange}
                 targetCapsPending={props.targetCapsPending}
                 targetCaps={props.targetCaps}
@@ -602,6 +614,7 @@ export function ClassStatSettings(props: ClassStatSettingsProps) {
 
             <div class={settingsColumn}>
                 <StatTargetControls
+                    allowBalancedTuning={props.allowBalancedTuning}
                     dumpStat={props.dumpStat}
                     onTargetChange={props.onTargetChange}
                     targetCapsPending={props.targetCapsPending}

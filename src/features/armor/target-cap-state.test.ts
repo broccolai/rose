@@ -5,6 +5,8 @@ import {
     clampTargetsToCaps,
     createPendingTargetCaps,
     MAX_STAT_TARGET_CAPS,
+    snapStatTarget,
+    statTargetMax,
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
 
@@ -62,5 +64,19 @@ describe('target cap state', () => {
         expect(caps.health).toBe(50);
         expect(targetsAreWithinCaps(targets, caps, '')).toBe(false);
         expect(clampTargetsToCaps(targets, caps, '')).toEqual({ ...targets, health: 50 });
+    });
+
+    test('snaps targets to five-point values when balanced tuning is disabled', () => {
+        expect(snapStatTarget(181, 200, false)).toBe(180);
+        expect(snapStatTarget(183, 200, false)).toBe(185);
+        expect(snapStatTarget(198, 200, false)).toBe(200);
+        expect(statTargetMax(143, false)).toBe(140);
+        expect(snapStatTarget(143, 143, false)).toBe(140);
+    });
+
+    test('keeps one-point targets available when balanced tuning is enabled', () => {
+        expect(snapStatTarget(181, 200, true)).toBe(181);
+        expect(statTargetMax(143, true)).toBe(143);
+        expect(clampTargetsToCaps({ ...MAX_STAT_TARGET_CAPS, health: 183 }, MAX_STAT_TARGET_CAPS, '', false).health).toBe(185);
     });
 });

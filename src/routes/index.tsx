@@ -48,6 +48,7 @@ import {
     clampTargetsToCaps,
     createPendingTargetCaps,
     MAX_STAT_TARGET_CAPS,
+    snapStatTarget,
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
 import type {
@@ -271,7 +272,7 @@ export default function Home() {
                 const requestedTarget = input.statTargets[priorityStat] ?? 0;
                 if (requestedTarget > verifiedCaps[priorityStat]) {
                     setNextTargetCapRefreshBackground(true);
-                    setTargets((current) => clampTargetsToCaps(current, verifiedCaps, dumpStat()));
+                    setTargets((current) => clampTargetsToCaps(current, verifiedCaps, dumpStat(), effectiveAllowBalancedTuning()));
                     invalidateSolve();
                     logDevTiming('priority cap clamped target', {
                         requestId,
@@ -487,7 +488,7 @@ export default function Home() {
         let changed = false;
 
         setTargets((current) => {
-            const next = clampTargetsToCaps(current, caps, currentDumpStat);
+            const next = clampTargetsToCaps(current, caps, currentDumpStat, effectiveAllowBalancedTuning());
             changed = next !== current;
 
             return next;
@@ -803,8 +804,8 @@ export default function Home() {
             return;
         }
 
-        if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat())) {
-            setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat()));
+        if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat(), effectiveAllowBalancedTuning())) {
+            setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat(), effectiveAllowBalancedTuning()));
             invalidateSolve();
             setMessage('Stat targets were adjusted to verified caps. Solve again.');
             return;
@@ -888,7 +889,7 @@ export default function Home() {
 
     function updateTarget(stat: ArmorStat, value: string) {
         const cap = dumpStat() === stat ? 0 : clampTarget(targetCaps()[stat]);
-        const numericValue = Math.min(clampTarget(Number(value) || 0), cap);
+        const numericValue = snapStatTarget(Number(value) || 0, cap, effectiveAllowBalancedTuning());
 
         setTargetCapPriorityStat(stat);
         setTargets((current) => ({
@@ -908,7 +909,9 @@ export default function Home() {
         }
 
         if (nextDumpStat) {
-            setTargets((current) => clampTargetsToCaps({ ...current, [nextDumpStat]: 0 }, targetCaps(), nextDumpStat));
+            setTargets((current) =>
+                clampTargetsToCaps({ ...current, [nextDumpStat]: 0 }, targetCaps(), nextDumpStat, effectiveAllowBalancedTuning())
+            );
         }
     }
 
@@ -926,7 +929,11 @@ export default function Home() {
         }
 
         const nextDumpStat = preferences.dumpStat && isArmorStat(preferences.dumpStat) ? preferences.dumpStat : '';
+        const nextAllowBalancedTuning = BALANCED_TUNING_ENABLED && preferences.allowBalancedTuning === true;
         const nextTargets = { ...EMPTY_STAT_TARGETS, ...sanitizeTargets(preferences.targets) };
+        for (const stat of ARMOR_STATS) {
+            nextTargets[stat] = snapStatTarget(nextTargets[stat], MAX_STAT_TARGET_CAPS[stat], nextAllowBalancedTuning);
+        }
         if (nextDumpStat) {
             nextTargets[nextDumpStat] = 0;
         }
@@ -935,7 +942,7 @@ export default function Home() {
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
         setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
         setDumpStat(nextDumpStat);
-        setAllowBalancedTuning(BALANCED_TUNING_ENABLED && preferences.allowBalancedTuning === true);
+        setAllowBalancedTuning(nextAllowBalancedTuning);
         setTargets(nextTargets);
         setSetSelections(preferences.setSelections ?? {});
         setResultSort(preferences.resultSort ?? DEFAULT_RESULT_SORT);
