@@ -30,6 +30,7 @@ type ResultsPanelProps = {
     visibleLimit: number;
     expandedBuildKey: string | null;
     onExpandedBuildKeyChange: (key: string | null) => void;
+    onEquipBuild?: (build: ArmorBuild) => Promise<void>;
     onSort: (key: VisibleResultSortKey) => void;
 };
 
@@ -249,8 +250,9 @@ async function copyTextToClipboard(text: string) {
     }
 }
 
-function BuildDetail(props: { build: ArmorBuild; showTuningResults: boolean }) {
+function BuildDetail(props: { build: ArmorBuild; onEquipBuild?: (build: ArmorBuild) => Promise<void>; showTuningResults: boolean }) {
     const [copyState, setCopyState] = createSignal<'idle' | 'copied' | 'failed'>('idle');
+    const [equipState, setEquipState] = createSignal<'idle' | 'equipping' | 'done' | 'failed'>('idle');
 
     async function copyDimQuery() {
         try {
@@ -273,6 +275,38 @@ function BuildDetail(props: { build: ArmorBuild; showTuningResults: boolean }) {
         }
 
         return 'Copy DIM Query';
+    };
+
+    async function equipBuild() {
+        if (!props.onEquipBuild || equipState() === 'equipping') {
+            return;
+        }
+
+        try {
+            setEquipState('equipping');
+            await props.onEquipBuild(props.build);
+            setEquipState('done');
+            window.setTimeout(() => setEquipState('idle'), 1600);
+        } catch {
+            setEquipState('failed');
+            window.setTimeout(() => setEquipState('idle'), 2200);
+        }
+    }
+
+    const equipLabel = () => {
+        if (equipState() === 'equipping') {
+            return 'Equipping...';
+        }
+
+        if (equipState() === 'done') {
+            return 'Equipped';
+        }
+
+        if (equipState() === 'failed') {
+            return 'Equip failed';
+        }
+
+        return 'Equip Items';
     };
 
     return (
@@ -323,8 +357,13 @@ function BuildDetail(props: { build: ArmorBuild; showTuningResults: boolean }) {
                     <button class={detailActionButton} type="button" onClick={copyDimQuery}>
                         {copyLabel()}
                     </button>
-                    <button class={detailActionButton} type="button" disabled title="Equip item support is not wired yet.">
-                        Equip Items
+                    <button
+                        class={detailActionButton}
+                        type="button"
+                        disabled={!props.onEquipBuild || equipState() === 'equipping'}
+                        onClick={equipBuild}
+                    >
+                        {equipLabel()}
                     </button>
                 </div>
             </div>
@@ -406,7 +445,9 @@ export function ResultsPanel(props: ResultsPanelProps) {
                             visibleLimit={props.visibleLimit}
                             onSort={props.onSort}
                             onToggleBuild={toggleExpandedBuild}
-                            renderExpandedBuild={(build) => <BuildDetail build={build} showTuningResults={props.showTuningResults} />}
+                            renderExpandedBuild={(build) => (
+                                <BuildDetail build={build} onEquipBuild={props.onEquipBuild} showTuningResults={props.showTuningResults} />
+                            )}
                         />
                     </Show>
                 </Show>

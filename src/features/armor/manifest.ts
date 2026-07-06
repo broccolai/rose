@@ -48,6 +48,14 @@ export async function createBungieManifestResolver(options: ManifestResolverOpti
                     definition
                 }));
         },
+        getInventoryItemDefinitionsByPlugCategory(plugCategoryIdentifier: string) {
+            return Object.entries(manifestCache?.inventoryItemDefinitions ?? {})
+                .filter(([, definition]) => definition.plug?.plugCategoryIdentifier === plugCategoryIdentifier)
+                .map(([hash, definition]) => ({
+                    hash: Number(hash),
+                    definition
+                }));
+        },
         getManifestCacheMetadata() {
             return {
                 version: manifestCache?.version,

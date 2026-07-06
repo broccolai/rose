@@ -50,31 +50,94 @@ type SelectedMembership = DestinyMembership & {
     selectionReason: string;
 };
 
+type BungieFetchOptions = {
+    method?: 'GET' | 'POST';
+    body?: unknown;
+    logLabel?: string;
+};
+
+export type DestinyItemTransferRequest = {
+    itemReferenceHash: number;
+    stackSize: number;
+    transferToVault: boolean;
+    itemId: string;
+    characterId: string;
+    membershipType: number;
+};
+
+export type DestinyEquipItemRequest = {
+    itemId: string;
+    characterId: string;
+    membershipType: number;
+};
+
+export type DestinyEquipItemsRequest = {
+    itemIds: string[];
+    characterId: string;
+    membershipType: number;
+};
+
+export type DestinyInsertPlugsRequestEntry = {
+    socketIndex: number;
+    socketArrayType: number;
+    plugItemHash: number;
+};
+
+export type DestinyInsertPlugsFreeActionRequest = {
+    plug: DestinyInsertPlugsRequestEntry;
+    itemId: string;
+    characterId: string;
+    membershipType: number;
+};
+
 function requestedComponentIds() {
     return Object.values(DESTINY_PROFILE_COMPONENTS);
 }
 
-function assertBungieSuccess<T>(payload: BungieResponse<T>, fallbackMessage: string) {
+function assertBungieSuccess<T>(payload: BungieResponse<T>, fallbackMessage: string, logDetails?: Record<string, unknown>) {
     if (payload.ErrorCode && payload.ErrorCode !== 1) {
+        console.error('[rose bungie api] Bungie returned an error', {
+            ...logDetails,
+            errorCode: payload.ErrorCode,
+            errorStatus: payload.ErrorStatus,
+            message: payload.Message,
+            payload
+        });
         throw new Error(`${payload.ErrorStatus ?? fallbackMessage}: ${payload.Message ?? 'Unknown Bungie API error'}`);
     }
 }
 
-async function bungieFetch<T>(path: string, token: BungieToken) {
+async function bungieFetch<T>(path: string, token: BungieToken, options: BungieFetchOptions = {}) {
     const config = getBungieConfig();
+    const method = options.method ?? 'GET';
     const response = await fetch(`${BUNGIE_PLATFORM_BASE_URL}${path}`, {
+        method,
         headers: {
             Authorization: `Bearer ${token.accessToken}`,
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
             'X-API-Key': config.apiKey
-        }
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
     });
     const payload = (await response.json().catch(() => null)) as BungieResponse<T> | null;
 
     if (!response.ok || !payload) {
+        console.error('[rose bungie api] Request failed', {
+            label: options.logLabel,
+            path,
+            method,
+            status: response.status,
+            payload
+        });
         throw new Error(`Bungie request failed (${response.status})`);
     }
 
-    assertBungieSuccess(payload, `Bungie request failed for ${path}`);
+    assertBungieSuccess(payload, `Bungie request failed for ${path}`, {
+        label: options.logLabel,
+        path,
+        method,
+        requestBody: options.body
+    });
     return payload;
 }
 
@@ -113,6 +176,38 @@ export async function fetchProfile(token: BungieToken, membership: SelectedMembe
     const components = requestedComponentIds().join(',');
     const path = `/Destiny2/${membership.membershipType}/Profile/${membership.membershipId}/?components=${components}`;
     return bungieFetch<Record<string, unknown>>(path, token);
+}
+
+export async function transferDestinyItem(token: BungieToken, request: DestinyItemTransferRequest) {
+    return bungieFetch<unknown>('/Destiny2/Actions/Items/TransferItem/', token, {
+        method: 'POST',
+        body: request,
+        logLabel: 'transfer item'
+    });
+}
+
+export async function equipDestinyItem(token: BungieToken, request: DestinyEquipItemRequest) {
+    return bungieFetch<unknown>('/Destiny2/Actions/Items/EquipItem/', token, {
+        method: 'POST',
+        body: request,
+        logLabel: 'equip item'
+    });
+}
+
+export async function equipDestinyItems(token: BungieToken, request: DestinyEquipItemsRequest) {
+    return bungieFetch<unknown>('/Destiny2/Actions/Items/EquipItems/', token, {
+        method: 'POST',
+        body: request,
+        logLabel: 'equip items'
+    });
+}
+
+export async function insertSocketPlugFree(token: BungieToken, request: DestinyInsertPlugsFreeActionRequest) {
+    return bungieFetch<unknown>('/Destiny2/Actions/Items/InsertSocketPlugFree/', token, {
+        method: 'POST',
+        body: request,
+        logLabel: 'insert socket plug free'
+    });
 }
 
 export async function exportVaultSnapshot(token: BungieToken) {

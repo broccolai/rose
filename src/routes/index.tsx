@@ -1,4 +1,5 @@
 import {
+    ARMOR_SLOTS,
     ARMOR_STATS,
     type ArmorBuild,
     type ArmorBuildSort,
@@ -6,6 +7,7 @@ import {
     type ArmorStatTargetCapsInput,
     type SolveArmorInput,
     type SolveArmorResult,
+    type StatAdjustment,
     type StatVector
 } from '@armor-calc';
 import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
@@ -69,9 +71,16 @@ import type {
     NormalizedArmorProfile,
     VaultExportSnapshot
 } from '@/features/armor/types';
-import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
+import {
+    downloadJsonFile,
+    equipDestinyItems,
+    exportVaultSnapshot,
+    insertSocketPlugFree,
+    readCachedVaultSnapshot,
+    transferDestinyItem
+} from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
-import { createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
+import { type BungieToken, createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
@@ -82,6 +91,9 @@ const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test
 const DEV_TIMING = import.meta.env.DEV;
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
+const GENERAL_ARMOR_MOD_PLUG_CATEGORY = 'enhancements.v2_general';
+const TUNING_PLUG_CATEGORY = 'core.gear_systems.armor_tiering.plugs.tuning.mods';
+const DEFAULT_SOCKET_ARRAY_TYPE = 0;
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 const SUBCLASS_BUCKET_HASH = 3284755031;
 
@@ -118,9 +130,81 @@ type EquippedSubclassImport = {
     subclassItemHash: number;
     subclassItemInstanceId: string;
 };
+type EquipItemLocation =
+    | {
+          location: 'selected-character';
+          item: { itemHash: number; itemInstanceId?: string };
+      }
+    | {
+          location: 'vault';
+          item: { itemHash: number; itemInstanceId?: string };
+      }
+    | {
+          location: 'other-character';
+          characterId: string;
+          item: { itemHash: number; itemInstanceId?: string };
+      };
 
 function readBungieUser(snapshot: VaultExportSnapshot | null): CachedBungieUser | undefined {
     return (snapshot?.membershipsResponse as CachedMembershipsResponse | undefined)?.Response?.bungieNetUser;
+}
+
+function readSnapshotMembershipType(snapshot: VaultExportSnapshot | null) {
+    const membershipType = (snapshot?.selectedMembership as { membershipType?: unknown } | undefined)?.membershipType;
+    return typeof membershipType === 'number' ? membershipType : null;
+}
+
+function findProfileItemLocation(
+    snapshot: VaultExportSnapshot,
+    itemInstanceId: string,
+    selectedCharacterId: string
+): EquipItemLocation | null {
+    const profile = snapshot.profileResponse?.Response;
+    const profileInventoryItem = profile?.profileInventory?.data?.items?.find((item) => item.itemInstanceId === itemInstanceId);
+    if (profileInventoryItem) {
+        return {
+            location: 'vault',
+            item: profileInventoryItem
+        };
+    }
+
+    const selectedInventoryItem = profile?.characterInventories?.data?.[selectedCharacterId]?.items?.find(
+        (item) => item.itemInstanceId === itemInstanceId
+    );
+    const selectedEquippedItem = profile?.characterEquipment?.data?.[selectedCharacterId]?.items?.find(
+        (item) => item.itemInstanceId === itemInstanceId
+    );
+    const selectedCharacterItem = selectedInventoryItem ?? selectedEquippedItem;
+    if (selectedCharacterItem) {
+        return {
+            location: 'selected-character',
+            item: selectedCharacterItem
+        };
+    }
+
+    for (const [characterId, bucket] of Object.entries(profile?.characterInventories?.data ?? {})) {
+        const item = bucket.items?.find((candidate) => candidate.itemInstanceId === itemInstanceId);
+        if (item) {
+            return {
+                location: 'other-character',
+                characterId,
+                item
+            };
+        }
+    }
+
+    for (const [characterId, bucket] of Object.entries(profile?.characterEquipment?.data ?? {})) {
+        const item = bucket.items?.find((candidate) => candidate.itemInstanceId === itemInstanceId);
+        if (item) {
+            return {
+                location: 'other-character',
+                characterId,
+                item
+            };
+        }
+    }
+
+    return null;
 }
 
 function absoluteBungieAssetUrl(path?: string) {
@@ -331,6 +415,208 @@ function emptyDebugStats(): StatVector {
 
 function statTotalDebug(stats: StatVector) {
     return ARMOR_STATS.reduce((total, stat) => total + stats[stat], 0);
+}
+
+function createDefinitionMap(definitions: LoadedManifestDefinition[]) {
+    return new Map(definitions.map(({ hash, definition }) => [hash, definition]));
+}
+
+function statAdjustmentIsZero(adjustment: StatAdjustment) {
+    return ARMOR_STATS.every((stat) => (adjustment.deltas[stat] ?? 0) === 0);
+}
+
+function statVectorMatchesAdjustment(stats: StatVector, adjustment: StatAdjustment) {
+    return ARMOR_STATS.every((stat) => stats[stat] === (adjustment.deltas[stat] ?? 0));
+}
+
+function definitionMatchesAdjustment(
+    definition: ManifestInventoryItemDefinition | undefined,
+    plugCategory: string,
+    adjustment: StatAdjustment
+) {
+    return (
+        definition?.plug?.plugCategoryIdentifier === plugCategory &&
+        statVectorMatchesAdjustment(readDebugInvestmentStats(definition), adjustment)
+    );
+}
+
+function parsePlugHashFromAdjustment(adjustment: StatAdjustment) {
+    const match = /^plug:(\d+)$/.exec(adjustment.id);
+    return match ? Number(match[1]) : null;
+}
+
+function readItemSocketPlugHash(snapshot: VaultExportSnapshot, itemInstanceId: string, socketIndex: number) {
+    return snapshot.profileResponse?.Response?.itemComponents?.sockets?.data?.[itemInstanceId]?.sockets?.[socketIndex]?.plugHash;
+}
+
+function readReusablePlugHashes(snapshot: VaultExportSnapshot, itemInstanceId: string, socketIndex: number) {
+    const plugs = snapshot.profileResponse?.Response?.itemComponents?.reusablePlugs?.data?.[itemInstanceId]?.plugs ?? {};
+    return (plugs[String(socketIndex)] ?? [])
+        .filter((plug) => plug.canInsert !== false && plug.enabled !== false)
+        .map((plug) => plug.plugItemHash)
+        .filter((hash): hash is number => typeof hash === 'number');
+}
+
+function findSocketIndexForPlugCategory(
+    snapshot: VaultExportSnapshot,
+    itemInstanceId: string,
+    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    plugCategory: string
+) {
+    const sockets = snapshot.profileResponse?.Response?.itemComponents?.sockets?.data?.[itemInstanceId]?.sockets ?? [];
+    const reusablePlugs = snapshot.profileResponse?.Response?.itemComponents?.reusablePlugs?.data?.[itemInstanceId]?.plugs ?? {};
+
+    for (const [socketIndex, socket] of sockets.entries()) {
+        const definition = socket.plugHash ? definitionsByHash.get(socket.plugHash) : undefined;
+        if (definition?.plug?.plugCategoryIdentifier === plugCategory) {
+            return socketIndex;
+        }
+    }
+
+    for (const [socketIndex, plugs] of Object.entries(reusablePlugs)) {
+        if (
+            plugs.some((plug) => {
+                const definition = plug.plugItemHash ? definitionsByHash.get(plug.plugItemHash) : undefined;
+                return definition?.plug?.plugCategoryIdentifier === plugCategory;
+            })
+        ) {
+            return Number(socketIndex);
+        }
+    }
+
+    return null;
+}
+
+function findPlugHashForAdjustment(
+    snapshot: VaultExportSnapshot,
+    itemInstanceId: string,
+    socketIndex: number,
+    plugCategory: string,
+    adjustment: StatAdjustment,
+    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    categoryDefinitions: LoadedManifestDefinition[]
+) {
+    const directPlugHash = parsePlugHashFromAdjustment(adjustment);
+    if (directPlugHash !== null && definitionMatchesAdjustment(definitionsByHash.get(directPlugHash), plugCategory, adjustment)) {
+        return directPlugHash;
+    }
+
+    const reusablePlugHashes = readReusablePlugHashes(snapshot, itemInstanceId, socketIndex);
+    for (const plugHash of reusablePlugHashes) {
+        if (definitionMatchesAdjustment(definitionsByHash.get(plugHash), plugCategory, adjustment)) {
+            return plugHash;
+        }
+    }
+
+    const exactDefinition = categoryDefinitions.find(({ definition }) => definitionMatchesAdjustment(definition, plugCategory, adjustment));
+    if (exactDefinition) {
+        return exactDefinition.hash;
+    }
+
+    return null;
+}
+
+async function insertBuildSocketPlugs(
+    token: BungieToken,
+    snapshot: VaultExportSnapshot,
+    membershipType: number,
+    characterId: string,
+    build: ArmorBuild,
+    categoryDefinitions: LoadedManifestDefinition[]
+) {
+    const definitionsByHash = createDefinitionMap(categoryDefinitions);
+    const inserted: Array<{ itemName: string; kind: string; socketIndex: number; plugItemHash: number; plugName?: string }> = [];
+    const skipped: Array<{ itemName: string; kind: string; reason: string }> = [];
+
+    for (const slot of ARMOR_SLOTS) {
+        const piece = build.pieces[slot];
+        const itemInstanceId = piece.item.itemInstanceId;
+        const socketPlans = [
+            {
+                kind: 'stat mod',
+                plugCategory: GENERAL_ARMOR_MOD_PLUG_CATEGORY,
+                adjustment: piece.statMod
+            },
+            {
+                kind: 'tuning',
+                plugCategory: TUNING_PLUG_CATEGORY,
+                adjustment: piece.tuning
+            }
+        ] as const;
+
+        for (const plan of socketPlans) {
+            const adjustment = plan.adjustment;
+            if (!adjustment) {
+                skipped.push({
+                    itemName: piece.item.name,
+                    kind: plan.kind,
+                    reason: 'solver returned no socket choice'
+                });
+                continue;
+            }
+
+            const socketIndex = findSocketIndexForPlugCategory(snapshot, itemInstanceId, definitionsByHash, plan.plugCategory);
+            if (socketIndex === null) {
+                const reason = `could not find ${plan.kind} socket`;
+                if (statAdjustmentIsZero(adjustment)) {
+                    skipped.push({
+                        itemName: piece.item.name,
+                        kind: plan.kind,
+                        reason
+                    });
+                    continue;
+                }
+
+                throw new Error(`Could not find a ${plan.kind} socket on ${piece.item.name}.`);
+            }
+
+            const plugItemHash = findPlugHashForAdjustment(
+                snapshot,
+                itemInstanceId,
+                socketIndex,
+                plan.plugCategory,
+                adjustment,
+                definitionsByHash,
+                categoryDefinitions
+            );
+            if (plugItemHash === null) {
+                throw new Error(`Could not resolve ${adjustment.name} for ${piece.item.name}.`);
+            }
+
+            if (readItemSocketPlugHash(snapshot, itemInstanceId, socketIndex) === plugItemHash) {
+                skipped.push({
+                    itemName: piece.item.name,
+                    kind: plan.kind,
+                    reason: 'already socketed'
+                });
+                continue;
+            }
+
+            await insertSocketPlugFree(token, {
+                itemId: itemInstanceId,
+                characterId,
+                membershipType,
+                plug: {
+                    socketIndex,
+                    socketArrayType: DEFAULT_SOCKET_ARRAY_TYPE,
+                    plugItemHash
+                }
+            });
+
+            inserted.push({
+                itemName: piece.item.name,
+                kind: plan.kind,
+                socketIndex,
+                plugItemHash,
+                plugName: definitionsByHash.get(plugItemHash)?.displayProperties?.name
+            });
+        }
+    }
+
+    console.debug('[rose bungie api] Socket plug insertion completed', {
+        inserted,
+        skipped
+    });
 }
 
 function createDebugExpandedResultReport(builds: ArmorBuild[], expandedBuildKey: string | null) {
@@ -1286,6 +1572,98 @@ export default function Home() {
         }
     }
 
+    async function equipBuildItems(build: ArmorBuild) {
+        const token = await getValidToken();
+        const snapshot = loadedSnapshot();
+        const character = selectedCharacter();
+        const membershipType = readSnapshotMembershipType(snapshot);
+
+        if (!token) {
+            throw new Error('Sign in again before equipping items.');
+        }
+
+        if (!snapshot || !character || membershipType === null) {
+            throw new Error('Load a Bungie profile before equipping items.');
+        }
+
+        const itemIds = ARMOR_SLOTS.map((slot) => build.pieces[slot].item.itemInstanceId);
+        console.debug('[rose bungie api] Equip build started', {
+            characterId: character.characterId,
+            membershipType,
+            itemIds
+        });
+
+        try {
+            for (const slot of ARMOR_SLOTS) {
+                const piece = build.pieces[slot].item;
+                const location = findProfileItemLocation(snapshot, piece.itemInstanceId, character.characterId);
+
+                if (!location) {
+                    throw new Error(`Could not find ${piece.name} in the loaded Bungie profile.`);
+                }
+
+                if (location.location === 'selected-character') {
+                    continue;
+                }
+
+                if (location.location === 'other-character') {
+                    await transferDestinyItem(token, {
+                        itemReferenceHash: piece.itemHash,
+                        stackSize: 1,
+                        transferToVault: true,
+                        itemId: piece.itemInstanceId,
+                        characterId: location.characterId,
+                        membershipType
+                    });
+                }
+
+                await transferDestinyItem(token, {
+                    itemReferenceHash: piece.itemHash,
+                    stackSize: 1,
+                    transferToVault: false,
+                    itemId: piece.itemInstanceId,
+                    characterId: character.characterId,
+                    membershipType
+                });
+            }
+
+            const manifest = await createBungieManifestResolver();
+            const socketDefinitions = [
+                ...loadedManifestDefinitions(),
+                ...(manifest.getInventoryItemDefinitionsByPlugCategory?.(GENERAL_ARMOR_MOD_PLUG_CATEGORY) ?? []),
+                ...(manifest.getInventoryItemDefinitionsByPlugCategory?.(TUNING_PLUG_CATEGORY) ?? [])
+            ];
+            const dedupedSocketDefinitions = [...createDefinitionMap(socketDefinitions)].map(([hash, definition]) => ({
+                hash,
+                definition
+            }));
+            await insertBuildSocketPlugs(token, snapshot, membershipType, character.characterId, build, dedupedSocketDefinitions);
+
+            await equipDestinyItems(token, {
+                itemIds,
+                characterId: character.characterId,
+                membershipType
+            });
+
+            console.debug('[rose bungie api] Equip build completed', {
+                characterId: character.characterId,
+                itemIds
+            });
+            setMessage('Equipped build. Refreshing profile...');
+            const nextSnapshot = (await exportVaultSnapshot(token)) as VaultExportSnapshot;
+            await applyLoadedCalculatorData(nextSnapshot, 'Bungie refresh');
+        } catch (error) {
+            console.error('[rose bungie api] Equip build failed', {
+                characterId: character.characterId,
+                membershipType,
+                itemIds,
+                error
+            });
+            setMessage(error instanceof Error ? error.message : 'Unknown equip failure.');
+            throw error;
+        }
+    }
+
     function updateTarget(stat: ArmorStat, value: string) {
         const cap = dumpStat() === stat ? 0 : clampTarget(targetCaps()[stat]);
         const numericValue = snapStatTarget(Number(value) || 0, cap, effectiveAllowBalancedTuning());
@@ -1447,6 +1825,7 @@ export default function Home() {
                     visibleLimit={VISIBLE_RESULT_LIMIT}
                     expandedBuildKey={expandedBuildKey()}
                     onExpandedBuildKeyChange={setExpandedBuildKey}
+                    onEquipBuild={equipBuildItems}
                     onSort={toggleResultSort}
                 />
             }
