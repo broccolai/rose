@@ -26,7 +26,7 @@ const tableWrap = css({
     w: '100%',
     maxW: '100%',
     minW: 0,
-    overflowX: 'auto',
+    overflowX: 'hidden',
     overflowY: 'auto',
     maxH: { base: '28rem', lg: 'calc(100vh - 16rem)' },
     scrollbarGutter: 'stable',
@@ -51,7 +51,7 @@ const sortButton = css({
     fontWeight: 700,
     p: 0,
     cursor: 'pointer',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'normal',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -61,19 +61,19 @@ const sortButton = css({
 
 const table = css({
     w: '100%',
-    minW: '930px',
+    minW: 0,
     tableLayout: 'fixed',
     borderCollapse: 'collapse',
     fontFamily: MONO_FONT_FAMILY,
-    fontSize: '0.76rem',
+    fontSize: '0.74rem',
     '& th': {
         textAlign: 'left',
         borderBottom: '1px solid var(--rose-border)',
         bg: '#0a0a0c',
-        p: '9px 8px',
+        p: '8px 6px',
         color: 'var(--rose-muted)',
-        whiteSpace: 'nowrap',
-        lineHeight: 1.2,
+        whiteSpace: 'normal',
+        lineHeight: 1.05,
         letterSpacing: 0,
         fontWeight: 680
     },
@@ -84,7 +84,7 @@ const table = css({
     },
     '& td': {
         borderBottom: '1px solid var(--rose-border)',
-        p: '8px',
+        p: '8px 6px',
         verticalAlign: 'middle',
         lineHeight: 1.2,
         h: '42px'
@@ -94,6 +94,7 @@ const table = css({
         fontVariantNumeric: 'tabular-nums'
     },
     '& td[data-text-cell]': {
+        minW: 0,
         overflowWrap: 'anywhere',
         wordBreak: 'normal'
     },
@@ -240,9 +241,9 @@ export function ResultsTable(props: ResultsTableProps) {
         <div class={tableWrap}>
             <table class={table}>
                 <colgroup>
-                    <For each={ARMOR_STATS}>{() => <col style={{ width: '78px' }} />}</For>
-                    <col style={{ width: '58px' }} />
-                    <col style={{ width: '310px' }} />
+                    <For each={ARMOR_STATS}>{() => <col style={{ width: '9.6%' }} />}</For>
+                    <col style={{ width: '9.2%' }} />
+                    <col style={{ width: '33.2%' }} />
                 </colgroup>
                 <thead>
                     <tr>

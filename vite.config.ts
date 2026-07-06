@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { solidStart } from '@solidjs/start/config';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
 const useDevHttps = process.env.ROSE_DEV_HTTPS !== '0';
 const localCertFile = fileURLToPath(new URL('./.cert/localhost.pem', import.meta.url));
@@ -14,6 +14,42 @@ const localHttps =
               key: readFileSync(localKeyFile)
           }
         : undefined;
+const privateDataDir = fileURLToPath(new URL('./data/private', import.meta.url));
+
+function latestLocalTestDataPath() {
+    if (!existsSync(privateDataDir)) {
+        return null;
+    }
+
+    const candidates = readdirSync(privateDataDir)
+        .filter((candidate) => candidate.endsWith('.json'))
+        .sort();
+    const file =
+        candidates.filter((candidate) => candidate.startsWith('rose-debug-vault-export-')).at(-1) ??
+        candidates.filter((candidate) => candidate.startsWith('rose-loaded-benchmark-bundle-')).at(-1);
+
+    return file ? fileURLToPath(new URL(`./data/private/${file}`, import.meta.url)) : null;
+}
+
+function roseDevTestDataPlugin(): Plugin {
+    return {
+        name: 'rose-dev-test-data',
+        configureServer(server) {
+            server.middlewares.use('/__rose-test-data__/loaded-benchmark-bundle', (_request, response) => {
+                const bundlePath = latestLocalTestDataPath();
+
+                if (!bundlePath) {
+                    response.statusCode = 404;
+                    response.end('No rose local test data found.');
+                    return;
+                }
+
+                response.setHeader('content-type', 'application/json; charset=utf-8');
+                response.end(readFileSync(bundlePath, 'utf8'));
+            });
+        }
+    };
+}
 
 export default defineConfig({
     resolve: {
@@ -28,5 +64,5 @@ export default defineConfig({
         port: 5173,
         https: localHttps
     },
-    plugins: [...(useDevHttps && !localHttps ? [basicSsl()] : []), ...solidStart({ ssr: false })]
+    plugins: [roseDevTestDataPlugin(), ...(useDevHttps && !localHttps ? [basicSsl()] : []), ...solidStart({ ssr: false })]
 });

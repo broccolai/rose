@@ -7,6 +7,7 @@ import {
     buildExpansionKey,
     DEFAULT_RESULT_SORT,
     formatArmorBonusSummary,
+    formatDimArmorQuery,
     getArmorBonusDisplays
 } from '@/features/armor/result-display';
 
@@ -62,6 +63,10 @@ describe('result display helpers', () => {
         const second = build({ modId: 'mod:super' });
 
         expect(buildExpansionKey(first)).not.toBe(buildExpansionKey(second));
+    });
+
+    test('formats a DIM armor query from build item instance ids', () => {
+        expect(formatDimArmorQuery(build({}))).toBe('is:armor (id:helmet-1 or id:arms-1 or id:chest-1 or id:legs-1 or id:classItem-1)');
     });
 });
 

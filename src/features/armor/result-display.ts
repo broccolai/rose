@@ -78,6 +78,12 @@ export function formatArmorBonusSummary(build: ArmorBuild, armorSets: ArmorBonus
     return displays.map((bonus) => bonus.label).join(' / ');
 }
 
+export function formatDimArmorQuery(build: ArmorBuild) {
+    const itemIds = ARMOR_SLOTS.map((slot) => build.pieces[slot].item.itemInstanceId).filter(Boolean);
+
+    return `is:armor (${itemIds.map((itemId) => `id:${itemId}`).join(' or ')})`;
+}
+
 export function buildExpansionKey(build: ArmorBuild) {
     return ARMOR_SLOTS.map((slot) => {
         const piece = build.pieces[slot];

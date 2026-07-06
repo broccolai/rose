@@ -42,7 +42,12 @@ import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
-import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
+import type {
+    LoadedManifestDefinition,
+    ManifestInventoryItemDefinition,
+    NormalizedArmorProfile,
+    VaultExportSnapshot
+} from '@/features/armor/types';
 import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
 import { createAuthorizationUrl, getTokenDebugState, readToken } from '@/features/bungie/oauth';
@@ -51,7 +56,7 @@ type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
 const SOLVER_RESULT_POOL_LIMIT = 30_000;
 const VISIBLE_RESULT_LIMIT = 25;
-const BALANCED_TUNING_ENABLED = false;
+const BALANCED_TUNING_ENABLED = true;
 const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
 const MAX_STAT_TARGET_CAPS: StatVector = {
     health: 200,
@@ -62,6 +67,7 @@ const MAX_STAT_TARGET_CAPS: StatVector = {
     weapons: 200
 };
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
+const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
 
 type CachedBungieUser = {
     cachedBungieGlobalDisplayName?: string;
@@ -73,6 +79,15 @@ type CachedBungieUser = {
 type CachedMembershipsResponse = {
     Response?: {
         bungieNetUser?: CachedBungieUser;
+    };
+};
+
+type LoadedBenchmarkBundle = {
+    vaultSnapshot?: VaultExportSnapshot;
+    normalizedProfile?: NormalizedArmorProfile;
+    loadedManifestDefinitions?: LoadedManifestDefinition[];
+    manifest?: {
+        inventoryItemDefinitions?: Record<string, ManifestInventoryItemDefinition>;
     };
 };
 
@@ -111,6 +126,10 @@ function isLocalDevHost() {
     }
 
     return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
+function canLoadLocalTestData() {
+    return AUTH_LOCK_DISABLED || isLocalDevHost();
 }
 
 export default function Home() {
@@ -275,7 +294,7 @@ export default function Home() {
         refreshAuthState();
         applyCalculatorPreferences(readCalculatorPreferences());
         setPreferencesLoaded(true);
-        void loadCachedCalculatorData({ silentMissing: true });
+        void loadInitialCalculatorData();
 
         const pressedKeys = new Set<string>();
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -387,6 +406,10 @@ export default function Home() {
     }
 
     async function loadCalculatorData() {
+        if (await loadLocalTestCalculatorData()) {
+            return;
+        }
+
         const token = readToken();
         if (!token) {
             setAuthenticated(false);
@@ -411,6 +434,70 @@ export default function Home() {
             setStatus('error');
             setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(error instanceof Error ? error.message : 'Unknown calculator load failure.');
+        }
+    }
+
+    async function loadInitialCalculatorData() {
+        if (await loadLocalTestCalculatorData({ silentMissing: true })) {
+            return;
+        }
+
+        await loadCachedCalculatorData({ silentMissing: true });
+    }
+
+    async function loadLocalTestCalculatorData(options: { silentMissing?: boolean } = {}) {
+        if (!canLoadLocalTestData()) {
+            return false;
+        }
+
+        try {
+            setStatus('loading');
+            setMessage('Loading local test armor data...');
+            setLoadProgress({
+                active: true,
+                label: 'Reading local test data',
+                current: 0,
+                total: 0,
+                percent: 12
+            });
+
+            const response = await fetch(TEST_DATA_ENDPOINT, { cache: 'no-store' });
+            if (response.status === 404) {
+                setStatus(options.silentMissing ? 'idle' : 'error');
+                setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+                setMessage(
+                    options.silentMissing
+                        ? 'No local test data found. Sign in and refresh once.'
+                        : 'No local test data found in data/private.'
+                );
+                return false;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Local test data request failed (${response.status})`);
+            }
+
+            const bundle = (await response.json()) as LoadedBenchmarkBundle;
+            if (!bundle.normalizedProfile) {
+                throw new Error('Local test data bundle does not contain a normalized profile.');
+            }
+
+            applyLoadedNormalizedCalculatorData(
+                bundle.normalizedProfile,
+                bundle.vaultSnapshot ?? null,
+                bundle.loadedManifestDefinitions ??
+                    Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => ({
+                        hash: Number(hash),
+                        definition
+                    })),
+                'local test data'
+            );
+            return true;
+        } catch (error) {
+            setStatus('error');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(error instanceof Error ? error.message : 'Unknown local test data load failure.');
+            return false;
         }
     }
 
@@ -510,6 +597,47 @@ export default function Home() {
                 `Loaded ${nextProfile.armor.length} current armor candidate pieces for ${nextProfile.characters.length} characters from ${sourceLabel}.`,
                 `Manifest cache: ${manifestMetadata?.fullCacheAvailable ? 'ready' : 'partial'}${manifestMetadata?.version ? ` (${manifestMetadata.version})` : ''}.`,
                 `Loaded manifest definitions used by this profile: ${manifest.getLoadedInventoryItemDefinitions().length}.`,
+                `Warnings: ${nextProfile.warnings.length}`
+            ].join('\n')
+        );
+    }
+
+    function applyLoadedNormalizedCalculatorData(
+        nextProfile: NormalizedArmorProfile,
+        nextSnapshot: VaultExportSnapshot | null,
+        nextManifestDefinitions: LoadedManifestDefinition[],
+        sourceLabel: string
+    ) {
+        setLoadedSnapshot(null);
+        setLoadedManifestDefinitions([]);
+        invalidateSolve();
+
+        const savedPreferences = readCalculatorPreferences();
+        const desiredCharacterId = selectedCharacterId() || savedPreferences?.selectedCharacterId || '';
+        const desiredExoticItemHash = selectedExoticItemHash() || savedPreferences?.selectedExoticItemHash || '';
+        const selectedCharacter =
+            nextProfile.characters.find((character) => character.characterId === desiredCharacterId) ?? nextProfile.characters[0];
+        const nextCharacterId = selectedCharacter?.characterId ?? '';
+        const nextCharacterClass = selectedCharacter?.classType ?? 'any';
+
+        setNormalizedProfile(nextProfile);
+        setLoadedSnapshot(nextSnapshot);
+        setLoadedManifestDefinitions(nextManifestDefinitions);
+        setSelectedCharacterId(nextCharacterId);
+        setSelectedExoticItemHash(reconcileSelectedExotic(nextProfile, nextCharacterClass, desiredExoticItemHash));
+        setSetSelections(reconcileSetSelections(nextProfile, nextCharacterClass, setSelections()));
+        setStatus('done');
+        setLoadProgress({
+            active: false,
+            label: 'Done',
+            current: nextProfile.armor.length,
+            total: nextProfile.armor.length,
+            percent: 100
+        });
+        setMessage(
+            [
+                `Loaded ${nextProfile.armor.length} current armor candidate pieces for ${nextProfile.characters.length} characters from ${sourceLabel}.`,
+                `Loaded manifest definitions in test bundle: ${nextManifestDefinitions.length}.`,
                 `Warnings: ${nextProfile.warnings.length}`
             ].join('\n')
         );

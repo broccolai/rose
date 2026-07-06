@@ -106,10 +106,6 @@ const checkboxField = css({
     fontWeight: 600
 });
 
-const hiddenControl = css({
-    display: 'none'
-});
-
 const section = css({
     display: 'grid',
     gap: '0.8rem',
@@ -147,6 +143,29 @@ const actionStack = css({
     }
 });
 
+const advancedSection = css({
+    pt: '0.8rem',
+    borderTop: '1px solid var(--rose-border)',
+    '& summary': {
+        cursor: 'pointer',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.82rem',
+        fontWeight: 720,
+        lineHeight: 1,
+        listStyle: 'revert'
+    },
+    '&[open] summary': {
+        color: 'var(--rose-text)'
+    }
+});
+
+const advancedBody = css({
+    display: 'grid',
+    gap: '0.42rem',
+    pt: '0.72rem'
+});
+
 function ActionControls(props: Pick<CalculatorControlsProps, 'canSolve' | 'onClearChoices' | 'onSolve' | 'solving'>) {
     return (
         <div class={actionStack}>
@@ -160,9 +179,7 @@ function ActionControls(props: Pick<CalculatorControlsProps, 'canSolve' | 'onCle
     );
 }
 
-function DumpControls(
-    props: Pick<CalculatorControlsProps, 'allowBalancedTuning' | 'dumpStat' | 'onBalancedTuningChange' | 'onDumpStatChange'>
-) {
+function DumpControls(props: Pick<CalculatorControlsProps, 'dumpStat' | 'onDumpStatChange'>) {
     return (
         <div class={inlineControls}>
             <div class={selectWrap}>
@@ -175,17 +192,25 @@ function DumpControls(
                     <For each={ARMOR_STATS}>{(stat) => <option value={stat}>{STAT_LABELS[stat]}</option>}</For>
                 </select>
             </div>
-            <label class={`${checkboxField} ${hiddenControl}`} aria-hidden="true">
-                <input
-                    type="checkbox"
-                    checked={props.allowBalancedTuning}
-                    disabled
-                    tabIndex={-1}
-                    onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
-                />
-                Balanced tuning
-            </label>
         </div>
+    );
+}
+
+function AdvancedControls(props: Pick<CalculatorControlsProps, 'allowBalancedTuning' | 'onBalancedTuningChange'>) {
+    return (
+        <details class={advancedSection}>
+            <summary>Advanced</summary>
+            <div class={advancedBody}>
+                <label class={checkboxField}>
+                    <input
+                        type="checkbox"
+                        checked={props.allowBalancedTuning}
+                        onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
+                    />
+                    Balanced tuning
+                </label>
+            </div>
+        </details>
     );
 }
 
@@ -207,12 +232,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
 
                     <div class={formRow}>
                         <span class={rowLabel}>Dump</span>
-                        <DumpControls
-                            allowBalancedTuning={props.allowBalancedTuning}
-                            dumpStat={props.dumpStat}
-                            onBalancedTuningChange={props.onBalancedTuningChange}
-                            onDumpStatChange={props.onDumpStatChange}
-                        />
+                        <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
                     </div>
 
                     <div class={formRow}>
@@ -244,6 +264,8 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                         setSelections={props.setSelections}
                     />
                 </section>
+
+                <AdvancedControls allowBalancedTuning={props.allowBalancedTuning} onBalancedTuningChange={props.onBalancedTuningChange} />
 
                 <ActionControls
                     canSolve={props.canSolve}
