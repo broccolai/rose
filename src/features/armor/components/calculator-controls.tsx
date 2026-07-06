@@ -8,15 +8,18 @@ import { CharacterPicker, StatTargetFields } from '@/features/armor/components/c
 import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-settings';
 import { button, input, MONO_FONT_FAMILY, secondaryButton } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
+import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
 
 type CalculatorControlsProps = {
     characterOptions: CharacterButtonOption[];
     selectedCharacterId: string;
     selectedExoticItemHash: string;
+    armorSetDisplayMode: ArmorSetDisplayMode;
     dumpStat: ArmorStat | '';
     allowBalancedTuning: boolean;
     targets: StatVector;
     targetCaps: StatVector;
+    targetCapsPending: boolean;
     setSelections: Record<string, SetSelectionValue>;
     availableExotics: AvailableExotic[];
     selectableSets: AvailableArmorSet[];
@@ -24,6 +27,7 @@ type CalculatorControlsProps = {
     solving: boolean;
     onCharacterSelect: (characterId: string) => void;
     onExoticChange: (itemHash: string) => void;
+    onArmorSetDisplayModeChange: (mode: ArmorSetDisplayMode) => void;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
     onTargetChange: (stat: ArmorStat, value: string) => void;
@@ -196,11 +200,27 @@ function DumpControls(props: Pick<CalculatorControlsProps, 'dumpStat' | 'onDumpS
     );
 }
 
-function AdvancedControls(props: Pick<CalculatorControlsProps, 'allowBalancedTuning' | 'onBalancedTuningChange'>) {
+function AdvancedControls(
+    props: Pick<
+        CalculatorControlsProps,
+        'allowBalancedTuning' | 'armorSetDisplayMode' | 'onArmorSetDisplayModeChange' | 'onBalancedTuningChange'
+    >
+) {
     return (
         <details class={advancedSection}>
             <summary>Advanced</summary>
             <div class={advancedBody}>
+                <label class={formRow}>
+                    <span class={rowLabel}>Armor set labels</span>
+                    <select
+                        class={input}
+                        value={props.armorSetDisplayMode}
+                        onChange={(event) => props.onArmorSetDisplayModeChange(event.currentTarget.value as ArmorSetDisplayMode)}
+                    >
+                        <option value="sets">Set names</option>
+                        <option value="sources">Sources</option>
+                    </select>
+                </label>
                 <label class={checkboxField}>
                     <input
                         type="checkbox"
@@ -251,6 +271,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                     <StatTargetFields
                         dumpStat={props.dumpStat}
                         onTargetChange={props.onTargetChange}
+                        targetCapsPending={props.targetCapsPending}
                         targetCaps={props.targetCaps}
                         targets={props.targets}
                     />
@@ -259,13 +280,19 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                 <section class={section} aria-label="Sets">
                     <h2 class={sectionTitle}>Sets</h2>
                     <ArmorSetFields
+                        armorSetDisplayMode={props.armorSetDisplayMode}
                         onSetRequirementChange={props.onSetRequirementChange}
                         selectableSets={props.selectableSets}
                         setSelections={props.setSelections}
                     />
                 </section>
 
-                <AdvancedControls allowBalancedTuning={props.allowBalancedTuning} onBalancedTuningChange={props.onBalancedTuningChange} />
+                <AdvancedControls
+                    allowBalancedTuning={props.allowBalancedTuning}
+                    armorSetDisplayMode={props.armorSetDisplayMode}
+                    onArmorSetDisplayModeChange={props.onArmorSetDisplayModeChange}
+                    onBalancedTuningChange={props.onBalancedTuningChange}
+                />
 
                 <ActionControls
                     canSolve={props.canSolve}

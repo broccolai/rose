@@ -15,6 +15,7 @@ describe('calculator preferences', () => {
             sanitizeCalculatorPreferences({
                 selectedCharacterId: 'character-1',
                 selectedExoticItemHash: '123',
+                armorSetDisplayMode: 'sources',
                 dumpStat: 'health',
                 allowBalancedTuning: 'yes',
                 targets: {
@@ -39,6 +40,7 @@ describe('calculator preferences', () => {
         ).toEqual({
             selectedCharacterId: 'character-1',
             selectedExoticItemHash: '123',
+            armorSetDisplayMode: 'sources',
             dumpStat: 'health',
             allowBalancedTuning: false,
             targets: {
@@ -65,12 +67,14 @@ describe('calculator preferences', () => {
         expect(
             sanitizeCalculatorPreferences({
                 dumpStat: 'mobility',
+                armorSetDisplayMode: 'invalid',
                 resultSort: {
                     key: 'wastedStats',
                     direction: 'sideways'
                 }
             })
         ).toMatchObject({
+            armorSetDisplayMode: 'sets',
             dumpStat: '',
             resultSort: {
                 key: 'totalStats',

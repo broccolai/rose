@@ -186,6 +186,20 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
         baseTargets[input.dumpStat] = 0;
     }
 
+    const maxTargetResult = solveArmor({
+        ...input,
+        statTargets: {
+            ...baseTargets,
+            [stat]: 200
+        },
+        maxResults: 1,
+        stopWhenResultLimitReached: true
+    });
+
+    if (maxTargetResult.ok) {
+        return Math.min(200, maxTargetResult.builds[0]?.stats[stat] ?? 200);
+    }
+
     const bestTarget = calculatePreparedArmorStatTargetCap(
         plans,
         baseTargets,
@@ -291,7 +305,7 @@ function canReachPreparedArmorStatTargets(
             continue;
         }
 
-        searchPlan(plan, context);
+        searchPlan(prioritizePlanForTargets(plan, context.targetValues, dumpStatIndex, setRequirements), context);
 
         if (context.foundValid) {
             return true;
@@ -349,6 +363,53 @@ function createCandidatePlan(armor: PreparedArmorBySlot): CandidatePlan {
         suffixMaxPotential: createSuffixMaxPotential(armor),
         supportsSimpleAddons: armorSupportsSimpleAddons(armor)
     };
+}
+
+function prioritizePlanForTargets(
+    plan: CandidatePlan,
+    targetValues: StatTuple,
+    dumpStatIndex: number,
+    setRequirements: ArmorSetRequirement[]
+): CandidatePlan {
+    const requiredSetIds = new Set(setRequirements.map((requirement) => requirement.setId));
+    const armor = {} as PreparedArmorBySlot;
+
+    for (const slot of ARMOR_SLOTS) {
+        armor[slot] = [...plan.armor[slot]].sort(
+            (left, right) =>
+                targetPriorityScore(right, targetValues, dumpStatIndex, requiredSetIds) -
+                    targetPriorityScore(left, targetValues, dumpStatIndex, requiredSetIds) || comparePreparedArmorIds(left, right)
+        );
+    }
+
+    return {
+        ...plan,
+        armor
+    };
+}
+
+function targetPriorityScore(item: PreparedArmorItem, targetValues: StatTuple, dumpStatIndex: number, requiredSetIds: Set<string>) {
+    let score = 0;
+
+    for (let index = 0; index < ARMOR_STATS.length; index++) {
+        if (index === dumpStatIndex) {
+            continue;
+        }
+
+        const target = targetValues[index];
+        const weight = target > 0 ? 8 : 1;
+        score += Math.min(item.max[index], Math.max(target, 25)) * weight;
+    }
+
+    if (item.item.set && requiredSetIds.has(item.item.set.id)) {
+        score += 10_000;
+    }
+
+    return score;
+}
+
+function comparePreparedArmorIds(left: PreparedArmorItem, right: PreparedArmorItem) {
+    return left.item.itemInstanceId.localeCompare(right.item.itemInstanceId);
 }
 
 function prepareArmorItem(item: ArmorItem, tuningMode: TuningMode, dumpStat: ArmorStat | undefined): PreparedArmorItem {

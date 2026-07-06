@@ -17,6 +17,7 @@ type ClassStatSettingsProps = {
     allowBalancedTuning: boolean;
     targets: StatVector;
     targetCaps: StatVector;
+    targetCapsPending: boolean;
     onCharacterSelect: (characterId: string) => void;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
@@ -164,6 +165,7 @@ const statSlider = css({
     appearance: 'none',
     bg: 'transparent',
     cursor: 'pointer',
+    touchAction: 'none',
     '--stat-track-height': '4px',
     '--stat-track-radius': '999px',
     '--stat-track-border': '1px solid var(--rose-border)',
@@ -176,50 +178,49 @@ const statSlider = css({
     '--stat-thumb-bg': 'var(--rose-accent)',
     '--stat-thumb-shadow': 'none',
     '--stat-thumb-transform': 'none',
-    '&::-webkit-slider-runnable-track': {
+    _focusVisible: {
+        outline: '2px solid color-mix(in srgb, var(--rose-accent) 34%, transparent)',
+        outlineOffset: '3px',
+        borderRadius: '999px'
+    },
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: '50%',
+        transform: 'translateY(-50%)',
         h: 'var(--stat-track-height)',
         borderRadius: 'var(--stat-track-radius)',
         bg: 'var(--stat-track-bg)',
         border: 'var(--stat-track-border)'
     },
-    '&::-webkit-slider-thumb': {
-        appearance: 'none',
-        w: 'var(--stat-thumb-size)',
-        h: 'var(--stat-thumb-size)',
-        mt: 'var(--stat-thumb-offset)',
-        borderRadius: 'var(--stat-thumb-radius)',
-        border: 'var(--stat-thumb-border)',
-        bg: 'var(--stat-thumb-bg)',
-        boxShadow: 'var(--stat-thumb-shadow)',
-        transform: 'var(--stat-thumb-transform)',
-        cursor: 'grab'
-    },
-    '&:active::-webkit-slider-thumb': {
+    '&[data-dragging="true"]': {
         cursor: 'grabbing'
     },
-    '&::-moz-range-track': {
-        h: 'var(--stat-track-height)',
-        borderRadius: 'var(--stat-track-radius)',
-        bg: 'var(--stat-track-bg)',
-        border: 'var(--stat-track-border)'
-    },
-    '&::-moz-range-thumb': {
-        w: 'var(--stat-thumb-size)',
-        h: 'var(--stat-thumb-size)',
-        borderRadius: 'var(--stat-thumb-radius)',
-        border: 'var(--stat-thumb-border)',
-        bg: 'var(--stat-thumb-bg)',
-        boxShadow: 'var(--stat-thumb-shadow)',
-        transform: 'var(--stat-thumb-transform)',
-        cursor: 'grab'
-    },
-    '&:active::-moz-range-thumb': {
-        cursor: 'grabbing'
-    },
-    _disabled: {
+    '&[data-disabled="true"]': {
         opacity: 0.35,
         cursor: 'not-allowed'
+    },
+    '&[data-pending="true"]': {
+        opacity: 0.62,
+        cursor: 'progress'
     }
+});
+
+const statSliderThumb = css({
+    position: 'absolute',
+    zIndex: 2,
+    left: 'var(--stat-value-percent)',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    w: 'var(--stat-thumb-size)',
+    h: 'var(--stat-thumb-size)',
+    borderRadius: 'var(--stat-thumb-radius)',
+    border: 'var(--stat-thumb-border)',
+    bg: 'var(--stat-thumb-bg)',
+    boxShadow: 'var(--stat-thumb-shadow)',
+    pointerEvents: 'none'
 });
 
 const statValue = css({
@@ -348,12 +349,14 @@ function StatTargetSlider(props: {
     cap: number;
     disabled: boolean;
     label: string;
+    pending: boolean;
     stat: ArmorStat;
     value: number;
     onCommit: (stat: ArmorStat, value: string) => void;
 }) {
     const committedValue = () => Math.min(props.value, props.cap);
     const [draftValue, setDraftValue] = createSignal(committedValue());
+    const [draggingPointerId, setDraggingPointerId] = createSignal<number | null>(null);
 
     createEffect(() => {
         setDraftValue(committedValue());
@@ -363,10 +366,11 @@ function StatTargetSlider(props: {
         return Math.max(0, Math.min(props.cap, MAX_STAT_TARGET, Math.trunc(Number(value) || 0)));
     }
 
-    function updateDraft(event: InputEvent & { currentTarget: HTMLInputElement }) {
-        const nextValue = clampDraft(event.currentTarget.value);
-        event.currentTarget.value = String(nextValue);
-        setDraftValue(nextValue);
+    function valueFromPointer(event: PointerEvent & { currentTarget: HTMLElement }) {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const width = Math.max(1, bounds.width);
+        const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / width));
+        return clampDraft(Math.round(ratio * MAX_STAT_TARGET));
     }
 
     function commit(value: string | number = draftValue()) {
@@ -378,9 +382,79 @@ function StatTargetSlider(props: {
         }
     }
 
-    function commitKeyboardChange(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Home' || event.key === 'End') {
-            commit(event.currentTarget.value);
+    function startDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+        if (props.disabled || props.pending || props.cap <= 0) {
+            return;
+        }
+
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDraggingPointerId(event.pointerId);
+        setDraftValue(valueFromPointer(event));
+    }
+
+    function drag(event: PointerEvent & { currentTarget: HTMLElement }) {
+        if (draggingPointerId() !== event.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        setDraftValue(valueFromPointer(event));
+    }
+
+    function finishDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+        if (draggingPointerId() !== event.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        const nextValue = valueFromPointer(event);
+        setDraggingPointerId(null);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        commit(nextValue);
+    }
+
+    function cancelDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+        if (draggingPointerId() !== event.pointerId) {
+            return;
+        }
+
+        setDraggingPointerId(null);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        setDraftValue(committedValue());
+    }
+
+    function commitKeyboardChange(event: KeyboardEvent) {
+        if (props.disabled || props.pending || props.cap <= 0) {
+            return;
+        }
+
+        const keyDeltas: Record<string, number> = {
+            ArrowDown: -1,
+            ArrowLeft: -1,
+            ArrowRight: 1,
+            ArrowUp: 1,
+            PageDown: -10,
+            PageUp: 10
+        };
+        const currentValue = draftValue();
+        let nextValue: number | null = null;
+
+        if (event.key in keyDeltas) {
+            nextValue = currentValue + keyDeltas[event.key];
+        } else if (event.key === 'Home') {
+            nextValue = 0;
+        } else if (event.key === 'End') {
+            nextValue = props.cap;
+        }
+
+        if (nextValue !== null) {
+            event.preventDefault();
+            commit(nextValue);
         }
     }
 
@@ -389,33 +463,46 @@ function StatTargetSlider(props: {
     }
 
     return (
-        <label class={statSliderRow}>
+        <div class={statSliderRow}>
             <span class={`${label} ${statSliderName}`}>{props.label}</span>
             <div class={statSliderFrame}>
-                <input
+                <div
                     class={statSlider}
+                    role="slider"
                     style={`--stat-value-percent: ${percent(draftValue())}%; --stat-cap-percent: ${percent(props.cap)}%;`}
-                    min="0"
-                    max={MAX_STAT_TARGET}
-                    step="1"
-                    type="range"
-                    value={draftValue()}
-                    disabled={props.disabled || props.cap <= 0}
-                    onInput={updateDraft}
-                    onChange={(event) => commit(event.currentTarget.value)}
-                    onPointerUp={(event) => commit(event.currentTarget.value)}
-                    onBlur={(event) => commit(event.currentTarget.value)}
-                    onKeyUp={commitKeyboardChange}
-                />
+                    aria-disabled={props.disabled || props.cap <= 0}
+                    aria-label={props.label}
+                    aria-valuemax={props.cap}
+                    aria-valuemin={0}
+                    aria-valuenow={draftValue()}
+                    aria-busy={props.pending}
+                    data-disabled={props.disabled || props.pending || props.cap <= 0}
+                    data-dragging={draggingPointerId() !== null}
+                    data-pending={props.pending}
+                    tabIndex={props.disabled || props.pending || props.cap <= 0 ? -1 : 0}
+                    onBlur={() => {
+                        setDraggingPointerId(null);
+                        commit(draftValue());
+                    }}
+                    onKeyDown={commitKeyboardChange}
+                    onPointerCancel={cancelDrag}
+                    onPointerDown={startDrag}
+                    onPointerMove={drag}
+                    onPointerUp={finishDrag}
+                >
+                    <span class={statSliderThumb} />
+                </div>
             </div>
             <span class={statValue}>
-                {draftValue()} <span class={statCap}>/ {props.cap}</span>
+                {draftValue()} <span class={statCap}>/ {props.pending ? 'checking' : props.cap}</span>
             </span>
-        </label>
+        </div>
     );
 }
 
-export function StatTargetFields(props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targets'>) {
+export function StatTargetFields(
+    props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'>
+) {
     function percent(value: number) {
         return Math.max(0, Math.min(100, (value / MAX_STAT_TARGET) * 100));
     }
@@ -443,6 +530,7 @@ export function StatTargetFields(props: Pick<ClassStatSettingsProps, 'dumpStat' 
                             cap={cap()}
                             disabled={props.dumpStat === stat}
                             label={STAT_LABELS[stat]}
+                            pending={props.targetCapsPending}
                             stat={stat}
                             value={value()}
                             onCommit={props.onTargetChange}
@@ -454,12 +542,15 @@ export function StatTargetFields(props: Pick<ClassStatSettingsProps, 'dumpStat' 
     );
 }
 
-export function StatTargetControls(props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targets'>) {
+export function StatTargetControls(
+    props: Pick<ClassStatSettingsProps, 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'>
+) {
     return (
         <ControlSection title="Stat targets">
             <StatTargetFields
                 dumpStat={props.dumpStat}
                 onTargetChange={props.onTargetChange}
+                targetCapsPending={props.targetCapsPending}
                 targetCaps={props.targetCaps}
                 targets={props.targets}
             />
@@ -513,6 +604,7 @@ export function ClassStatSettings(props: ClassStatSettingsProps) {
                 <StatTargetControls
                     dumpStat={props.dumpStat}
                     onTargetChange={props.onTargetChange}
+                    targetCapsPending={props.targetCapsPending}
                     targetCaps={props.targetCaps}
                     targets={props.targets}
                 />

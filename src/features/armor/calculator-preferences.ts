@@ -1,12 +1,13 @@
 import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-calc';
 
-import { DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
+import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 
 export type SetSelectionValue = '0' | '2' | '4';
 
 export type CalculatorPreferences = {
     selectedCharacterId?: string;
     selectedExoticItemHash?: string;
+    armorSetDisplayMode?: ArmorSetDisplayMode;
     dumpStat?: ArmorStat | '';
     allowBalancedTuning?: boolean;
     targets?: Partial<StatVector>;
@@ -85,12 +86,17 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
     return {
         selectedCharacterId: typeof candidate.selectedCharacterId === 'string' ? candidate.selectedCharacterId : undefined,
         selectedExoticItemHash: typeof candidate.selectedExoticItemHash === 'string' ? candidate.selectedExoticItemHash : undefined,
+        armorSetDisplayMode: sanitizeArmorSetDisplayMode(candidate.armorSetDisplayMode),
         dumpStat: candidate.dumpStat && isArmorStat(candidate.dumpStat) ? candidate.dumpStat : '',
         allowBalancedTuning: candidate.allowBalancedTuning === true,
         targets: sanitizeTargets(candidate.targets),
         setSelections: sanitizeSetSelectionRecord(candidate.setSelections),
         resultSort: sanitizeResultSort(candidate.resultSort)
     };
+}
+
+export function sanitizeArmorSetDisplayMode(value: unknown): ArmorSetDisplayMode {
+    return value === 'sources' ? 'sources' : 'sets';
 }
 
 export function sanitizeTargets(value: unknown): Partial<StatVector> {

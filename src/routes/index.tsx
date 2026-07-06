@@ -18,6 +18,7 @@ import {
     mergeCalculatorPreferencesForStorage,
     readCalculatorPreferences,
     type SetSelectionValue,
+    sanitizeArmorSetDisplayMode,
     sanitizeTargets,
     writeCalculatorPreferences
 } from '@/features/armor/calculator-preferences';
@@ -40,8 +41,15 @@ import { CalculatorControls } from '@/features/armor/components/calculator-contr
 import { ResultsPanel } from '@/features/armor/components/results-panel';
 import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
-import { DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
+import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
+import {
+    applyVerifiedTargetCap,
+    clampTargetsToCaps,
+    createPendingTargetCaps,
+    MAX_STAT_TARGET_CAPS,
+    targetsAreWithinCaps
+} from '@/features/armor/target-cap-state';
 import type {
     LoadedManifestDefinition,
     ManifestInventoryItemDefinition,
@@ -58,14 +66,7 @@ const SOLVER_RESULT_POOL_LIMIT = 30_000;
 const VISIBLE_RESULT_LIMIT = 25;
 const BALANCED_TUNING_ENABLED = true;
 const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
-const MAX_STAT_TARGET_CAPS: StatVector = {
-    health: 200,
-    melee: 200,
-    grenade: 200,
-    super: 200,
-    class: 200,
-    weapons: 200
-};
+const DEV_TIMING = import.meta.env.DEV;
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
 
@@ -132,6 +133,22 @@ function canLoadLocalTestData() {
     return AUTH_LOCK_DISABLED || isLocalDevHost();
 }
 
+function elapsedMs(startedAt: number) {
+    return Math.round((performance.now() - startedAt) * 10) / 10;
+}
+
+function logDevTiming(label: string, details: Record<string, unknown>) {
+    if (!DEV_TIMING) {
+        return;
+    }
+
+    console.debug(`[rose timing] ${label}`, details);
+}
+
+function armorSlotCounts(input: ArmorStatTargetCapsInput | SolveArmorInput) {
+    return Object.fromEntries(Object.entries(input.armor).map(([slot, armor]) => [slot, armor.length]));
+}
+
 export default function Home() {
     let targetCapRequestId = 0;
     let solveRequestId = 0;
@@ -152,10 +169,14 @@ export default function Home() {
     const [loadedManifestDefinitions, setLoadedManifestDefinitions] = createSignal<LoadedManifestDefinition[]>([]);
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
+    const [armorSetDisplayMode, setArmorSetDisplayMode] = createSignal<ArmorSetDisplayMode>('sets');
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
     const [allowBalancedTuning, setAllowBalancedTuning] = createSignal(false);
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
     const [targetCaps, setTargetCaps] = createSignal<StatVector>({ ...MAX_STAT_TARGET_CAPS });
+    const [targetCapsPending, setTargetCapsPending] = createSignal(false);
+    const [targetCapPriorityStat, setTargetCapPriorityStat] = createSignal<ArmorStat | null>(null);
+    const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
@@ -212,40 +233,142 @@ export default function Home() {
         return targetCapRequestId;
     }
 
-    async function calculateTargetCapsIncrementally(input: ArmorStatTargetCapsInput, requestId: number, initialCaps: StatVector) {
+    async function calculateTargetCapsIncrementally(
+        input: ArmorStatTargetCapsInput,
+        requestId: number,
+        initialCaps: StatVector,
+        priorityStat: ArmorStat | null
+    ) {
         const nextCaps = { ...initialCaps };
+        const startedAt = performance.now();
+        logDevTiming('cap batch started', {
+            requestId,
+            priorityStat,
+            targets: input.statTargets,
+            initialCaps,
+            setRequirements: input.setRequirements.length,
+            armorCounts: armorSlotCounts(input)
+        });
         try {
-            await armorSolver.calculateStatCaps(input, ARMOR_STATS, (stat, cap) => {
+            if (priorityStat) {
+                const cap = await armorSolver.calculateStatCap(input, priorityStat);
                 if (requestId !== targetCapRequestId) {
+                    logDevTiming('priority cap ignored after supersede', {
+                        requestId,
+                        priorityStat,
+                        cap,
+                        currentRequestId: targetCapRequestId
+                    });
                     return;
                 }
 
-                nextCaps[stat] = cap;
-                setTargetCaps({ ...nextCaps });
+                const verifiedCaps = applyVerifiedTargetCap(nextCaps, priorityStat, cap, dumpStat());
+                nextCaps[priorityStat] = verifiedCaps[priorityStat];
+                setTargetCaps(verifiedCaps);
+                setTargetCapPriorityStat(null);
+                setTargetCapsPending(false);
+
+                const requestedTarget = input.statTargets[priorityStat] ?? 0;
+                if (requestedTarget > verifiedCaps[priorityStat]) {
+                    setNextTargetCapRefreshBackground(true);
+                    setTargets((current) => clampTargetsToCaps(current, verifiedCaps, dumpStat()));
+                    invalidateSolve();
+                    logDevTiming('priority cap clamped target', {
+                        requestId,
+                        priorityStat,
+                        requested: requestedTarget,
+                        cap: verifiedCaps[priorityStat],
+                        ms: elapsedMs(startedAt)
+                    });
+                    return;
+                }
+            }
+
+            const remainingStats = priorityStat ? ARMOR_STATS.filter((stat) => stat !== priorityStat) : ARMOR_STATS;
+            await armorSolver.calculateStatCaps(input, remainingStats, (stat, cap) => {
+                if (requestId !== targetCapRequestId) {
+                    logDevTiming('cap stat ignored after supersede', {
+                        requestId,
+                        stat,
+                        cap,
+                        currentRequestId: targetCapRequestId
+                    });
+                    return;
+                }
+
+                const verifiedCaps = applyVerifiedTargetCap(nextCaps, stat, cap, dumpStat());
+                nextCaps[stat] = verifiedCaps[stat];
+                setTargetCaps(verifiedCaps);
             });
+            if (requestId === targetCapRequestId) {
+                setTargetCapsPending(false);
+                logDevTiming('cap batch completed', {
+                    requestId,
+                    ms: elapsedMs(startedAt),
+                    caps: nextCaps
+                });
+            } else {
+                logDevTiming('cap batch completed stale', {
+                    requestId,
+                    currentRequestId: targetCapRequestId,
+                    ms: elapsedMs(startedAt)
+                });
+            }
         } catch (error) {
             if (error instanceof Error && error.message === 'Armor solver request superseded.') {
+                logDevTiming('cap batch superseded', {
+                    requestId,
+                    currentRequestId: targetCapRequestId,
+                    ms: elapsedMs(startedAt)
+                });
                 return;
             }
 
             if (requestId !== targetCapRequestId) {
+                logDevTiming('cap batch failed stale', {
+                    requestId,
+                    currentRequestId: targetCapRequestId,
+                    ms: elapsedMs(startedAt)
+                });
                 return;
             }
 
             setMessage(error instanceof Error ? error.message : 'Unknown armor stat cap worker failure.');
+            setTargetCapsPending(false);
+            logDevTiming('cap batch failed', {
+                requestId,
+                ms: elapsedMs(startedAt),
+                error: error instanceof Error ? error.message : String(error)
+            });
         }
     }
 
     function invalidateSolve() {
         solveRequestId += 1;
-        armorSolver.cancelPending();
         setSolveResult(null);
     }
 
-    function selectCharacter(characterId: string) {
-        setSelectedCharacterId(characterId);
+    function resetBuildChoices() {
         setSelectedExoticItemHash('');
+        setArmorSetDisplayMode('sets');
+        setDumpStat('');
+        setAllowBalancedTuning(false);
+        setTargets({ ...EMPTY_STAT_TARGETS });
+        setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
+        setTargetCapsPending(false);
+        setTargetCapPriorityStat(null);
+        setNextTargetCapRefreshBackground(false);
         setSetSelections({});
+        setResultSort(DEFAULT_RESULT_SORT);
+    }
+
+    function selectCharacter(characterId: string) {
+        if (characterId === selectedCharacterId()) {
+            return;
+        }
+
+        setSelectedCharacterId(characterId);
+        resetBuildChoices();
         invalidateSolve();
     }
 
@@ -272,10 +395,12 @@ export default function Home() {
                     selectedCharacterId: selectedCharacterId(),
                     selectedCharacter: selectedCharacter(),
                     selectedExoticItemHash: selectedExoticItemHash(),
+                    armorSetDisplayMode: armorSetDisplayMode(),
                     dumpStat: dumpStat(),
                     allowBalancedTuning: effectiveAllowBalancedTuning(),
                     targets: targets(),
                     targetCaps: targetCaps(),
+                    targetCapsPending: targetCapsPending(),
                     setSelections: setSelections(),
                     selectedSetRequirements: selectedSetRequirements(),
                     resultSort: resultSort()
@@ -339,6 +464,7 @@ export default function Home() {
         const currentPreferences = {
             selectedCharacterId: selectedCharacterId(),
             selectedExoticItemHash: selectedExoticItemHash(),
+            armorSetDisplayMode: armorSetDisplayMode(),
             dumpStat: dumpStat(),
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             targets: targets(),
@@ -357,17 +483,10 @@ export default function Home() {
         let changed = false;
 
         setTargets((current) => {
-            const next = { ...current };
+            const next = clampTargetsToCaps(current, caps, currentDumpStat);
+            changed = next !== current;
 
-            for (const stat of ARMOR_STATS) {
-                const cappedValue = stat === currentDumpStat ? 0 : Math.min(current[stat], caps[stat]);
-                if (cappedValue !== current[stat]) {
-                    next[stat] = cappedValue;
-                    changed = true;
-                }
-            }
-
-            return changed ? next : current;
+            return next;
         });
 
         if (changed) {
@@ -378,20 +497,24 @@ export default function Home() {
     createEffect(() => {
         const input = targetCapInput();
         const currentDumpStat = dumpStat();
+        const priorityStat = untrack(targetCapPriorityStat);
+        const backgroundOnly = untrack(nextTargetCapRefreshBackground);
+        setNextTargetCapRefreshBackground(false);
         const requestId = nextTargetCapRequestId();
+
+        armorSolver.cancelPending();
 
         if (!input) {
             setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
+            setTargetCapsPending(false);
             return;
         }
 
-        const initialCaps = { ...untrack(targetCaps) };
-        if (currentDumpStat) {
-            initialCaps[currentDumpStat] = 0;
-        }
+        const initialCaps = createPendingTargetCaps(untrack(targets), currentDumpStat);
         setTargetCaps(initialCaps);
+        setTargetCapsPending(!backgroundOnly);
 
-        void calculateTargetCapsIncrementally(input, requestId, initialCaps);
+        void calculateTargetCapsIncrementally(input, requestId, initialCaps, priorityStat);
     });
 
     function signIn() {
@@ -671,8 +794,29 @@ export default function Home() {
             return;
         }
 
+        if (targetCapsPending()) {
+            setMessage('Waiting for stat caps to finish updating.');
+            return;
+        }
+
+        if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat())) {
+            setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat()));
+            invalidateSolve();
+            setMessage('Stat targets were adjusted to verified caps. Solve again.');
+            return;
+        }
+
         const requestId = solveRequestId + 1;
         solveRequestId = requestId;
+        const startedAt = performance.now();
+        const solveInput = createSolveInput(profile, character);
+        logDevTiming('solve started', {
+            requestId,
+            targets: targets(),
+            caps: targetCaps(),
+            setRequirements: selectedSetRequirements().length,
+            armorCounts: armorSlotCounts(solveInput)
+        });
         setStatus('solving');
         setLoadProgress({
             active: true,
@@ -683,19 +827,34 @@ export default function Home() {
         });
         let result: SolveArmorResult;
         try {
-            result = await armorSolver.solve(createSolveInput(profile, character));
+            result = await armorSolver.solve(solveInput);
         } catch (error) {
             if (requestId !== solveRequestId) {
+                logDevTiming('solve failed stale', {
+                    requestId,
+                    currentRequestId: solveRequestId,
+                    ms: elapsedMs(startedAt)
+                });
                 return;
             }
 
             setStatus('error');
             setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(error instanceof Error ? error.message : 'Unknown armor solver worker failure.');
+            logDevTiming('solve failed', {
+                requestId,
+                ms: elapsedMs(startedAt),
+                error: error instanceof Error ? error.message : String(error)
+            });
             return;
         }
 
         if (requestId !== solveRequestId) {
+            logDevTiming('solve completed stale', {
+                requestId,
+                currentRequestId: solveRequestId,
+                ms: elapsedMs(startedAt)
+            });
             return;
         }
 
@@ -713,12 +872,21 @@ export default function Home() {
                       .join(' ')
                 : `${result.reason}\nSearched ${result.searchedCombinations} armor combinations.`
         );
+        logDevTiming('solve completed', {
+            requestId,
+            ms: elapsedMs(startedAt),
+            ok: result.ok,
+            validBuildCount: result.ok ? result.validBuildCount : 0,
+            returnedBuildCount: result.ok ? result.returnedBuildCount : 0,
+            searchedCombinations: result.searchedCombinations
+        });
     }
 
     function updateTarget(stat: ArmorStat, value: string) {
-        const cap = targetCaps()[stat];
+        const cap = dumpStat() === stat ? 0 : clampTarget(targetCaps()[stat]);
         const numericValue = Math.min(clampTarget(Number(value) || 0), cap);
 
+        setTargetCapPriorityStat(stat);
         setTargets((current) => ({
             ...current,
             [stat]: numericValue
@@ -736,10 +904,7 @@ export default function Home() {
         }
 
         if (nextDumpStat) {
-            setTargets((current) => ({
-                ...current,
-                [nextDumpStat]: 0
-            }));
+            setTargets((current) => clampTargetsToCaps({ ...current, [nextDumpStat]: 0 }, targetCaps(), nextDumpStat));
         }
     }
 
@@ -764,6 +929,7 @@ export default function Home() {
 
         setSelectedCharacterId(preferences.selectedCharacterId ?? '');
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
+        setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
         setDumpStat(nextDumpStat);
         setAllowBalancedTuning(BALANCED_TUNING_ENABLED && preferences.allowBalancedTuning === true);
         setTargets(nextTargets);
@@ -773,13 +939,7 @@ export default function Home() {
 
     function clearSavedCalculatorChoices() {
         clearCalculatorPreferences();
-        setSelectedCharacterId(normalizedProfile()?.characters[0]?.characterId ?? '');
-        setSelectedExoticItemHash('');
-        setDumpStat('');
-        setAllowBalancedTuning(false);
-        setTargets({ ...EMPTY_STAT_TARGETS });
-        setSetSelections({});
-        setResultSort(DEFAULT_RESULT_SORT);
+        resetBuildChoices();
         invalidateSolve();
         setStatus('idle');
         setMessage('Calculator choices cleared.');
@@ -803,16 +963,19 @@ export default function Home() {
                     characterOptions={characterButtons()}
                     selectedCharacterId={selectedCharacter()?.characterId ?? ''}
                     selectedExoticItemHash={selectedExoticItemHash()}
+                    armorSetDisplayMode={armorSetDisplayMode()}
                     dumpStat={dumpStat()}
                     allowBalancedTuning={effectiveAllowBalancedTuning()}
                     targets={targets()}
                     targetCaps={targetCaps()}
+                    targetCapsPending={targetCapsPending()}
                     setSelections={setSelections()}
                     availableExotics={availableExotics()}
                     selectableSets={selectableSets()}
-                    canSolve={!calculatorLocked() && Boolean(normalizedProfile()) && status() !== 'loading'}
+                    canSolve={!calculatorLocked() && Boolean(normalizedProfile()) && status() !== 'loading' && !targetCapsPending()}
                     solving={status() === 'loading' || status() === 'solving'}
                     onCharacterSelect={selectCharacter}
+                    onArmorSetDisplayModeChange={setArmorSetDisplayMode}
                     onExoticChange={(itemHash) => {
                         setSelectedExoticItemHash(itemHash);
                         invalidateSolve();
@@ -833,6 +996,7 @@ export default function Home() {
                     result={solveResult()}
                     builds={resultBuilds()}
                     armorSets={selectableSets()}
+                    armorSetDisplayMode={armorSetDisplayMode()}
                     resultFailure={resultFailure()}
                     sort={resultSort()}
                     dumpStat={dumpStat()}

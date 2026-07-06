@@ -4,13 +4,19 @@ import { For, type JSX, Show } from 'solid-js';
 
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
-import { type ArmorBonusDefinitionSet, buildExpansionKey, getArmorBonusDisplays } from '@/features/armor/result-display';
+import {
+    type ArmorBonusDefinitionSet,
+    type ArmorSetDisplayMode,
+    buildExpansionKey,
+    getArmorBonusDisplays
+} from '@/features/armor/result-display';
 
 export type VisibleResultSortKey = ArmorStat | 'totalStats';
 
 type ResultsTableProps = {
     builds: ArmorBuild[];
     armorSets: ArmorBonusDefinitionSet[];
+    armorSetDisplayMode: ArmorSetDisplayMode;
     dumpStat: ArmorStat | '';
     expandedBuildKey: string | null;
     sort: ArmorBuildSort;
@@ -175,8 +181,8 @@ function SortableHeader(props: { label: string; mark: string; numeric?: boolean;
     );
 }
 
-function BonusSummary(props: { build: ArmorBuild; armorSets: ArmorBonusDefinitionSet[] }) {
-    const bonuses = () => getArmorBonusDisplays(props.build, props.armorSets);
+function BonusSummary(props: { build: ArmorBuild; armorSets: ArmorBonusDefinitionSet[]; armorSetDisplayMode: ArmorSetDisplayMode }) {
+    const bonuses = () => getArmorBonusDisplays(props.build, props.armorSets, props.armorSetDisplayMode);
 
     return (
         <div class={bonusText}>
@@ -196,6 +202,7 @@ function BonusSummary(props: { build: ArmorBuild; armorSets: ArmorBonusDefinitio
 function ResultRow(props: {
     build: ArmorBuild;
     armorSets: ArmorBonusDefinitionSet[];
+    armorSetDisplayMode: ArmorSetDisplayMode;
     dumpStat: ArmorStat | '';
     expanded: boolean;
     onToggle: () => void;
@@ -222,7 +229,7 @@ function ResultRow(props: {
             </For>
             <td data-numeric>{props.build.score.totalStats}</td>
             <td data-text-cell>
-                <BonusSummary build={props.build} armorSets={props.armorSets} />
+                <BonusSummary build={props.build} armorSets={props.armorSets} armorSetDisplayMode={props.armorSetDisplayMode} />
             </td>
         </tr>
     );
@@ -275,6 +282,7 @@ export function ResultsTable(props: ResultsTableProps) {
                                 <ResultRow
                                     build={build}
                                     armorSets={props.armorSets}
+                                    armorSetDisplayMode={props.armorSetDisplayMode}
                                     dumpStat={props.dumpStat}
                                     expanded={props.expandedBuildKey === buildExpansionKey(build)}
                                     onToggle={() => props.onToggleBuild(build)}

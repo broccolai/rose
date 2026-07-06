@@ -8,7 +8,8 @@ import {
     DEFAULT_RESULT_SORT,
     formatArmorBonusSummary,
     formatDimArmorQuery,
-    getArmorBonusDisplays
+    getArmorBonusDisplays,
+    getArmorSetDisplayName
 } from '@/features/armor/result-display';
 
 describe('result display helpers', () => {
@@ -50,12 +51,32 @@ describe('result display helpers', () => {
 
         expect(displays.map((bonus) => bonus.label)).toEqual(['Warmind Network', 'Rasputin Protocol']);
         expect(displays.map((bonus) => bonus.isOp)).toEqual([false, true]);
+        expect(displays[1]?.title).toBe('Rasputin Protocol\nFour piece text.');
         expect(
             formatArmorBonusSummary(
                 build({ bonuses: [{ setId: 'set:seraph', name: 'Seventh Seraph', pieces: 4, activeBonuses: [4] }] }),
                 armorSets
             )
         ).toBe('Rasputin Protocol');
+    });
+
+    test('can display known armor set sources without replacing manifest tooltip text', () => {
+        const armorSets: ArmorBonusDefinitionSet[] = [
+            {
+                id: 'set:seraph',
+                bonuses: [{ requiredPieces: 4, name: 'Rasputin Protocol', description: 'Manifest effect text.' }],
+                opBonuses: [{ requiredPieces: 4, source: 'Test Source', category: 'DPS', trigger: 'Do not show.', effect: 'Do not show.' }]
+            }
+        ];
+        const displays = getArmorBonusDisplays(
+            build({ bonuses: [{ setId: 'set:seraph', name: 'Seventh Seraph', pieces: 4, activeBonuses: [4] }] }),
+            armorSets,
+            'sources'
+        );
+
+        expect(getArmorSetDisplayName({ name: 'Seventh Seraph', opBonuses: armorSets[0]?.opBonuses }, 'sources')).toBe('Test Source');
+        expect(displays[0]?.label).toBe('Test Source 4pc');
+        expect(displays[0]?.title).toBe('Rasputin Protocol\nManifest effect text.');
     });
 
     test('keys expansion state by armor pieces and selected addons', () => {

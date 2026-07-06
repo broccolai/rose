@@ -11,9 +11,13 @@ import {
 
 import type { SolverWorkerRequest, SolverWorkerResponse } from '@/features/armor/solver-worker';
 
+const DEV_SOLVER_TIMING = Boolean(import.meta.env.DEV);
+
 type PendingRequest = {
     resolve: (value: unknown) => void;
     reject: (reason?: unknown) => void;
+    label: string;
+    startedAt: number;
 };
 
 type SolverWorkerClient = {
@@ -88,6 +92,7 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             }
 
             this.pending.delete(message.id);
+            logSolverTiming(request.label, request.startedAt, message.ok ? 'done' : 'error');
             if (message.ok) {
                 request.resolve(message.result);
                 return;
@@ -97,6 +102,7 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         };
         worker.onerror = (event) => {
             for (const request of this.pending.values()) {
+                logSolverTiming(request.label, request.startedAt, 'worker-error');
                 request.reject(event.error ?? new Error(event.message || 'Armor solver worker failed.'));
             }
 
@@ -111,7 +117,15 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             worker.terminate();
         }
 
+        if (DEV_SOLVER_TIMING && this.pending.size > 0) {
+            console.debug('[rose timing] solver workers reset', {
+                canceledRequests: this.pending.size,
+                reason
+            });
+        }
+
         for (const request of this.pending.values()) {
+            logSolverTiming(request.label, request.startedAt, 'canceled');
             request.reject(new Error(reason));
         }
 
@@ -125,11 +139,17 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         }
 
         const id = this.nextId++;
+        const label = solverRequestLabel(id, request);
         return new Promise<T>((resolve, reject) => {
             this.pending.set(id, {
                 resolve: (value) => resolve(value as T),
-                reject
+                reject,
+                label,
+                startedAt: performance.now()
             });
+            if (DEV_SOLVER_TIMING) {
+                console.debug('[rose timing] solver request started', { label });
+            }
             worker.postMessage({ ...request, id } satisfies SolverWorkerRequest);
         });
     }
@@ -142,7 +162,12 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
 
 class DirectSolverWorkerClient implements SolverWorkerClient {
     async calculateStatCap(input: ArmorStatTargetCapsInput, stat: ArmorStat) {
-        return calculateArmorStatTargetCap(input, stat);
+        const startedAt = performance.now();
+        try {
+            return calculateArmorStatTargetCap(input, stat);
+        } finally {
+            logSolverTiming(`direct cap:${stat}`, startedAt, 'done');
+        }
     }
 
     async calculateStatCaps(
@@ -161,12 +186,37 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
     }
 
     async solve(input: SolveArmorInput) {
-        return solveArmor(input);
+        const startedAt = performance.now();
+        try {
+            return solveArmor(input);
+        } finally {
+            logSolverTiming('direct solve', startedAt, 'done');
+        }
     }
 
     cancelPending() {}
 
     dispose() {}
+}
+
+function solverRequestLabel(id: number, request: SolverWorkerRequest) {
+    if (request.type === 'calculate-stat-cap') {
+        return `worker#${id} cap:${request.stat}`;
+    }
+
+    return `worker#${id} ${request.type}`;
+}
+
+function logSolverTiming(label: string, startedAt: number, status: 'canceled' | 'done' | 'error' | 'worker-error') {
+    if (!DEV_SOLVER_TIMING) {
+        return;
+    }
+
+    console.debug('[rose timing] solver request finished', {
+        label,
+        status,
+        ms: Math.round((performance.now() - startedAt) * 10) / 10
+    });
 }
 
 function workerCount() {

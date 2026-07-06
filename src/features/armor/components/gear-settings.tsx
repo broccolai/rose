@@ -5,9 +5,11 @@ import type { SetSelectionValue } from '@/features/armor/calculator-preferences'
 import type { AvailableArmorSet, AvailableExotic } from '@/features/armor/calculator-view-model';
 import { ControlSection } from '@/features/armor/components/control-section';
 import { field, input, label, MONO_FONT_FAMILY, muted } from '@/features/armor/components/ui-styles';
+import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/armor/result-display';
 
 type GearSettingsProps = {
     selectedExoticItemHash: string;
+    armorSetDisplayMode: ArmorSetDisplayMode;
     setSelections: Record<string, SetSelectionValue>;
     availableExotics: AvailableExotic[];
     selectableSets: AvailableArmorSet[];
@@ -257,22 +259,8 @@ export function ExoticControls(props: Pick<GearSettingsProps, 'availableExotics'
 }
 
 function setBonusTooltip(set: AvailableArmorSet, requiredPieces: 2 | 4) {
-    const opBonus = set.opBonuses.find((bonus) => bonus.requiredPieces === requiredPieces);
     const bonus = set.bonuses.find((setBonus) => setBonus.requiredPieces === requiredPieces);
     const ownership = `Own ${Math.min(set.count, requiredPieces)} / ${requiredPieces} compatible pieces.`;
-
-    if (opBonus) {
-        const manifestDetails = bonus ? [`Manifest: ${bonus.name}`, bonus.description].filter(Boolean).join('\n') : '';
-        return [
-            `OP ${opBonus.source} ${requiredPieces}pc (${opBonus.category}${opBonus.bugged ? ', bugged' : ''})`,
-            `Trigger: ${opBonus.trigger}`,
-            `Effect: ${opBonus.effect}`,
-            manifestDetails,
-            ownership
-        ]
-            .filter(Boolean)
-            .join('\n');
-    }
 
     if (!bonus) {
         return `${requiredPieces}-piece bonus\nNo perk details in manifest.\n${ownership}`;
@@ -281,7 +269,9 @@ function setBonusTooltip(set: AvailableArmorSet, requiredPieces: 2 | 4) {
     return [bonus.name, bonus.description, ownership].filter(Boolean).join('\n');
 }
 
-export function ArmorSetFields(props: Pick<GearSettingsProps, 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>) {
+export function ArmorSetFields(
+    props: Pick<GearSettingsProps, 'armorSetDisplayMode' | 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>
+) {
     function nextRequirement(current: SetSelectionValue, value: SetSelectionValue) {
         return current === value ? '0' : value;
     }
@@ -291,6 +281,7 @@ export function ArmorSetFields(props: Pick<GearSettingsProps, 'onSetRequirementC
 
     function renderSetCard(set: AvailableArmorSet) {
         const selected = () => props.setSelections[set.id] ?? '0';
+        const displayName = () => getArmorSetDisplayName(set, props.armorSetDisplayMode);
         const canRequire = (requiredPieces: 2 | 4) => set.count >= requiredPieces;
         const hasOpBonus = (requiredPieces: 2 | 4) => set.opBonuses.some((bonus) => bonus.requiredPieces === requiredPieces);
         const updateRequirement = (requiredPieces: 2 | 4) => {
@@ -303,13 +294,13 @@ export function ArmorSetFields(props: Pick<GearSettingsProps, 'onSetRequirementC
 
         return (
             <div class={setRow} data-op={set.opBonuses.length > 0} data-unavailable={set.count < 2}>
-                <span class={setName} title={set.name}>
-                    <span class={setNameText}>{set.name}</span>
+                <span class={setName} title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
+                    <span class={setNameText}>{displayName()}</span>
                 </span>
                 <span class={setCount} title={`${set.count} owned compatible pieces`}>
                     {set.count}
                 </span>
-                <fieldset class={segmentedControl} aria-label={`${set.name} requirement`}>
+                <fieldset class={segmentedControl} aria-label={`${displayName()} requirement`}>
                     <button
                         class={`${segmentButton} ${hasOpBonus(2) ? opSegmentButton : ''}`}
                         type="button"
@@ -368,10 +359,13 @@ export function ArmorSetFields(props: Pick<GearSettingsProps, 'onSetRequirementC
     );
 }
 
-export function ArmorSetControls(props: Pick<GearSettingsProps, 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>) {
+export function ArmorSetControls(
+    props: Pick<GearSettingsProps, 'armorSetDisplayMode' | 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>
+) {
     return (
         <ControlSection title="Sets">
             <ArmorSetFields
+                armorSetDisplayMode={props.armorSetDisplayMode}
                 onSetRequirementChange={props.onSetRequirementChange}
                 selectableSets={props.selectableSets}
                 setSelections={props.setSelections}
@@ -390,6 +384,7 @@ export function GearSettings(props: GearSettingsProps) {
             />
 
             <ArmorSetControls
+                armorSetDisplayMode={props.armorSetDisplayMode}
                 onSetRequirementChange={props.onSetRequirementChange}
                 selectableSets={props.selectableSets}
                 setSelections={props.setSelections}

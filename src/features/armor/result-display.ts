@@ -3,6 +3,7 @@ import { ARMOR_SLOTS, type ArmorBuild, type ArmorBuildSort } from '@armor-calc';
 export { COMPACT_STAT_LABELS } from '@/features/armor/display-metadata';
 
 export const DEFAULT_RESULT_SORT: ArmorBuildSort = { key: 'totalStats', direction: 'desc' };
+export type ArmorSetDisplayMode = 'sets' | 'sources';
 
 export type ArmorBonusDefinitionSet = {
     id: string;
@@ -27,7 +28,23 @@ export type ArmorBonusDisplay = {
     isOp: boolean;
 };
 
-export function getArmorBonusDisplays(build: ArmorBuild, armorSets: ArmorBonusDefinitionSet[] = []): ArmorBonusDisplay[] {
+export function getArmorSetDisplayName(
+    set: { name: string; opBonuses?: Array<{ source: string }> },
+    displayMode: ArmorSetDisplayMode = 'sets'
+) {
+    if (displayMode !== 'sources') {
+        return set.name;
+    }
+
+    const sourceNames = [...new Set((set.opBonuses ?? []).map((bonus) => bonus.source).filter(Boolean))];
+    return sourceNames.length > 0 ? sourceNames.join(' / ') : set.name;
+}
+
+export function getArmorBonusDisplays(
+    build: ArmorBuild,
+    armorSets: ArmorBonusDefinitionSet[] = [],
+    displayMode: ArmorSetDisplayMode = 'sets'
+): ArmorBonusDisplay[] {
     if (build.activeSetBonuses.length === 0) {
         return [];
     }
@@ -48,13 +65,14 @@ export function getArmorBonusDisplays(build: ArmorBuild, armorSets: ArmorBonusDe
             .map((pieces) => {
                 const manifestBonus = set.bonuses.find((bonus) => bonus.requiredPieces === pieces);
                 const opBonus = set.opBonuses?.find((bonus) => bonus.requiredPieces === pieces);
-                const label = manifestBonus?.name || `${activeBonus.name} ${pieces}pc`;
+                const fallbackSetName = getArmorSetDisplayName({ name: activeBonus.name, opBonuses: set.opBonuses }, displayMode);
+                const label =
+                    displayMode === 'sources' && opBonus
+                        ? `${opBonus.source} ${pieces}pc`
+                        : manifestBonus?.name || `${fallbackSetName} ${pieces}pc`;
                 const title = [
                     manifestBonus?.name || `${pieces}pc ${activeBonus.name}`,
-                    manifestBonus?.description,
-                    opBonus
-                        ? `OP ${opBonus.source} (${opBonus.category}${opBonus.bugged ? ', bugged' : ''})\nTrigger: ${opBonus.trigger}\nEffect: ${opBonus.effect}`
-                        : ''
+                    manifestBonus?.description || 'No perk details in manifest.'
                 ]
                     .filter(Boolean)
                     .join('\n');
@@ -68,8 +86,12 @@ export function getArmorBonusDisplays(build: ArmorBuild, armorSets: ArmorBonusDe
     });
 }
 
-export function formatArmorBonusSummary(build: ArmorBuild, armorSets: ArmorBonusDefinitionSet[] = []) {
-    const displays = getArmorBonusDisplays(build, armorSets);
+export function formatArmorBonusSummary(
+    build: ArmorBuild,
+    armorSets: ArmorBonusDefinitionSet[] = [],
+    displayMode: ArmorSetDisplayMode = 'sets'
+) {
+    const displays = getArmorBonusDisplays(build, armorSets, displayMode);
 
     if (displays.length === 0) {
         return '-';

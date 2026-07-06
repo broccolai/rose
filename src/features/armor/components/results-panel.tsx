@@ -14,12 +14,13 @@ import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
 import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
 import { MONO_FONT_FAMILY, muted } from '@/features/armor/components/ui-styles';
 import { SLOT_LABELS } from '@/features/armor/display-metadata';
-import { buildExpansionKey, formatDimArmorQuery } from '@/features/armor/result-display';
+import { type ArmorSetDisplayMode, buildExpansionKey, formatDimArmorQuery } from '@/features/armor/result-display';
 
 type ResultsPanelProps = {
     result: SolveArmorResult | null;
     builds: ArmorBuild[];
     armorSets: AvailableArmorSet[];
+    armorSetDisplayMode: ArmorSetDisplayMode;
     resultFailure: string | null;
     sort: ArmorBuildSort;
     dumpStat: ArmorStat | '';
@@ -398,6 +399,7 @@ export function ResultsPanel(props: ResultsPanelProps) {
                         <ResultsTable
                             builds={props.builds}
                             armorSets={props.armorSets}
+                            armorSetDisplayMode={props.armorSetDisplayMode}
                             dumpStat={props.dumpStat}
                             expandedBuildKey={expandedBuildKey()}
                             sort={props.sort}
