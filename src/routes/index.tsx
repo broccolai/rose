@@ -58,7 +58,7 @@ import type {
 } from '@/features/armor/types';
 import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
-import { createAuthorizationUrl, getTokenDebugState, readToken } from '@/features/bungie/oauth';
+import { createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
@@ -375,7 +375,11 @@ export default function Home() {
     function refreshAuthState() {
         const debugState = getTokenDebugState();
         setAuthenticated(debugState.authenticated);
-        setMessage(debugState.authenticated ? `Signed in. Token expires at ${debugState.expiresAt}.` : 'Signed out.');
+        setMessage(
+            debugState.authenticated
+                ? `Signed in. Access expires at ${debugState.expiresAt}.${debugState.refreshExpiresAt ? ` Refresh expires at ${debugState.refreshExpiresAt}.` : ''}`
+                : 'Signed out.'
+        );
     }
 
     function downloadDebugVaultExport() {
@@ -533,11 +537,11 @@ export default function Home() {
             return;
         }
 
-        const token = readToken();
+        const token = await getValidToken();
         if (!token) {
             setAuthenticated(false);
             setStatus('error');
-            setMessage('Missing or expired token. Sign in again.');
+            setMessage('Missing or expired Bungie sign-in. Sign in again.');
             return;
         }
 

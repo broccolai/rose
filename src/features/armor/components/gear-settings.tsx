@@ -185,13 +185,13 @@ const segmentButton = css({
     _last: {
         borderInlineEnd: 0
     },
-    '&[data-disabled="false"]:hover': {
+    '&[data-disabled="false"][data-selected="false"]:hover': {
         bg: 'var(--rose-surface-raised)',
         color: 'var(--rose-text)'
     },
     '&[data-op="true"]': {
         color: 'color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%)',
-        bg: 'color-mix(in srgb, var(--rose-op) 10%, transparent)'
+        bg: 'color-mix(in srgb, var(--rose-op) 8%, transparent)'
     },
     '&[data-disabled="true"]': {
         opacity: 0.34,
@@ -211,14 +211,10 @@ const segmentButton = css({
         boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
     },
     '&[data-selected="true"][data-op="true"]': {
-        bg: 'color-mix(in srgb, var(--rose-op) 18%, var(--rose-button))',
+        bg: 'var(--rose-button)',
         color: 'var(--rose-button-text)',
-        boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 32%, var(--rose-accent))'
+        boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
     }
-});
-
-const opSegmentButton = css({
-    bg: 'color-mix(in srgb, #d8b15f 10%, transparent)!'
 });
 
 export function ExoticPicker(
@@ -302,7 +298,7 @@ export function ArmorSetFields(
                 </span>
                 <fieldset class={segmentedControl} aria-label={`${displayName()} requirement`}>
                     <button
-                        class={`${segmentButton} ${hasOpBonus(2) ? opSegmentButton : ''}`}
+                        class={segmentButton}
                         type="button"
                         title={setBonusTooltip(set, 2)}
                         aria-disabled={!canRequire(2)}
@@ -314,7 +310,7 @@ export function ArmorSetFields(
                         2
                     </button>
                     <button
-                        class={`${segmentButton} ${hasOpBonus(4) ? opSegmentButton : ''}`}
+                        class={segmentButton}
                         type="button"
                         title={setBonusTooltip(set, 4)}
                         aria-disabled={!canRequire(4)}

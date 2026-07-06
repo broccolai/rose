@@ -671,10 +671,6 @@
     background: var(--edNtiq);
 }
 
-  .ftGlla\! {
-    background: color-mix(in srgb, #d8b15f 10%, transparent) !important;
-}
-
   .kWIjhW {
     font: inherit;
 }
@@ -1629,20 +1625,16 @@
     background: color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%);
 }
 
-  .fhvrRp[data-op="true"] {
-    background: color-mix(in srgb, var(--rose-op) 10%, transparent);
+  .iEsEyc[data-op="true"] {
+    background: color-mix(in srgb, var(--rose-op) 8%, transparent);
 }
 
   .kxxLSn[data-disabled="true"][data-op="true"] {
     background: color-mix(in srgb, var(--rose-op) 7%, transparent);
 }
 
-  .kVRWFC[data-selected="true"] {
+  .kVRWFC[data-selected="true"],.VUetR[data-selected="true"][data-op="true"] {
     background: var(--rose-button);
-}
-
-  .ljNCfu[data-selected="true"][data-op="true"] {
-    background: color-mix(in srgb, var(--rose-op) 18%, var(--rose-button));
 }
 
   .jDkIok th,.jDUnsw td {
@@ -1813,8 +1805,8 @@
     color: var(--rose-button-text);
 }
 
-  .iLslCI[data-selected="true"][data-op="true"] {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rose-op) 32%, var(--rose-accent));
+  .bfEVPX[data-selected="true"][data-op="true"] {
+    box-shadow: inset 0 0 0 1px var(--rose-accent);
 }
 
   .eiQzWo th {
@@ -2049,7 +2041,7 @@
     background: color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised));
 }
 
-  .hFMUQy[data-disabled="false"]:hover {
+  .kHgwGY[data-disabled="false"][data-selected="false"]:hover {
     background: var(--rose-surface-raised);
 }
 
@@ -2081,7 +2073,7 @@
     border-color: #c292ff;
 }
 
-  .bhulYZ[data-disabled="false"]:hover {
+  .hvKMKj[data-disabled="false"][data-selected="false"]:hover {
     color: var(--rose-text);
 }
 

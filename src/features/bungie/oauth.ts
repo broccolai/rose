@@ -10,6 +10,8 @@ export type BungieToken = {
     accessToken: string;
     tokenType: string;
     expiresAt: number;
+    refreshToken?: string;
+    refreshExpiresAt?: number;
     raw: unknown;
 };
 
@@ -17,6 +19,8 @@ type BungieTokenResponse = {
     access_token?: string;
     token_type?: string;
     expires_in?: number;
+    refresh_token?: string;
+    refresh_expires_in?: number;
 };
 
 function randomState() {
@@ -45,6 +49,19 @@ export function takeStoredOAuthState() {
 }
 
 export function readToken() {
+    const token = readStoredToken();
+    if (!token) {
+        return null;
+    }
+
+    if (!token.accessToken || !token.expiresAt || token.expiresAt <= Date.now() + EXPIRY_SKEW_MS) {
+        return null;
+    }
+
+    return token;
+}
+
+function readStoredToken() {
     const rawToken = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!rawToken) {
         return null;
@@ -52,7 +69,10 @@ export function readToken() {
 
     try {
         const token = JSON.parse(rawToken) as BungieToken;
-        if (!token.accessToken || !token.expiresAt || token.expiresAt <= Date.now() + EXPIRY_SKEW_MS) {
+        if (
+            (!token.accessToken || !token.expiresAt) &&
+            (!token.refreshToken || !token.refreshExpiresAt || token.refreshExpiresAt <= Date.now() + EXPIRY_SKEW_MS)
+        ) {
             clearToken();
             return null;
         }
@@ -70,6 +90,21 @@ export function storeToken(token: BungieToken) {
 
 export function clearToken() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export async function getValidToken() {
+    const token = readToken();
+    if (token) {
+        return token;
+    }
+
+    const storedToken = readStoredToken();
+    if (!storedToken?.refreshToken || !storedToken.refreshExpiresAt || storedToken.refreshExpiresAt <= Date.now() + EXPIRY_SKEW_MS) {
+        clearToken();
+        return null;
+    }
+
+    return refreshToken(storedToken);
 }
 
 export async function exchangeAuthorizationCode(code: string) {
@@ -94,26 +129,76 @@ export async function exchangeAuthorizationCode(code: string) {
         throw new Error(`Bungie token exchange failed (${response.status})`);
     }
 
-    const token: BungieToken = {
-        accessToken: payload.access_token,
-        tokenType: payload.token_type ?? 'Bearer',
-        expiresAt: Date.now() + (payload.expires_in ?? 3600) * 1000,
-        raw: payload
-    };
+    const token = tokenFromResponse(payload);
 
     storeToken(token);
     return token;
 }
 
+async function refreshToken(previousToken: BungieToken) {
+    const config = getBungieConfig();
+    const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: previousToken.refreshToken ?? '',
+        client_id: config.clientId
+    });
+
+    const response = await fetch(TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-API-Key': config.apiKey
+        },
+        body
+    });
+    const payload = (await response.json().catch(() => null)) as BungieTokenResponse | null;
+
+    if (!response.ok || !payload?.access_token) {
+        clearToken();
+        throw new Error(`Bungie token refresh failed (${response.status})`);
+    }
+
+    const token = tokenFromResponse(payload, previousToken);
+    storeToken(token);
+    return token;
+}
+
+function tokenFromResponse(payload: BungieTokenResponse, previousToken?: BungieToken): BungieToken {
+    const now = Date.now();
+    const refreshToken = payload.refresh_token ?? previousToken?.refreshToken;
+    const refreshExpiresAt =
+        payload.refresh_expires_in !== undefined
+            ? now + payload.refresh_expires_in * 1000
+            : previousToken && refreshToken === previousToken.refreshToken
+              ? previousToken.refreshExpiresAt
+              : undefined;
+
+    return {
+        accessToken: payload.access_token ?? previousToken?.accessToken ?? '',
+        tokenType: payload.token_type ?? previousToken?.tokenType ?? 'Bearer',
+        expiresAt: now + (payload.expires_in ?? 3600) * 1000,
+        refreshToken,
+        refreshExpiresAt,
+        raw: payload
+    };
+}
+
 export function getTokenDebugState() {
-    const token = readToken();
+    const token = readStoredToken();
+    const accessTokenActive = Boolean(token?.accessToken && token.expiresAt > Date.now() + EXPIRY_SKEW_MS);
+    const refreshTokenActive = Boolean(
+        token?.refreshToken && token.refreshExpiresAt && token.refreshExpiresAt > Date.now() + EXPIRY_SKEW_MS
+    );
+
     return token
         ? {
-              authenticated: true,
-              expiresAt: new Date(token.expiresAt).toISOString()
+              authenticated: accessTokenActive || refreshTokenActive,
+              expiresAt: new Date(token.expiresAt).toISOString(),
+              refreshExpiresAt: token.refreshExpiresAt ? new Date(token.refreshExpiresAt).toISOString() : null
           }
         : {
               authenticated: false,
-              expiresAt: null
+              expiresAt: null,
+              refreshExpiresAt: null
           };
 }

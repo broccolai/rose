@@ -6,7 +6,7 @@ function Document(props: DocumentComponentProps) {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>rose/ARMOR</title>
+                <title>ARMOR</title>
                 {props.assets}
             </head>
             <body>
