@@ -24,7 +24,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'DPS',
         trigger: 'Precision damage within a short window of weapon ready.',
         effect: '7% weapon damage for 3s, doubled for Tex Mechanica weapons.',
-        aliases: ['spire', 'spire of the watcher', 'tm-earp', 'tex mechanica custom']
+        aliases: ['tm custom', 'high noon', 'old martian diplomacy', 'tm-earp', 'tex mechanica custom']
     },
     {
         id: 'nessus-4',
@@ -33,7 +33,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Gaining, losing, or spending Armor Charge.',
         effect: '13% / 21% / 30% DR, up to 35%; extends 3s per stack, heals and starts critical health regeneration.',
-        aliases: ['nessus', 'aion renewal', 'exodus down']
+        aliases: ['exodus down', 'repurposed charge', 'emergency electromagnet']
     },
     {
         id: 'salvations-edge-2',
@@ -42,7 +42,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability / DPS',
         trigger: 'Elite+ kill.',
         effect: '25% DR and 7% damage for 12s, refreshable.',
-        aliases: ["salvation's edge", 'salvations edge', 'promised reign']
+        aliases: ['promised', 'stable resonance', 'resonance redirection']
     },
     {
         id: 'vog-4',
@@ -51,7 +51,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Damage',
         trigger: 'Five damage instances while a subclass buff is active, such as Radiant or Devour.',
         effect: 'Spawns an Orb of Power at your feet with a 5s internal cooldown.',
-        aliases: ['vault of glass', 'vog', 'hezen', 'kabr', 'prime zealot']
+        aliases: ["atheon's memory", 'atheons memory', 'collective power', 'radiolaria breach']
     },
     {
         id: 'prophecy-4',
@@ -60,7 +60,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Ability regen / Survivability',
         trigger: 'Light weapon kills, Dark or Kinetic weapon kills, and alternating weapon kills within a short window.',
         effect: '+22% grenade energy, +22% melee energy, and 40% DR for 5s on alternating weapon kills.',
-        aliases: ['prophecy', 'coda', 'flowing cowl', 'moonfang']
+        aliases: ['coda', 'so very thin', 'between poles']
     },
     {
         id: 'smoke-jumper-2',
@@ -69,7 +69,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Orb pickup.',
         effect: '40% DR decaying over 3s.',
-        aliases: ['smoke jumper']
+        aliases: ['smoke jumper', 'ride together die together', 'too old for this']
     },
     {
         id: 'dsc-2',
@@ -78,7 +78,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Splash debuff',
         trigger: 'Powered melee kill.',
         effect: '9m disorienting pulse, constantly re-proccable.',
-        aliases: ['deep stone crypt', 'deep stone', 'dsc', "legacy's oath"]
+        aliases: ["legacy's oath", 'legacys oath', 'augmented servos', 'god like judgment']
     },
     {
         id: 'europa-2',
@@ -88,7 +88,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         trigger: 'Kill, with a 12s internal cooldown; currently working in combat.',
         effect: 'Additive 20% ammo progress for both ammo types and an Orb of Power spawn.',
         bugged: true,
-        aliases: ['europa', 'crystocrene']
+        aliases: ['crystocrene', 'resupply', 'from the storm']
     },
     {
         id: 'ron-4',
@@ -97,7 +97,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Elite+ finisher or Devour proc.',
         effect: 'Devour and 20% DR.',
-        aliases: ['root of nightmares', 'ron', 'luminopotent']
+        aliases: ["nezarec's nightmare", 'nezarecs nightmare', 'dream devourer', 'bad dreams']
     },
     {
         id: 'pantheon-2',
@@ -115,7 +115,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Critical health after Elite+ kill.',
         effect: 'Invisibility for 6-8s with no internal cooldown.',
-        aliases: ["king's fall", 'kings fall', 'kf', 'taken king', 'darkhollow', 'wormlore', 'grasp of eir', 'mouth of ur', 'path of xol']
+        aliases: ["oryx's memory", 'oryxs memory', 'ascendant escape', 'iron sharpens iron']
     },
     {
         id: 'duality-4',
@@ -133,7 +133,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Micro-missile, rocket, or grenade launcher kill.',
         effect: '20% splash DR and 60% self-explosive DR for 15s.',
-        aliases: ['kepler', 'eutechnology']
+        aliases: ['aion adapter', 'force absorption', 'reactive shock']
     },
     {
         id: 'kf-2',
@@ -142,7 +142,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Ammo gen',
         trigger: 'Elite+ kill.',
         effect: 'Additive 12% special ammo progress and 7.5% heavy ammo progress.',
-        aliases: ["king's fall", 'kings fall', 'kf', 'taken king', 'darkhollow', 'wormlore', 'grasp of eir', 'mouth of ur', 'path of xol']
+        aliases: ["oryx's memory", 'oryxs memory', 'iron sharpens iron', 'ascendant escape']
     },
     {
         id: 'last-wish-4',
@@ -151,7 +151,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Ammo gen',
         trigger: 'Grenade kills.',
         effect: 'Additive 10% heavy ammo progress.',
-        aliases: ['last wish', 'great hunt', "techeun's regalia"]
+        aliases: ['great hunt', 'taken armaments', 'taken barrier']
     },
     {
         id: 'shattered-throne-4',
@@ -160,7 +160,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability / Ability regen',
         trigger: 'Build stacks from damage, kills, and finishers; max 999 stacks.',
         effect: 'Up to 15% DR, +50% grenade/melee regen, and +35% class regen.',
-        aliases: ['shattered throne', 'reverie dawn']
+        aliases: ["techeun's regalia", 'techeuns regalia', 'truth to power', 'queensfoil rush']
     },
     {
         id: 'equilibrium-2',
@@ -169,7 +169,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Ability regen',
         trigger: 'Sword damage.',
         effect: '+5% grenade and class energy, or 10% if Blade Focus is active.',
-        aliases: ['equilibrium', "swordmaster's", 'swordmaster', "temptation's"]
+        aliases: ['sage protector', 'combat meditation', 'blade focus']
     },
     {
         id: 'crota-4',
@@ -178,7 +178,7 @@ export const OP_ARMOR_SET_BONUSES: OpArmorSetBonus[] = [
         category: 'Survivability',
         trigger: 'Being in combat for 12s; ends after being out of combat for 7s.',
         effect: 'Flinch resistance and 15% DR, increasing to 25% after 24s in combat.',
-        aliases: ["crota's end", 'crota', 'deathsinger', 'bone circlet', 'willbreaker', 'unyielding']
+        aliases: ["crota's memory", 'crotas memory', 'power of the son', 'cursed fist']
     }
 ];
 
