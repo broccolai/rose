@@ -20,6 +20,7 @@ type CalculatorControlsProps = {
     selectedFragmentIds: string[];
     dumpStat: ArmorStat | '';
     allowBalancedTuning: boolean;
+    onlyFullyMasterworkedGear: boolean;
     targets: StatVector;
     targetCaps: StatVector;
     targetCapsPending: boolean;
@@ -36,6 +37,7 @@ type CalculatorControlsProps = {
     onImportFragmentsFromGame: () => void;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
+    onOnlyFullyMasterworkedGearChange: (enabled: boolean) => void;
     onTargetChange: (stat: ArmorStat, value: string) => void;
     onSetRequirementChange: (setId: string, value: string) => void;
     onSolve: () => void;
@@ -417,7 +419,12 @@ function FragmentControls(
 function AdvancedControls(
     props: Pick<
         CalculatorControlsProps,
-        'allowBalancedTuning' | 'armorSetDisplayMode' | 'onArmorSetDisplayModeChange' | 'onBalancedTuningChange'
+        | 'allowBalancedTuning'
+        | 'armorSetDisplayMode'
+        | 'onArmorSetDisplayModeChange'
+        | 'onBalancedTuningChange'
+        | 'onOnlyFullyMasterworkedGearChange'
+        | 'onlyFullyMasterworkedGear'
     >
 ) {
     return (
@@ -442,6 +449,14 @@ function AdvancedControls(
                         onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
                     />
                     Balanced tuning
+                </label>
+                <label class={checkboxField}>
+                    <input
+                        type="checkbox"
+                        checked={props.onlyFullyMasterworkedGear}
+                        onChange={(event) => props.onOnlyFullyMasterworkedGearChange(event.currentTarget.checked)}
+                    />
+                    Only fully masterworked gear
                 </label>
             </div>
         </details>
@@ -513,8 +528,10 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                 <AdvancedControls
                     allowBalancedTuning={props.allowBalancedTuning}
                     armorSetDisplayMode={props.armorSetDisplayMode}
+                    onlyFullyMasterworkedGear={props.onlyFullyMasterworkedGear}
                     onArmorSetDisplayModeChange={props.onArmorSetDisplayModeChange}
                     onBalancedTuningChange={props.onBalancedTuningChange}
+                    onOnlyFullyMasterworkedGearChange={props.onOnlyFullyMasterworkedGearChange}
                 />
 
                 <ActionControls

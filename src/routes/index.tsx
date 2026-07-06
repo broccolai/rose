@@ -3,6 +3,7 @@ import {
     ARMOR_STATS,
     type ArmorBuild,
     type ArmorBuildSort,
+    type ArmorItem,
     type ArmorStat,
     type ArmorStatTargetCapsInput,
     type SolveArmorInput,
@@ -258,6 +259,47 @@ function logDevTiming(label: string, details: Record<string, unknown>) {
 
 function armorSlotCounts(input: ArmorStatTargetCapsInput | SolveArmorInput) {
     return Object.fromEntries(Object.entries(input.armor).map(([slot, armor]) => [slot, armor.length]));
+}
+
+function filterFullyMasterworkedProfile(profile: NormalizedArmorProfile | null, enabled: boolean) {
+    if (!profile || !enabled) {
+        return profile;
+    }
+
+    const armor = profile.armor.map((item) => keepFullyMasterworkedItem(item)).filter((item): item is ArmorItem => Boolean(item));
+
+    return {
+        ...profile,
+        armor,
+        armorBySlot: groupArmorBySlotForProfile(armor)
+    };
+}
+
+function keepFullyMasterworkedItem(item: ArmorItem): ArmorItem | null {
+    const fullyMasterworkedIds = item.fullyMasterworkedItemInstanceIds ?? (item.isCurrentMasterworked ? [item.itemInstanceId] : []);
+    if (fullyMasterworkedIds.length === 0) {
+        return null;
+    }
+
+    return {
+        ...item,
+        itemInstanceId: fullyMasterworkedIds[0],
+        equivalentItemInstanceIds: fullyMasterworkedIds,
+        fullyMasterworkedItemInstanceIds: fullyMasterworkedIds,
+        isCurrentMasterworked: true
+    };
+}
+
+function groupArmorBySlotForProfile(armor: ArmorItem[]) {
+    return Object.fromEntries(
+        ARMOR_SLOTS.map((slot) => [slot, armor.filter((item) => item.slot === slot)])
+    ) as NormalizedArmorProfile['armorBySlot'];
+}
+
+function setSelectionRecordsEqual(left: Record<string, SetSelectionValue>, right: Record<string, SetSelectionValue>) {
+    const leftEntries = Object.entries(left);
+    const rightEntries = Object.entries(right);
+    return leftEntries.length === rightEntries.length && leftEntries.every(([key, value]) => right[key] === value);
 }
 
 function createDebugArmorReport(
@@ -734,6 +776,7 @@ export default function Home() {
     const [selectedFragmentIds, setSelectedFragmentIds] = createSignal<string[]>([]);
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
     const [allowBalancedTuning, setAllowBalancedTuning] = createSignal(false);
+    const [onlyFullyMasterworkedGear, setOnlyFullyMasterworkedGear] = createSignal(false);
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
     const [targetCaps, setTargetCaps] = createSignal<StatVector>({ ...MAX_STAT_TARGET_CAPS });
     const [targetCapsPending, setTargetCapsPending] = createSignal(false);
@@ -744,10 +787,11 @@ export default function Home() {
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
     const [expandedBuildKey, setExpandedBuildKey] = createSignal<string | null>(null);
     const [preferencesLoaded, setPreferencesLoaded] = createSignal(false);
-    const selectedCharacter = createMemo(() => getSelectedCharacter(normalizedProfile(), selectedCharacterId()));
+    const calculatorProfile = createMemo(() => filterFullyMasterworkedProfile(normalizedProfile(), onlyFullyMasterworkedGear()));
+    const selectedCharacter = createMemo(() => getSelectedCharacter(calculatorProfile(), selectedCharacterId()));
     const characterButtons = createMemo(() => getCharacterButtonOptions(normalizedProfile()));
-    const availableExotics = createMemo(() => getAvailableExoticOptions(normalizedProfile(), selectedCharacter()));
-    const selectableSets = createMemo(() => getSelectableArmorSets(normalizedProfile(), selectedCharacter()));
+    const availableExotics = createMemo(() => getAvailableExoticOptions(calculatorProfile(), selectedCharacter()));
+    const selectableSets = createMemo(() => getSelectableArmorSets(calculatorProfile(), selectedCharacter()));
     const resultBuilds = createMemo(() => {
         const result = solveResult();
         if (!result?.ok) {
@@ -783,7 +827,7 @@ export default function Home() {
             }));
     });
     const targetCapInput = createMemo(() => {
-        const profile = normalizedProfile();
+        const profile = calculatorProfile();
         const character = selectedCharacter();
 
         if (!profile || !character) {
@@ -935,6 +979,7 @@ export default function Home() {
         setSelectedFragmentIds([]);
         setDumpStat('');
         setAllowBalancedTuning(false);
+        setOnlyFullyMasterworkedGear(false);
         setTargets({ ...EMPTY_STAT_TARGETS });
         setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
         setTargetCapsPending(false);
@@ -988,6 +1033,7 @@ export default function Home() {
                     selectedFragmentBonuses: selectedFragmentBonuses(),
                     dumpStat: dumpStat(),
                     allowBalancedTuning: effectiveAllowBalancedTuning(),
+                    onlyFullyMasterworkedGear: onlyFullyMasterworkedGear(),
                     targets: targets(),
                     targetCaps: targetCaps(),
                     targetCapsPending: targetCapsPending(),
@@ -1069,6 +1115,7 @@ export default function Home() {
             selectedFragmentIds: selectedFragmentIds(),
             dumpStat: dumpStat(),
             allowBalancedTuning: effectiveAllowBalancedTuning(),
+            onlyFullyMasterworkedGear: onlyFullyMasterworkedGear(),
             targets: targets(),
             setSelections: setSelections(),
             resultSort: resultSort()
@@ -1092,6 +1139,26 @@ export default function Home() {
         });
 
         if (changed) {
+            invalidateSolve();
+        }
+    });
+
+    createEffect(() => {
+        const profile = calculatorProfile();
+        const character = selectedCharacter();
+        if (!profile || !character) {
+            return;
+        }
+
+        const nextExotic = reconcileSelectedExotic(profile, character.classType, selectedExoticItemHash());
+        if (nextExotic !== selectedExoticItemHash()) {
+            setSelectedExoticItemHash(nextExotic);
+            invalidateSolve();
+        }
+
+        const nextSelections = reconcileSetSelections(profile, character.classType, setSelections());
+        if (!setSelectionRecordsEqual(setSelections(), nextSelections)) {
+            setSetSelections(nextSelections);
             invalidateSolve();
         }
     });
@@ -1414,7 +1481,7 @@ export default function Home() {
     }
 
     async function solveCurrentBuilds() {
-        const profile = normalizedProfile();
+        const profile = calculatorProfile();
         const character = selectedCharacter();
 
         if (!profile || !character) {
@@ -1746,6 +1813,7 @@ export default function Home() {
         setSelectedFragmentIds(sanitizeFragmentIds(preferences.selectedFragmentIds, nextSubclass));
         setDumpStat(nextDumpStat);
         setAllowBalancedTuning(nextAllowBalancedTuning);
+        setOnlyFullyMasterworkedGear(preferences.onlyFullyMasterworkedGear === true);
         setTargets(nextTargets);
         setSetSelections(preferences.setSelections ?? {});
         setResultSort(preferences.resultSort ?? DEFAULT_RESULT_SORT);
@@ -1782,6 +1850,7 @@ export default function Home() {
                     selectedFragmentIds={selectedFragmentIds()}
                     dumpStat={dumpStat()}
                     allowBalancedTuning={effectiveAllowBalancedTuning()}
+                    onlyFullyMasterworkedGear={onlyFullyMasterworkedGear()}
                     targets={targets()}
                     targetCaps={targetCaps()}
                     targetCapsPending={targetCapsPending()}
@@ -1802,6 +1871,10 @@ export default function Home() {
                     onDumpStatChange={updateDumpStat}
                     onBalancedTuningChange={(enabled) => {
                         setAllowBalancedTuning(BALANCED_TUNING_ENABLED && enabled);
+                        invalidateSolve();
+                    }}
+                    onOnlyFullyMasterworkedGearChange={(enabled) => {
+                        setOnlyFullyMasterworkedGear(enabled);
                         invalidateSolve();
                     }}
                     onTargetChange={updateTarget}

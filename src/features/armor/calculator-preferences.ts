@@ -13,6 +13,7 @@ export type CalculatorPreferences = {
     selectedFragmentIds?: string[];
     dumpStat?: ArmorStat | '';
     allowBalancedTuning?: boolean;
+    onlyFullyMasterworkedGear?: boolean;
     targets?: Partial<StatVector>;
     setSelections?: Record<string, SetSelectionValue>;
     resultSort?: ArmorBuildSort;
@@ -94,6 +95,7 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         selectedFragmentIds: sanitizeFragmentIds(candidate.selectedFragmentIds, sanitizeSubclassType(candidate.selectedSubclass)),
         dumpStat: candidate.dumpStat && isArmorStat(candidate.dumpStat) ? candidate.dumpStat : '',
         allowBalancedTuning: candidate.allowBalancedTuning === true,
+        onlyFullyMasterworkedGear: candidate.onlyFullyMasterworkedGear === true,
         targets: sanitizeTargets(candidate.targets),
         setSelections: sanitizeSetSelectionRecord(candidate.setSelections),
         resultSort: sanitizeResultSort(candidate.resultSort)

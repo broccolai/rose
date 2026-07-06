@@ -30,6 +30,8 @@ export type ArmorItem = {
     isExotic: boolean;
     set?: ArmorSetInfo;
     tier?: 1 | 2 | 3 | 4 | 5;
+    isCurrentMasterworked?: boolean;
+    fullyMasterworkedItemInstanceIds?: string[];
     baseStats: StatVector;
     statModOptions: StatAdjustment[];
     tuningOptions: StatAdjustment[];

@@ -10,7 +10,8 @@ export function dedupeEquivalentArmorItems(items: ArmorItem[]) {
         if (!existing) {
             byKey.set(key, {
                 ...item,
-                equivalentItemInstanceIds: item.equivalentItemInstanceIds ?? [item.itemInstanceId]
+                equivalentItemInstanceIds: item.equivalentItemInstanceIds ?? [item.itemInstanceId],
+                fullyMasterworkedItemInstanceIds: masterworkedItemInstanceIds(item)
             });
             continue;
         }
@@ -19,9 +20,22 @@ export function dedupeEquivalentArmorItems(items: ArmorItem[]) {
             ...(existing.equivalentItemInstanceIds ?? [existing.itemInstanceId]),
             ...(item.equivalentItemInstanceIds ?? [item.itemInstanceId])
         ];
+        existing.fullyMasterworkedItemInstanceIds = [
+            ...(existing.fullyMasterworkedItemInstanceIds ?? []),
+            ...masterworkedItemInstanceIds(item)
+        ];
+        existing.isCurrentMasterworked = (existing.fullyMasterworkedItemInstanceIds?.length ?? 0) > 0;
     }
 
     return [...byKey.values()];
+}
+
+function masterworkedItemInstanceIds(item: ArmorItem) {
+    if (item.fullyMasterworkedItemInstanceIds) {
+        return item.fullyMasterworkedItemInstanceIds;
+    }
+
+    return item.isCurrentMasterworked ? [item.itemInstanceId] : [];
 }
 
 function equivalentArmorKey(item: ArmorItem) {

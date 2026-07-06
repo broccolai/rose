@@ -20,6 +20,7 @@ describe('calculator preferences', () => {
                 selectedFragmentIds: ['solar:ember-of-beams', 'void:echo-of-dilation', 'solar:ember-of-beams'],
                 dumpStat: 'health',
                 allowBalancedTuning: 'yes',
+                onlyFullyMasterworkedGear: true,
                 targets: {
                     health: -10,
                     melee: 42.9,
@@ -47,6 +48,7 @@ describe('calculator preferences', () => {
             selectedFragmentIds: ['solar:ember-of-beams'],
             dumpStat: 'health',
             allowBalancedTuning: false,
+            onlyFullyMasterworkedGear: true,
             targets: {
                 health: 0,
                 melee: 42,

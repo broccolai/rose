@@ -184,6 +184,7 @@ async function normalizeArmorItem(
     const socketAdjustments = await readSocketedStatAdjustments(sockets, manifest);
     const statsWithoutChosenPlugs = socketAdjustments.reduce((stats, adjustment) => subtractStats(stats, adjustment.deltas), baseStats);
     const currentMasterwork = await readSocketedMasterworkAdjustment(sockets, manifest);
+    const isCurrentMasterworked = isFullyMasterworkedAdjustment(currentMasterwork);
     const normalizedBaseStats = normalizeAssumedMasterworkStats(statsWithoutChosenPlugs, currentMasterwork);
     if (!hasModernArmorStatShape(normalizedBaseStats)) {
         return null;
@@ -202,6 +203,8 @@ async function normalizeArmorItem(
         isExotic: definition.inventory?.tierType === EXOTIC_TIER_TYPE || definition.inventory?.tierTypeName === 'Exotic',
         set,
         tier,
+        isCurrentMasterworked,
+        fullyMasterworkedItemInstanceIds: isCurrentMasterworked ? [itemInstanceId] : [],
         baseStats: normalizedBaseStats,
         statModOptions,
         tuningOptions: await readTuningOptions(itemInstanceId, sockets, profile, manifest, normalizedBaseStats, hasTuningSocket),
@@ -379,6 +382,12 @@ function addAssumedMasterworkStats(stats: StatVector): StatVector {
 
 function statTotalLocal(stats: StatVector) {
     return ARMOR_STATS.reduce((total, stat) => total + stats[stat], 0);
+}
+
+function isFullyMasterworkedAdjustment(adjustment: StatAdjustment | null) {
+    return adjustment
+        ? ARMOR_STATS.reduce((total, stat) => total + (adjustment.deltas[stat] ?? 0), 0) >= ASSUMED_MASTERWORK_STAT_BONUS * 3
+        : false;
 }
 
 function readGearTier(profile: NonNullable<VaultExportSnapshot['profileResponse']>['Response'] | undefined, itemInstanceId: string) {

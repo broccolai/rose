@@ -111,6 +111,8 @@ describe('loaded benchmark bundle input', () => {
             class: 5,
             weapons: 5
         });
+        expect(armor?.isCurrentMasterworked).toBe(false);
+        expect(armor?.fullyMasterworkedItemInstanceIds).toEqual([]);
         expect(armor?.tuningOptions.some((option) => option.deltas.super === 5 && option.deltas.health === -5)).toBe(true);
     });
 
@@ -188,6 +190,7 @@ describe('loaded benchmark bundle input', () => {
             class: 5,
             weapons: 5
         });
+        expect(profile.armor[0]?.isCurrentMasterworked).toBe(false);
         expect(profile.armor[0] && ARMOR_STATS.reduce((total, stat) => total + profile.armor[0].baseStats[stat], 0)).toBe(90);
     });
 
@@ -282,6 +285,8 @@ describe('loaded benchmark bundle input', () => {
             class: 20,
             weapons: 30
         });
+        expect(profile.armor[0]?.isCurrentMasterworked).toBe(true);
+        expect(profile.armor[0]?.fullyMasterworkedItemInstanceIds).toEqual([itemInstanceId]);
         expect(profile.armor[0] && ARMOR_STATS.reduce((total, stat) => total + profile.armor[0].baseStats[stat], 0)).toBe(90);
     });
 
