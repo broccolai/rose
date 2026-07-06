@@ -114,6 +114,83 @@ describe('loaded benchmark bundle input', () => {
         expect(armor?.tuningOptions.some((option) => option.deltas.super === 5 && option.deltas.health === -5)).toBe(true);
     });
 
+    test('strips partial masterwork before applying assumed full masterwork', async () => {
+        const itemInstanceId = 'partial-masterwork-armor';
+        const itemHash = 1101;
+        const partialMasterworkHash = 1102;
+        const armorStatsPlugHash = 1103;
+        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+            [
+                itemHash,
+                {
+                    hash: itemHash,
+                    itemType: 2,
+                    classType: 2,
+                    displayProperties: { name: 'Partial Masterwork Robes', description: '' },
+                    inventory: { bucketTypeHash: 14239492, tierType: 5, tierTypeName: 'Legendary' }
+                }
+            ],
+            [
+                partialMasterworkHash,
+                plug(partialMasterworkHash, 'Partial Upgrade Armor', 'v460.plugs.armor.masterworks', [
+                    { statTypeHash: ARMOR_STAT_HASHES.health, value: 3 },
+                    { statTypeHash: ARMOR_STAT_HASHES.melee, value: 3 },
+                    { statTypeHash: ARMOR_STAT_HASHES.grenade, value: 3 }
+                ])
+            ],
+            [armorStatsPlugHash, plug(armorStatsPlugHash, '', 'armor_stats', [{ statTypeHash: ARMOR_STAT_HASHES.health, value: 20 }])]
+        ]);
+        const profile = await normalizeVaultExport(
+            {
+                profileResponse: {
+                    Response: {
+                        profileInventory: { data: { items: [{ itemHash, itemInstanceId }] } },
+                        characters: { data: { character: { classType: 2 } } },
+                        itemComponents: {
+                            instances: { data: { [itemInstanceId]: { gearTier: 5 } } },
+                            stats: {
+                                data: {
+                                    [itemInstanceId]: {
+                                        stats: {
+                                            [ARMOR_STAT_HASHES.health]: { value: 23 },
+                                            [ARMOR_STAT_HASHES.melee]: { value: 23 },
+                                            [ARMOR_STAT_HASHES.grenade]: { value: 23 },
+                                            [ARMOR_STAT_HASHES.super]: { value: 15 },
+                                            [ARMOR_STAT_HASHES.class]: { value: 0 },
+                                            [ARMOR_STAT_HASHES.weapons]: { value: 0 }
+                                        }
+                                    }
+                                }
+                            },
+                            sockets: {
+                                data: {
+                                    [itemInstanceId]: {
+                                        sockets: [{ plugHash: partialMasterworkHash }, { plugHash: armorStatsPlugHash }]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                async getInventoryItem(hash) {
+                    return definitions.get(hash) ?? null;
+                }
+            }
+        );
+
+        expect(profile.armor[0]?.baseStats).toEqual({
+            health: 20,
+            melee: 20,
+            grenade: 20,
+            super: 20,
+            class: 5,
+            weapons: 5
+        });
+        expect(profile.armor[0] && ARMOR_STATS.reduce((total, stat) => total + profile.armor[0].baseStats[stat], 0)).toBe(90);
+    });
+
     test('excludes lower gear tiers even when they have modern sockets', async () => {
         const itemHash = 4001;
         const itemInstanceId = 'tier-3-armor';

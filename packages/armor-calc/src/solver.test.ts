@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    ARMOR_STATS,
     type ArmorItem,
     type ArmorSlot,
     type ArmorStat,
@@ -10,7 +11,8 @@ import {
     createDefaultStatModOptions,
     createTierFiveTuningOptions,
     type StatVector,
-    solveArmor
+    solveArmor,
+    statTotal
 } from '.';
 
 const slots: ArmorSlot[] = ['helmet', 'arms', 'chest', 'legs', 'classItem'];
@@ -114,6 +116,43 @@ describe('solveArmor', () => {
         expect(options.some((option) => option.id === 'stat-mod:weapons:10' && option.deltas.weapons === 10)).toBe(true);
     });
 
+    test('prefers major stat mods in the simple no-tuning path', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { weapons: 55 },
+            setRequirements: [],
+            armor: inventory(slots.map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() }))),
+            maxResults: 1
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBe(60);
+        expect(result.ok && result.builds[0]?.pieces.helmet.statMod?.deltas.weapons).toBe(10);
+    });
+
+    test('uses minor stat mods when a major stat mod would exceed 200', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { weapons: 200 },
+            setRequirements: [],
+            armor: inventory(
+                slots.map((slot) =>
+                    item(slot, {
+                        baseStats: { ...baseStats, weapons: 39 },
+                        statModOptions: createDefaultStatModOptions()
+                    })
+                )
+            ),
+            maxResults: 1
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBe(200);
+        expect(result.ok && result.builds[0]?.pieces.helmet.statMod?.deltas.weapons).toBe(5);
+    });
+
     test('applies selected fragment stat bonuses to final stats and target checks', () => {
         const result = solveArmor({
             characterId: 'hunter',
@@ -200,7 +239,14 @@ describe('solveArmor', () => {
 
         expect(result.ok).toBe(true);
         expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(55);
+        expect(result.ok && result.builds[0]?.score.totalStats).toBe(result.ok ? statTotal(result.builds[0].stats) : 0);
+        expect(result.ok && result.builds[0]?.score.totalStats).toBe(300);
         expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
+        if (result.ok) {
+            const decreasedStat = ARMOR_STATS.find((stat) => (result.builds[0]?.pieces.helmet.tuning?.deltas[stat] ?? 0) < 0);
+            expect(decreasedStat).toBeDefined();
+            expect(decreasedStat ? result.builds[0]?.stats[decreasedStat] : undefined).toBe(45);
+        }
     });
 
     test('uses tier five tuning to reach requested targets when a dump stat is selected', () => {
@@ -250,6 +296,10 @@ describe('solveArmor', () => {
 
         expect(withoutBalanced.ok).toBe(false);
         expect(withBalanced.ok).toBe(true);
+        expect(withBalanced.ok && withBalanced.builds[0]?.stats.health).toBe(51);
+        expect(withBalanced.ok && withBalanced.builds[0]?.stats.melee).toBe(51);
+        expect(withBalanced.ok && withBalanced.builds[0]?.stats.grenade).toBe(51);
+        expect(withBalanced.ok && withBalanced.builds[0]?.score.totalStats).toBe(303);
         expect(withBalanced.ok && withBalanced.builds[0]?.pieces.helmet.tuning?.id).toBe('tuning:balanced');
     });
 

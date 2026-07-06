@@ -21,6 +21,7 @@ import {
 
 const DEFAULT_MAX_RESULTS = 50;
 const DEFAULT_RESULT_SORT: ArmorBuildSort = { key: 'wastedStats', direction: 'asc' };
+const MAX_DISPLAY_STAT = 200;
 const TUNING_MODES = ['off', 'pair', 'all'] as const;
 const itemMaximumStatsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
 const simpleAddonCapabilityCache = new WeakMap<ArmorItem, Map<string, boolean>>();
@@ -47,6 +48,15 @@ type AddonChoice = {
 type AddonState = {
     stats: StatVector;
     choices: Record<ArmorSlot, AddonChoice>;
+};
+
+type SimpleStatModRequest = {
+    stat: ArmorStat;
+    value: 5 | 10;
+};
+
+type AdjustmentPreference = {
+    preferPositiveGain?: boolean;
 };
 
 type CandidatePlan = {
@@ -582,8 +592,8 @@ function evaluateSimpleStatMods(
     dumpStatIndex: number,
     retainState: boolean
 ) {
-    let requiredMods = 0;
-    const modsByStat = new Map<ArmorStat, number>();
+    const modRequests: SimpleStatModRequest[] = [];
+    const projectedStats = [...baseStats] as StatTuple;
 
     for (let index = 0; index < ARMOR_STATS.length; index++) {
         if (index === dumpStatIndex) {
@@ -593,13 +603,24 @@ function evaluateSimpleStatMods(
         const deficit = targetValues[index] - baseStats[index];
 
         if (deficit > 0) {
-            const mods = Math.ceil(deficit / 10);
-            modsByStat.set(ARMOR_STATS[index], mods);
-            requiredMods += mods;
+            let remaining = deficit;
+            while (remaining > 0) {
+                const value = projectedStats[index] + 10 <= MAX_DISPLAY_STAT ? 10 : 5;
+                if (projectedStats[index] + value > MAX_DISPLAY_STAT) {
+                    return {
+                        valid: false,
+                        state: null
+                    };
+                }
+
+                modRequests.push({ stat: ARMOR_STATS[index], value });
+                projectedStats[index] += value;
+                remaining -= value;
+            }
         }
     }
 
-    if (requiredMods > ARMOR_SLOTS.length) {
+    if (modRequests.length > ARMOR_SLOTS.length) {
         return {
             valid: false,
             state: null
@@ -615,17 +636,11 @@ function evaluateSimpleStatMods(
 
     const stats = tupleToStats(baseStats);
     const choices = {} as Record<ArmorSlot, AddonChoice>;
-    const modQueue: ArmorStat[] = [];
-
-    for (const stat of ARMOR_STATS) {
-        for (let index = 0; index < (modsByStat.get(stat) ?? 0); index++) {
-            modQueue.push(stat);
-        }
-    }
+    const modQueue = [...modRequests];
 
     for (const slot of ARMOR_SLOTS) {
-        const modStat = modQueue.shift();
-        const statMod = getSimpleStatModOption(pieces[slot].item, modStat);
+        const modRequest = modQueue.shift();
+        const statMod = getSimpleStatModOption(pieces[slot].item, modRequest);
         const deltas = statMod?.deltas ?? {};
 
         stats.health += deltas.health ?? 0;
@@ -650,12 +665,12 @@ function evaluateSimpleStatMods(
     };
 }
 
-function getSimpleStatModOption(item: ArmorItem, stat?: ArmorStat) {
-    if (!stat) {
+function getSimpleStatModOption(item: ArmorItem, request?: SimpleStatModRequest) {
+    if (!request) {
         return item.statModOptions.find((option) => isZeroAdjustment(option));
     }
 
-    return item.statModOptions.find((option) => option.deltas[stat] === 10 && adjustmentTotal(option) === 10);
+    return item.statModOptions.find((option) => option.deltas[request.stat] === request.value && adjustmentTotal(option) === request.value);
 }
 
 function zeroTuple(): StatTuple {
@@ -734,10 +749,12 @@ function hasSimpleStatModsAndNoTuning(item: ArmorItem, tuningMode: TuningMode, d
     const hasOnlyNoTuning =
         tuningMode === 'off' || tuningOptionsForMode(item, tuningMode, dumpStat).every((option) => isZeroAdjustment(option));
     const hasNoMod = item.statModOptions.some((option) => isZeroAdjustment(option));
-    const hasEveryMajorStatMod = ARMOR_STATS.every((stat) =>
-        item.statModOptions.some((option) => option.deltas[stat] === 10 && adjustmentTotal(option) === 10)
+    const hasEveryStatMod = ARMOR_STATS.every((stat) =>
+        ([5, 10] as const).every((value) =>
+            item.statModOptions.some((option) => option.deltas[stat] === value && adjustmentTotal(option) === value)
+        )
     );
-    const isSimple = hasOnlyNoTuning && hasNoMod && hasEveryMajorStatMod;
+    const isSimple = hasOnlyNoTuning && hasNoMod && hasEveryStatMod;
 
     cache.set(key, isSimple);
     return isSimple;
@@ -957,7 +974,7 @@ function findBestAddonState(
 
     for (const slot of ARMOR_SLOTS) {
         const piece = pieces[slot];
-        const statMod = chooseBestAdjustment(piece.statModOptions, state.stats, targets, dumpStat);
+        const statMod = chooseBestAdjustment(piece.statModOptions, state.stats, targets, dumpStat, { preferPositiveGain: true });
         const statsAfterMod = addStats(state.stats, statMod?.deltas ?? {});
         const tuning =
             tuningMode === 'off'
@@ -976,30 +993,62 @@ function findBestAddonState(
     return meetsSolverTargets(state.stats, targets, dumpStat) ? state : null;
 }
 
-function chooseBestAdjustment(options: StatAdjustment[], stats: StatVector, targets: StatVector, dumpStat?: ArmorStat) {
+function chooseBestAdjustment(
+    options: StatAdjustment[],
+    stats: StatVector,
+    targets: StatVector,
+    dumpStat?: ArmorStat,
+    preference: AdjustmentPreference = {}
+) {
     const noChange = options.find((option) => statTotal(sumStatVectors([option.deltas])) === 0);
     let best = noChange;
     let bestScore = 0;
     let bestDumpRelief = dumpStat && best ? dumpStatRelief(best, dumpStat) : 0;
+    let bestOverflow = best ? overflowAmount(addStats(stats, best.deltas)) : 0;
+    let bestGain = best ? positiveAdjustmentTotal(best) : 0;
 
     for (const option of options) {
         const nextStats = addStats(stats, option.deltas);
         const score = totalDeficit(stats, targets, dumpStat) - totalDeficit(nextStats, targets, dumpStat);
         const relief = dumpStat ? dumpStatRelief(option, dumpStat) : 0;
+        const overflow = overflowAmount(nextStats);
+        const gain = positiveAdjustmentTotal(option);
         const hasUsefulEffect = score > 0 || relief > 0;
 
         if (
-            score > bestScore ||
-            (score === bestScore && relief > bestDumpRelief) ||
-            (hasUsefulEffect && score === bestScore && relief === bestDumpRelief && best && option.id.localeCompare(best.id) < 0)
+            overflow < bestOverflow ||
+            (overflow === bestOverflow && score > bestScore) ||
+            (overflow === bestOverflow && score === bestScore && relief > bestDumpRelief) ||
+            (preference.preferPositiveGain &&
+                overflow === bestOverflow &&
+                score === bestScore &&
+                relief === bestDumpRelief &&
+                gain > bestGain) ||
+            (hasUsefulEffect &&
+                overflow === bestOverflow &&
+                score === bestScore &&
+                relief === bestDumpRelief &&
+                gain === bestGain &&
+                best &&
+                option.id.localeCompare(best.id) < 0)
         ) {
             best = option;
             bestScore = score;
             bestDumpRelief = relief;
+            bestOverflow = overflow;
+            bestGain = gain;
         }
     }
 
     return best;
+}
+
+function overflowAmount(stats: StatVector) {
+    return ARMOR_STATS.reduce((total, stat) => total + Math.max(0, stats[stat] - MAX_DISPLAY_STAT), 0);
+}
+
+function positiveAdjustmentTotal(adjustment: StatAdjustment) {
+    return ARMOR_STATS.reduce((total, stat) => total + Math.max(0, adjustment.deltas[stat] ?? 0), 0);
 }
 
 function totalDeficit(stats: StatVector, targets: StatVector, dumpStat?: ArmorStat) {
