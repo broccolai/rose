@@ -16,6 +16,8 @@ describe('calculator preferences', () => {
                 selectedCharacterId: 'character-1',
                 selectedExoticItemHash: '123',
                 armorSetDisplayMode: 'sources',
+                selectedSubclass: 'Solar',
+                selectedFragmentIds: ['solar:ember-of-beams', 'void:echo-of-dilation', 'solar:ember-of-beams'],
                 dumpStat: 'health',
                 allowBalancedTuning: 'yes',
                 targets: {
@@ -41,6 +43,8 @@ describe('calculator preferences', () => {
             selectedCharacterId: 'character-1',
             selectedExoticItemHash: '123',
             armorSetDisplayMode: 'sources',
+            selectedSubclass: 'Solar',
+            selectedFragmentIds: ['solar:ember-of-beams'],
             dumpStat: 'health',
             allowBalancedTuning: false,
             targets: {
@@ -68,6 +72,8 @@ describe('calculator preferences', () => {
             sanitizeCalculatorPreferences({
                 dumpStat: 'mobility',
                 armorSetDisplayMode: 'invalid',
+                selectedSubclass: 'invalid',
+                selectedFragmentIds: 'nope',
                 resultSort: {
                     key: 'wastedStats',
                     direction: 'sideways'
@@ -75,6 +81,8 @@ describe('calculator preferences', () => {
             })
         ).toMatchObject({
             armorSetDisplayMode: 'sets',
+            selectedSubclass: 'Prismatic',
+            selectedFragmentIds: [],
             dumpStat: '',
             resultSort: {
                 key: 'totalStats',

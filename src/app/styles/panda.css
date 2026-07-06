@@ -959,6 +959,18 @@
     gap: 0.8rem;
 }
 
+  .fyUCwZ {
+    gap: 0.65rem;
+}
+
+  .iJxZKk {
+    border-radius: 0.55rem;
+}
+
+  .hUKEnS {
+    padding-inline: 0.35rem;
+}
+
   .jrHZPA {
     border-radius: 8px;
 }
@@ -1389,6 +1401,26 @@
     font-size: 0.95rem;
 }
 
+  .bYPzoC {
+    text-align: center;
+}
+
+  .jRHKod {
+    font-weight: 660;
+}
+
+  .cltYZS\! {
+    color: var(--rose-muted-strong) !important;
+}
+
+  .bTpXKU\! {
+    font-size: 0.72rem !important;
+}
+
+  .ljHGQN {
+    text-align: right;
+}
+
   .fqAjFf {
     box-shadow: 0 20px 50px rgba(22, 24, 29, 0.08);
 }
@@ -1593,6 +1625,22 @@
     padding-top: 0.72rem;
 }
 
+  .OpwUI {
+    min-height: 34px;
+}
+
+  .KBEUW {
+    max-height: 13.5rem;
+}
+
+  .ggdFgs {
+    width: 2.1rem;
+}
+
+  .iyUwHO {
+    padding-right: 0.55rem;
+}
+
   .fqQWqA {
     width: min(560px, 100%);
 }
@@ -1661,6 +1709,14 @@
     border: var(--stat-track-border);
 }
 
+  .eIchPt th {
+    background: color-mix(in srgb, var(--rose-surface-soft) 74%, #000 26%);
+}
+
+  .jhRmSk tr[data-selected="true"] td {
+    background: color-mix(in srgb, var(--rose-accent) 10%, transparent);
+}
+
   .fOoSvn button {
     flex: 1 1 auto;
 }
@@ -1703,6 +1759,22 @@
 
   .iEEags summary {
     list-style: revert;
+}
+
+  .fFHQDE th {
+    padding-block: 0.48rem;
+}
+
+  .bbitKK td {
+    padding-block: 0.42rem;
+}
+
+  .cXjRMC td {
+    border-bottom: 1px solid color-mix(in srgb, var(--rose-border) 72%, transparent);
+}
+
+  .cPFfBS tr:last-child td {
+    border-bottom: 0;
 }
 
   .iFgXmy h3 {
@@ -1969,6 +2041,42 @@
     color: var(--rose-text);
 }
 
+  .gTwNBe th {
+    position: sticky;
+}
+
+  .dxGPJC th {
+    z-index: 1;
+}
+
+  .boooe th {
+    font-size: 0.68rem;
+}
+
+  .bsCYCZ th {
+    font-weight: 760;
+}
+
+  .TOCFk th {
+    line-height: 1;
+}
+
+  .iNgTwl td {
+    color: var(--rose-text);
+}
+
+  .jCUQBv td {
+    font-size: 0.78rem;
+}
+
+  .dxOVGa td {
+    line-height: 1.15;
+}
+
+  .kNqZdn input {
+    accent-color: var(--rose-accent);
+}
+
   .enNcCL::after {
     height: 1px;
 }
@@ -2007,6 +2115,10 @@
 
   .cQjGmz button {
     min-width: var(--kTdGYg);
+}
+
+  .KqqIq th {
+    top: var(--fcTUxn);
 }
 
   .zvhxz:is(:focus-visible, [data-focus-visible]) {

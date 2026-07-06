@@ -19,6 +19,7 @@ import {
     readCalculatorPreferences,
     type SetSelectionValue,
     sanitizeArmorSetDisplayMode,
+    sanitizeSubclassType,
     sanitizeTargets,
     writeCalculatorPreferences
 } from '@/features/armor/calculator-preferences';
@@ -43,6 +44,7 @@ import { createBungieManifestResolver } from '@/features/armor/manifest';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
+import { type SubclassType, sanitizeFragmentIds, sumFragmentBonuses } from '@/features/armor/subclass-fragments';
 import {
     applyVerifiedTargetCap,
     clampTargetsToCaps,
@@ -171,6 +173,8 @@ export default function Home() {
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
     const [armorSetDisplayMode, setArmorSetDisplayMode] = createSignal<ArmorSetDisplayMode>('sets');
+    const [selectedSubclass, setSelectedSubclass] = createSignal<SubclassType>('Prismatic');
+    const [selectedFragmentIds, setSelectedFragmentIds] = createSignal<string[]>([]);
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
     const [allowBalancedTuning, setAllowBalancedTuning] = createSignal(false);
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
@@ -205,6 +209,7 @@ export default function Home() {
 
     const selectedSetRequirements = createMemo(() => getSelectedSetRequirements(selectableSets(), setSelections()));
     const effectiveAllowBalancedTuning = createMemo(() => BALANCED_TUNING_ENABLED && allowBalancedTuning());
+    const selectedFragmentBonuses = createMemo(() => sumFragmentBonuses(selectedFragmentIds()));
     const targetCapInput = createMemo(() => {
         const profile = normalizedProfile();
         const character = selectedCharacter();
@@ -220,6 +225,7 @@ export default function Home() {
             dumpStat: dumpStat() || undefined,
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             statTargets: targets(),
+            statBonuses: selectedFragmentBonuses(),
             setRequirements: selectedSetRequirements(),
             armor: makeArmorBySlotForClass(profile.armor, character.classType)
         };
@@ -352,6 +358,8 @@ export default function Home() {
     function resetBuildChoices() {
         setSelectedExoticItemHash('');
         setArmorSetDisplayMode('sets');
+        setSelectedSubclass('Prismatic');
+        setSelectedFragmentIds([]);
         setDumpStat('');
         setAllowBalancedTuning(false);
         setTargets({ ...EMPTY_STAT_TARGETS });
@@ -470,6 +478,8 @@ export default function Home() {
             selectedCharacterId: selectedCharacterId(),
             selectedExoticItemHash: selectedExoticItemHash(),
             armorSetDisplayMode: armorSetDisplayMode(),
+            selectedSubclass: selectedSubclass(),
+            selectedFragmentIds: selectedFragmentIds(),
             dumpStat: dumpStat(),
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             targets: targets(),
@@ -782,6 +792,7 @@ export default function Home() {
             dumpStat: dumpStat() || undefined,
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             statTargets: targets(),
+            statBonuses: selectedFragmentBonuses(),
             setRequirements: selectedSetRequirements(),
             armor: makeArmorBySlotForClass(profile.armor, character.classType),
             maxResults: SOLVER_RESULT_POOL_LIMIT,
@@ -899,6 +910,29 @@ export default function Home() {
         invalidateSolve();
     }
 
+    function updateSubclass(value: SubclassType) {
+        const nextSubclass = sanitizeSubclassType(value);
+        setSelectedSubclass(nextSubclass);
+        setSelectedFragmentIds((current) => sanitizeFragmentIds(current, nextSubclass));
+        setTargetCapPriorityStat(null);
+        invalidateSolve();
+    }
+
+    function toggleFragment(fragmentId: string) {
+        setSelectedFragmentIds((current) => {
+            const selected = new Set(current);
+            if (selected.has(fragmentId)) {
+                selected.delete(fragmentId);
+            } else {
+                selected.add(fragmentId);
+            }
+
+            return sanitizeFragmentIds([...selected], selectedSubclass());
+        });
+        setTargetCapPriorityStat(null);
+        invalidateSolve();
+    }
+
     function updateDumpStat(value: string) {
         const nextDumpStat = isArmorStat(value) ? value : '';
         setDumpStat(nextDumpStat);
@@ -929,6 +963,7 @@ export default function Home() {
         }
 
         const nextDumpStat = preferences.dumpStat && isArmorStat(preferences.dumpStat) ? preferences.dumpStat : '';
+        const nextSubclass = sanitizeSubclassType(preferences.selectedSubclass);
         const nextAllowBalancedTuning = BALANCED_TUNING_ENABLED && preferences.allowBalancedTuning === true;
         const nextTargets = { ...EMPTY_STAT_TARGETS, ...sanitizeTargets(preferences.targets) };
         for (const stat of ARMOR_STATS) {
@@ -941,6 +976,8 @@ export default function Home() {
         setSelectedCharacterId(preferences.selectedCharacterId ?? '');
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
         setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
+        setSelectedSubclass(nextSubclass);
+        setSelectedFragmentIds(sanitizeFragmentIds(preferences.selectedFragmentIds, nextSubclass));
         setDumpStat(nextDumpStat);
         setAllowBalancedTuning(nextAllowBalancedTuning);
         setTargets(nextTargets);
@@ -975,6 +1012,8 @@ export default function Home() {
                     selectedCharacterId={selectedCharacter()?.characterId ?? ''}
                     selectedExoticItemHash={selectedExoticItemHash()}
                     armorSetDisplayMode={armorSetDisplayMode()}
+                    selectedSubclass={selectedSubclass()}
+                    selectedFragmentIds={selectedFragmentIds()}
                     dumpStat={dumpStat()}
                     allowBalancedTuning={effectiveAllowBalancedTuning()}
                     targets={targets()}
@@ -987,6 +1026,8 @@ export default function Home() {
                     solving={status() === 'loading' || status() === 'solving'}
                     onCharacterSelect={selectCharacter}
                     onArmorSetDisplayModeChange={setArmorSetDisplayMode}
+                    onSubclassChange={updateSubclass}
+                    onFragmentToggle={toggleFragment}
                     onExoticChange={(itemHash) => {
                         setSelectedExoticItemHash(itemHash);
                         invalidateSolve();

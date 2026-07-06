@@ -9,12 +9,15 @@ import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-s
 import { button, input, MONO_FONT_FAMILY, secondaryButton } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
+import { formatFragmentBonus, fragmentsForSubclass, SUBCLASS_TYPES, type SubclassType } from '@/features/armor/subclass-fragments';
 
 type CalculatorControlsProps = {
     characterOptions: CharacterButtonOption[];
     selectedCharacterId: string;
     selectedExoticItemHash: string;
     armorSetDisplayMode: ArmorSetDisplayMode;
+    selectedSubclass: SubclassType;
+    selectedFragmentIds: string[];
     dumpStat: ArmorStat | '';
     allowBalancedTuning: boolean;
     targets: StatVector;
@@ -28,6 +31,8 @@ type CalculatorControlsProps = {
     onCharacterSelect: (characterId: string) => void;
     onExoticChange: (itemHash: string) => void;
     onArmorSetDisplayModeChange: (mode: ArmorSetDisplayMode) => void;
+    onSubclassChange: (subclass: SubclassType) => void;
+    onFragmentToggle: (fragmentId: string) => void;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
     onTargetChange: (stat: ArmorStat, value: string) => void;
@@ -170,6 +175,108 @@ const advancedBody = css({
     pt: '0.72rem'
 });
 
+const fragmentHeader = css({
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '0.65rem',
+    alignItems: 'center'
+});
+
+const fragmentSubclassSelect = css({
+    h: '34px',
+    minH: '34px',
+    fontSize: '0.78rem'
+});
+
+const fragmentCount = css({
+    color: 'var(--rose-muted)',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.72rem',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap'
+});
+
+const fragmentWipTag = css({
+    color: 'var(--rose-muted)',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.62rem',
+    fontWeight: 680,
+    letterSpacing: '0.02em',
+    ml: '0.4rem',
+    verticalAlign: 'middle'
+});
+
+const fragmentTableFrame = css({
+    overflow: 'hidden',
+    border: '1px solid var(--rose-border)',
+    borderRadius: '0.55rem',
+    bg: 'var(--rose-surface)'
+});
+
+const fragmentTableScroll = css({
+    maxH: '13.5rem',
+    overflowY: 'auto'
+});
+
+const fragmentTable = css({
+    w: '100%',
+    borderCollapse: 'collapse',
+    tableLayout: 'fixed',
+    '& th': {
+        position: 'sticky',
+        top: 0,
+        zIndex: 1,
+        bg: 'color-mix(in srgb, var(--rose-surface-soft) 74%, #000 26%)',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.68rem',
+        fontWeight: 760,
+        lineHeight: 1,
+        textAlign: 'left',
+        py: '0.48rem',
+        borderBottom: '1px solid var(--rose-border)'
+    },
+    '& td': {
+        py: '0.42rem',
+        borderBottom: '1px solid color-mix(in srgb, var(--rose-border) 72%, transparent)',
+        color: 'var(--rose-text)',
+        fontSize: '0.78rem',
+        lineHeight: 1.15,
+        verticalAlign: 'middle'
+    },
+    '& tr:last-child td': {
+        borderBottom: 0
+    },
+    '& tr[data-selected="true"] td': {
+        bg: 'color-mix(in srgb, var(--rose-accent) 10%, transparent)'
+    }
+});
+
+const fragmentCheckCell = css({
+    w: '2.1rem',
+    textAlign: 'center',
+    '& input': {
+        accentColor: 'var(--rose-accent)'
+    }
+});
+
+const fragmentNameCell = css({
+    px: '0.35rem',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontWeight: 660
+});
+
+const fragmentBonusCell = css({
+    pr: '0.55rem',
+    color: 'var(--rose-muted-strong)!',
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: '0.72rem!important',
+    textAlign: 'right',
+    whiteSpace: 'nowrap'
+});
+
 function ActionControls(props: Pick<CalculatorControlsProps, 'canSolve' | 'onClearChoices' | 'onSolve' | 'solving'>) {
     return (
         <div class={actionStack}>
@@ -197,6 +304,73 @@ function DumpControls(props: Pick<CalculatorControlsProps, 'dumpStat' | 'onDumpS
                 </select>
             </div>
         </div>
+    );
+}
+
+function FragmentControls(
+    props: Pick<CalculatorControlsProps, 'onFragmentToggle' | 'onSubclassChange' | 'selectedFragmentIds' | 'selectedSubclass'>
+) {
+    const selectedIds = () => new Set(props.selectedFragmentIds);
+    const fragments = () => fragmentsForSubclass(props.selectedSubclass);
+
+    return (
+        <section class={section} aria-label="Fragments">
+            <div class={fragmentHeader}>
+                <h2 class={sectionTitle}>
+                    Fragments <span class={fragmentWipTag}>(WIP UI)</span>
+                </h2>
+                <span class={fragmentCount}>{props.selectedFragmentIds.length} selected</span>
+            </div>
+            <select
+                class={`${input} ${fragmentSubclassSelect}`}
+                value={props.selectedSubclass}
+                onChange={(event) => props.onSubclassChange(event.currentTarget.value as SubclassType)}
+            >
+                <For each={SUBCLASS_TYPES}>{(subclass) => <option value={subclass}>{subclass}</option>}</For>
+            </select>
+            <div class={fragmentTableFrame}>
+                <div class={fragmentTableScroll}>
+                    <table class={fragmentTable}>
+                        <colgroup>
+                            <col style={{ width: '2.1rem' }} />
+                            <col />
+                            <col style={{ width: '7.2rem' }} />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class={fragmentCheckCell} />
+                                <th class={fragmentNameCell}>Fragment</th>
+                                <th class={fragmentBonusCell}>Stats</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <For each={fragments()}>
+                                {(fragment) => {
+                                    const selected = () => selectedIds().has(fragment.id);
+
+                                    return (
+                                        <tr data-selected={selected()}>
+                                            <td class={fragmentCheckCell}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selected()}
+                                                    aria-label={`Toggle ${fragment.name}`}
+                                                    onChange={() => props.onFragmentToggle(fragment.id)}
+                                                />
+                                            </td>
+                                            <td class={fragmentNameCell} title={fragment.name}>
+                                                {fragment.name}
+                                            </td>
+                                            <td class={fragmentBonusCell}>{formatFragmentBonus(fragment)}</td>
+                                        </tr>
+                                    );
+                                }}
+                            </For>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     );
 }
 
@@ -277,6 +451,13 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                         targets={props.targets}
                     />
                 </section>
+
+                <FragmentControls
+                    selectedSubclass={props.selectedSubclass}
+                    selectedFragmentIds={props.selectedFragmentIds}
+                    onSubclassChange={props.onSubclassChange}
+                    onFragmentToggle={props.onFragmentToggle}
+                />
 
                 <section class={section} aria-label="Sets">
                     <h2 class={sectionTitle}>Sets</h2>

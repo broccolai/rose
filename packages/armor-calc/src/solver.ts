@@ -64,6 +64,7 @@ type SearchCounters = {
 type SearchContext = {
     targets: StatVector;
     targetValues: StatTuple;
+    statBonusValues: StatTuple;
     dumpStat?: ArmorStat;
     dumpStatIndex: number;
     tuningMode: TuningMode;
@@ -81,6 +82,7 @@ type SearchContext = {
 export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     const warnings: string[] = [];
     const targets = normalizeTargets(input.statTargets);
+    const statBonuses = normalizeStatBonuses(input.statBonuses);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
     const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const maxResults = input.maxResults ?? DEFAULT_MAX_RESULTS;
@@ -109,6 +111,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     const context: SearchContext = {
         targets,
         targetValues: toStatTuple(targets),
+        statBonusValues: toStatTuple(statBonuses),
         dumpStat: input.dumpStat,
         dumpStatIndex,
         tuningMode,
@@ -174,6 +177,7 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
     }
 
     const baseTargets = normalizeTargets(input.statTargets);
+    const statBonuses = normalizeStatBonuses(input.statBonuses);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
     const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
@@ -203,6 +207,7 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
     const bestTarget = calculatePreparedArmorStatTargetCap(
         plans,
         baseTargets,
+        statBonuses,
         stat,
         input.dumpStat,
         dumpStatIndex,
@@ -229,6 +234,7 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
 function calculatePreparedArmorStatTargetCap(
     plans: CandidatePlan[],
     baseTargets: StatVector,
+    statBonuses: StatVector,
     stat: ArmorStat,
     dumpStat: ArmorStat | undefined,
     dumpStatIndex: number,
@@ -246,7 +252,7 @@ function calculatePreparedArmorStatTargetCap(
             [stat]: midpoint
         };
 
-        if (canReachPreparedArmorStatTargets(plans, targets, dumpStat, dumpStatIndex, tuningMode, setRequirements)) {
+        if (canReachPreparedArmorStatTargets(plans, targets, statBonuses, dumpStat, dumpStatIndex, tuningMode, setRequirements)) {
             best = midpoint;
             low = midpoint + 1;
         } else {
@@ -259,6 +265,7 @@ function calculatePreparedArmorStatTargetCap(
 
 export function canReachArmorStatTargets(input: ArmorStatTargetCapsInput) {
     const targets = normalizeTargets(input.statTargets);
+    const statBonuses = normalizeStatBonuses(input.statBonuses);
     const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
     const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
     const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
@@ -268,12 +275,13 @@ export function canReachArmorStatTargets(input: ArmorStatTargetCapsInput) {
         return false;
     }
 
-    return canReachPreparedArmorStatTargets(plans, targets, input.dumpStat, dumpStatIndex, tuningMode, input.setRequirements);
+    return canReachPreparedArmorStatTargets(plans, targets, statBonuses, input.dumpStat, dumpStatIndex, tuningMode, input.setRequirements);
 }
 
 function canReachPreparedArmorStatTargets(
     plans: CandidatePlan[],
     targets: StatVector,
+    statBonuses: StatVector,
     dumpStat: ArmorStat | undefined,
     dumpStatIndex: number,
     tuningMode: TuningMode,
@@ -282,6 +290,7 @@ function canReachPreparedArmorStatTargets(
     const context: SearchContext = {
         targets,
         targetValues: toStatTuple(targets),
+        statBonusValues: toStatTuple(statBonuses),
         dumpStat,
         dumpStatIndex,
         tuningMode,
@@ -436,7 +445,7 @@ function searchPlan(plan: CandidatePlan, context: SearchContext) {
     const selectedPieces = {} as Partial<Record<ArmorSlot, PreparedArmorItem>>;
     const selectedList: PreparedArmorItem[] = [];
 
-    searchSlot(plan, context, selectedPieces, selectedList, 0, zeroTuple(), zeroTuple());
+    searchSlot(plan, context, selectedPieces, selectedList, 0, [...context.statBonusValues], [...context.statBonusValues]);
 }
 
 function searchSlot(
@@ -666,6 +675,21 @@ function tupleToStats(stats: StatTuple): StatVector {
         class: stats[4],
         weapons: stats[5]
     };
+}
+
+function normalizeStatBonuses(statBonuses: Partial<StatVector> | undefined): StatVector {
+    const normalized = emptyStats();
+
+    if (!statBonuses) {
+        return normalized;
+    }
+
+    for (const stat of ARMOR_STATS) {
+        const value = statBonuses[stat] ?? 0;
+        normalized[stat] = Number.isFinite(value) ? Math.trunc(value) : 0;
+    }
+
+    return normalized;
 }
 
 function addTupleInPlace(left: StatTuple, right: StatTuple, multiplier: 1 | -1) {

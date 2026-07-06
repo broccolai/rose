@@ -78,6 +78,21 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(60);
     });
 
+    test('applies selected fragment stat bonuses to final stats and target checks', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { weapons: 60, health: 40 },
+            statBonuses: { weapons: 10, health: -10 },
+            setRequirements: [],
+            armor: inventory()
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBe(60);
+        expect(result.ok && result.builds[0]?.stats.health).toBe(40);
+    });
+
     test('uses pair tuning without a dump stat', () => {
         const tuned = item('helmet', { tier: 5 });
         tuned.tuningOptions = createTierFiveTuningOptions(tuned);

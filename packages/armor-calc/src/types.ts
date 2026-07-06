@@ -58,6 +58,7 @@ export type SolveArmorInput = {
     dumpStat?: ArmorStat;
     allowBalancedTuning?: boolean;
     statTargets: Partial<StatVector>;
+    statBonuses?: Partial<StatVector>;
     setRequirements: ArmorSetRequirement[];
     armor: ArmorInventoryBySlot;
     /**

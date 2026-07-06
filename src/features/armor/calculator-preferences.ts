@@ -1,6 +1,7 @@
 import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-calc';
 
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
+import { isSubclassType, type SubclassType, sanitizeFragmentIds } from '@/features/armor/subclass-fragments';
 
 export type SetSelectionValue = '0' | '2' | '4';
 
@@ -8,6 +9,8 @@ export type CalculatorPreferences = {
     selectedCharacterId?: string;
     selectedExoticItemHash?: string;
     armorSetDisplayMode?: ArmorSetDisplayMode;
+    selectedSubclass?: SubclassType;
+    selectedFragmentIds?: string[];
     dumpStat?: ArmorStat | '';
     allowBalancedTuning?: boolean;
     targets?: Partial<StatVector>;
@@ -87,6 +90,8 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         selectedCharacterId: typeof candidate.selectedCharacterId === 'string' ? candidate.selectedCharacterId : undefined,
         selectedExoticItemHash: typeof candidate.selectedExoticItemHash === 'string' ? candidate.selectedExoticItemHash : undefined,
         armorSetDisplayMode: sanitizeArmorSetDisplayMode(candidate.armorSetDisplayMode),
+        selectedSubclass: sanitizeSubclassType(candidate.selectedSubclass),
+        selectedFragmentIds: sanitizeFragmentIds(candidate.selectedFragmentIds, sanitizeSubclassType(candidate.selectedSubclass)),
         dumpStat: candidate.dumpStat && isArmorStat(candidate.dumpStat) ? candidate.dumpStat : '',
         allowBalancedTuning: candidate.allowBalancedTuning === true,
         targets: sanitizeTargets(candidate.targets),
@@ -97,6 +102,10 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
 
 export function sanitizeArmorSetDisplayMode(value: unknown): ArmorSetDisplayMode {
     return value === 'sources' ? 'sources' : 'sets';
+}
+
+export function sanitizeSubclassType(value: unknown): SubclassType {
+    return typeof value === 'string' && isSubclassType(value) ? value : 'Prismatic';
 }
 
 export function sanitizeTargets(value: unknown): Partial<StatVector> {
