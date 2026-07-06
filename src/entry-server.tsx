@@ -7,6 +7,8 @@ function Document(props: DocumentComponentProps) {
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>ARMOR</title>
+                <link rel="icon" type="image/png" href="/canvas.png" />
+                <link rel="apple-touch-icon" href="/canvas.png" />
                 {props.assets}
             </head>
             <body>
