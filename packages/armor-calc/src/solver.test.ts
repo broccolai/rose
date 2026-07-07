@@ -153,6 +153,28 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.pieces.helmet.statMod?.deltas.weapons).toBe(5);
     });
 
+    test('caps displayed stats at 200 before calculating total score', () => {
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { weapons: 200 },
+            statBonuses: { weapons: 50 },
+            setRequirements: [],
+            armor: inventory(
+                slots.map((slot) =>
+                    item(slot, {
+                        baseStats: { health: 10, melee: 10, grenade: 10, super: 10, class: 10, weapons: 40 }
+                    })
+                )
+            ),
+            maxResults: 1
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.weapons).toBe(200);
+        expect(result.ok && result.builds[0]?.score.totalStats).toBe(450);
+    });
+
     test('applies selected fragment stat bonuses to final stats and target checks', () => {
         const result = solveArmor({
             characterId: 'hunter',

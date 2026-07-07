@@ -2,7 +2,7 @@ import { ARMOR_STATS, type ArmorStat } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { For } from 'solid-js';
 
-import { CollapsibleSection, SecondaryButton, SelectInput, ToggleBox } from '@/features/armor/components/calculator-control-primitives';
+import { CollapsibleSection, SecondaryButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 import { fragmentsForSubclass, SUBCLASS_TYPES, type SubclassType } from '@/features/armor/subclass-fragments';
@@ -107,7 +107,10 @@ const FragmentBonusCell = styled('td', {
     base: {
         color: 'var(--rose-muted-strong)!',
         fontFamily: MONO_FONT_FAMILY,
-        textAlign: 'left'
+        textAlign: 'left',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
     }
 });
 
@@ -121,48 +124,79 @@ const FragmentBonusHeader = styled('th', {
 
 const FragmentCheckCell = styled('td', {
     base: {
-        w: '3.4rem',
+        w: '3.75rem',
         textAlign: 'center'
     }
 });
 
 const FragmentCheckHeader = styled('th', {
     base: {
-        w: '3.4rem',
+        w: '3.75rem',
         textAlign: 'center!'
     }
 });
 
 const FragmentBonusList = styled('div', {
     base: {
-        display: 'flex',
-        justifyContent: 'flex-start',
-        gap: 'var(--rose-space-xxs)',
-        flexWrap: 'wrap',
-        minW: 0
+        minW: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
     }
 });
 
-const FragmentBonusChip = styled('span', {
+const FragmentBonusText = styled('span', {
     base: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        h: '1.25rem',
-        px: '0.38rem',
-        borderRadius: '999px',
-        bg: 'color-mix(in srgb, var(--rose-surface-raised) 72%, #000 28%)',
         color: 'var(--rose-muted-strong)',
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.64rem',
-        fontWeight: 760,
+        fontSize: '0.72rem',
+        fontWeight: 700,
         lineHeight: 1,
         '&[data-direction="positive"]': {
-            color: 'color-mix(in srgb, var(--rose-accent) 74%, #fff 26%)',
-            bg: 'color-mix(in srgb, var(--rose-accent) 14%, transparent)'
+            color: 'color-mix(in srgb, var(--rose-accent) 74%, #fff 26%)'
         },
         '&[data-direction="negative"]': {
-            color: 'color-mix(in srgb, #ff8d8d 82%, var(--rose-muted) 18%)',
-            bg: 'color-mix(in srgb, #ff5b5b 10%, transparent)'
+            color: 'color-mix(in srgb, #ff8d8d 82%, var(--rose-muted) 18%)'
+        }
+    }
+});
+
+const FragmentToggle = styled('label', {
+    base: {
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minW: '2.75rem',
+        h: 'var(--rose-control-compact-height)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.78rem',
+        fontWeight: 760,
+        lineHeight: 1,
+        cursor: 'pointer',
+        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
+        _hover: {
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        },
+        '&[data-selected="true"]': {
+            bg: 'var(--rose-button)',
+            borderColor: 'var(--rose-button)',
+            color: 'var(--rose-button-text)'
+        },
+        '&:has(input:focus-visible)': {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 40%, transparent)',
+            outlineOffset: '2px'
+        },
+        '& input': {
+            position: 'absolute',
+            inset: 0,
+            opacity: 0,
+            cursor: 'pointer'
         }
     }
 });
@@ -191,7 +225,7 @@ export function FragmentControls(props: FragmentControlsProps) {
                         <colgroup>
                             <col />
                             <col style={{ width: '7.2rem' }} />
-                            <col style={{ width: '3.4rem' }} />
+                            <col style={{ width: '3.75rem' }} />
                         </colgroup>
                         <thead>
                             <tr>
@@ -215,23 +249,24 @@ export function FragmentControls(props: FragmentControlsProps) {
                                                             const value = fragment.bonuses[stat] ?? 0;
 
                                                             return (
-                                                                <FragmentBonusChip data-direction={value > 0 ? 'positive' : 'negative'}>
+                                                                <FragmentBonusText data-direction={value > 0 ? 'positive' : 'negative'}>
                                                                     {formatSignedStat(value, stat)}
-                                                                </FragmentBonusChip>
+                                                                </FragmentBonusText>
                                                             );
                                                         }}
                                                     </For>
                                                 </FragmentBonusList>
                                             </FragmentBonusCell>
                                             <FragmentCheckCell>
-                                                <ToggleBox as="label" data-selected={selected()}>
+                                                <FragmentToggle data-selected={selected()}>
                                                     <input
                                                         type="checkbox"
                                                         checked={selected()}
                                                         aria-label={`Toggle ${fragment.name}`}
                                                         onChange={() => props.onFragmentToggle(fragment.id)}
                                                     />
-                                                </ToggleBox>
+                                                    {selected() ? 'Y' : 'N'}
+                                                </FragmentToggle>
                                             </FragmentCheckCell>
                                         </tr>
                                     );

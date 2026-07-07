@@ -671,10 +671,6 @@
     background: color-mix(in srgb, var(--rose-success) 10%, var(--rose-surface));
 }
 
-  .VIBua {
-    background: color-mix(in srgb, var(--rose-surface-raised) 72%, #000 28%);
-}
-
   .bKdZLP {
     grid-area: slider;
 }
@@ -915,8 +911,8 @@
     padding-inline: var(--rose-space-xs);
 }
 
-  .egpjin {
-    padding-inline: 0.38rem;
+  .ialrtd {
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
   .iqWPzb {
@@ -1325,10 +1321,6 @@
     color: var(--rose-muted-strong);
 }
 
-  .hdWGQH {
-    font-size: 0.64rem;
-}
-
   .ddgODW {
     display: none;
 }
@@ -1428,6 +1420,14 @@
 
   .hLsNni {
     pointer-events: auto;
+}
+
+  .cluKUT {
+    scrollbar-width: thin;
+}
+
+  .ljXzyr {
+    scrollbar-color: color-mix(in srgb, var(--rose-accent) 38%, var(--rose-border)) transparent;
 }
 
   .dodxlk {
@@ -1582,12 +1582,8 @@
     padding-top: var(--rose-space-xxs);
 }
 
-  .gfWJOU {
-    width: 3.4rem;
-}
-
-  .jzlbhu {
-    height: 1.25rem;
+  .jzIPnu {
+    width: 3.75rem;
 }
 
   .dSXBgr {
@@ -1714,14 +1710,6 @@
     background: color-mix(in srgb, #d9b45f 12%, var(--rose-surface));
 }
 
-  .dviMWz[data-direction="positive"] {
-    background: color-mix(in srgb, var(--rose-accent) 14%, transparent);
-}
-
-  .Ybljg[data-direction="negative"] {
-    background: color-mix(in srgb, #ff5b5b 10%, transparent);
-}
-
   .iKuurm::before {
     background: var(--stat-track-bg);
 }
@@ -1752,6 +1740,18 @@
 
   .hiqBYU[data-status="failed"] {
     background: #ff5a72;
+}
+
+  .hVrpDN::-webkit-scrollbar-track {
+    background: var(--edNtiq);
+}
+
+  .ckXAFM::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--rose-muted) 26%, transparent);
+}
+
+  .nejfI::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
 }
 
   .dwbeCP th,.dufZlP td {
@@ -1812,6 +1812,10 @@
 
   .bzEOUq[data-status="failed"] {
     border-color: color-mix(in srgb, #ff5a72 60%, var(--rose-border));
+}
+
+  .klHkQS::-webkit-scrollbar-thumb {
+    border-radius: 999px;
 }
 
   .bQjlMB tbody tr:last-child td {
@@ -2146,6 +2150,11 @@
     white-space: nowrap;
 }
 
+  .DNHWR::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    -webkit-background-clip: content-box;
+}
+
   .kfDJvW:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]) {
     opacity: 0.5;
 }
@@ -2204,6 +2213,10 @@
 
   .ewnRRl::before {
     height: var(--stat-track-height);
+}
+
+  .dyRWRm::-webkit-scrollbar {
+    width: 0.45rem;
 }
 
   .zvhxz:is(:focus-visible, [data-focus-visible]) {
@@ -2266,6 +2279,10 @@
     background: color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft));
 }
 
+  .ffFVNk:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--rose-accent) 48%, var(--rose-muted) 22%);
+}
+
   .gYoXMB:is(:hover, [data-hover]) {
     background: color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised));
 }
@@ -2300,6 +2317,11 @@
 
   .lamJxE:is(:hover, [data-hover]) {
     color: var(--rose-text);
+}
+
+  .fDRjJ:hover::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    -webkit-background-clip: content-box;
 }
 
   .jBQrbx:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]):is(:hover, [data-hover]) {
@@ -2418,6 +2440,9 @@
     .iAUmLD {
       grid-template-rows: auto minmax(0, 1fr) auto;
 }
+    .hwoTTE {
+      scrollbar-gutter: stable;
+}
     .bqMLgi {
       top: var(--fcTUxn);
 }
@@ -2433,8 +2458,11 @@
     .eCvggF {
       height: 100%;
 }
-    .dXvXvv {
-      padding-right: var(--rose-space-xs);
+    .drtUVW {
+      padding-right: var(--rose-space-sm);
+}
+    .hSBvSU {
+      margin-right: calc(var(--rose-space-xs) * -1);
 }
     .doWUce {
       padding-bottom: var(--rose-space-sm);

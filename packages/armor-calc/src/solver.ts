@@ -1533,7 +1533,7 @@ function wastedStatsForSolver(stats: StatVector, targets: StatVector, dumpStat?:
 
 function createBuild(pieces: Record<ArmorSlot, ArmorItem>, addonState: AddonState, targets: StatVector, dumpStat?: ArmorStat): ArmorBuild {
     const buildPieces = {} as Record<ArmorSlot, BuildArmorPiece>;
-    const finalStats = floorStats(addonState.stats);
+    const finalStats = clampDisplayStats(addonState.stats);
 
     for (const slot of ARMOR_SLOTS) {
         buildPieces[slot] = {
@@ -1554,14 +1554,14 @@ function createBuild(pieces: Record<ArmorSlot, ArmorItem>, addonState: AddonStat
     };
 }
 
-function floorStats(stats: StatVector) {
-    const floored = emptyStats();
+function clampDisplayStats(stats: StatVector) {
+    const clamped = emptyStats();
 
     for (const stat of ARMOR_STATS) {
-        floored[stat] = Math.max(0, stats[stat]);
+        clamped[stat] = Math.max(0, Math.min(MAX_DISPLAY_STAT, stats[stat]));
     }
 
-    return floored;
+    return clamped;
 }
 
 function getActiveSetBonuses(pieces: ArmorItem[]): ActiveArmorSetBonus[] {

@@ -4,6 +4,7 @@ const OAUTH_STATE_STORAGE_KEY = 'rose.bungie.oauth.state';
 const TOKEN_STORAGE_KEY = 'rose.bungie.oauth.token';
 const TOKEN_ENDPOINT = 'https://www.bungie.net/Platform/App/OAuth/Token/';
 const STATE_BYTE_LENGTH = 24;
+const STATE_TTL_MS = 10 * 60 * 1000;
 const EXPIRY_SKEW_MS = 60_000;
 
 export type BungieToken = {
@@ -23,6 +24,11 @@ type BungieTokenResponse = {
     refresh_expires_in?: number;
 };
 
+type StoredOAuthState = {
+    state: string;
+    createdAt: number;
+};
+
 function randomState() {
     const bytes = crypto.getRandomValues(new Uint8Array(STATE_BYTE_LENGTH));
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -31,7 +37,7 @@ function randomState() {
 export function createAuthorizationUrl() {
     const config = getBungieConfig();
     const state = randomState();
-    sessionStorage.setItem(OAUTH_STATE_STORAGE_KEY, state);
+    storeOAuthState(state);
 
     const url = new URL(config.authUrl);
     url.searchParams.set('client_id', config.clientId);
@@ -43,9 +49,38 @@ export function createAuthorizationUrl() {
 }
 
 export function takeStoredOAuthState() {
-    const stored = sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY);
+    const stored = readStoredOAuthState(sessionStorage) ?? readStoredOAuthState(localStorage);
     sessionStorage.removeItem(OAUTH_STATE_STORAGE_KEY);
+    localStorage.removeItem(OAUTH_STATE_STORAGE_KEY);
     return stored;
+}
+
+function storeOAuthState(state: string) {
+    const payload = JSON.stringify({
+        state,
+        createdAt: Date.now()
+    } satisfies StoredOAuthState);
+
+    sessionStorage.setItem(OAUTH_STATE_STORAGE_KEY, payload);
+    localStorage.setItem(OAUTH_STATE_STORAGE_KEY, payload);
+}
+
+function readStoredOAuthState(storage: Storage): string | null {
+    const raw = storage.getItem(OAUTH_STATE_STORAGE_KEY);
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as Partial<StoredOAuthState>;
+        if (!parsed.state || !parsed.createdAt || Date.now() - parsed.createdAt > STATE_TTL_MS) {
+            return null;
+        }
+
+        return parsed.state;
+    } catch {
+        return raw;
+    }
 }
 
 export function readToken() {
