@@ -596,7 +596,7 @@ function isEmptySocketPlug(definition: ManifestInventoryItemDefinition | undefin
 }
 
 function isClearableArmorModCategory(plugCategory: string | undefined) {
-    return Boolean(plugCategory?.startsWith(CLEARABLE_ARMOR_MOD_PLUG_CATEGORY_PREFIX) && plugCategory !== GENERAL_ARMOR_MOD_PLUG_CATEGORY);
+    return Boolean(plugCategory?.startsWith(CLEARABLE_ARMOR_MOD_PLUG_CATEGORY_PREFIX));
 }
 
 function findEmptyPlugHashForSocket(
@@ -732,7 +732,16 @@ async function insertBuildSocketPlugs(
             status: 'active',
             detail: `Clearing other mods on ${piece.item.name}`
         });
-        await clearOtherArmorMods(token, snapshot, membershipType, characterId, piece.item, definitionsByHash, onProgress, slot);
+        const clearedSocketIndices = await clearOtherArmorMods(
+            token,
+            snapshot,
+            membershipType,
+            characterId,
+            piece.item,
+            definitionsByHash,
+            onProgress,
+            slot
+        );
 
         const socketPlans = [
             {
@@ -779,7 +788,10 @@ async function insertBuildSocketPlugs(
                 throw new Error(`Could not find a ${plan.kind} socket on ${piece.item.name}.`);
             }
 
-            if (currentSocketMatchesAdjustment(snapshot, itemInstanceId, socketIndex, plan.plugCategory, adjustment, definitionsByHash)) {
+            if (
+                !clearedSocketIndices.has(socketIndex) &&
+                currentSocketMatchesAdjustment(snapshot, itemInstanceId, socketIndex, plan.plugCategory, adjustment, definitionsByHash)
+            ) {
                 skipped.push({
                     itemName: piece.item.name,
                     kind: plan.kind,
@@ -869,6 +881,7 @@ async function clearOtherArmorMods(
     slot: ArmorSlot
 ) {
     const clearableSockets = readClearableArmorModSockets(snapshot, item.itemInstanceId, definitionsByHash);
+    const clearedSocketIndices = new Set<number>();
 
     for (const socket of clearableSockets) {
         if (
@@ -905,7 +918,30 @@ async function clearOtherArmorMods(
                 plugItemHash: socket.emptyPlugHash
             }
         });
+        clearedSocketIndices.add(socket.socketIndex);
     }
+
+    const unclearedSockets = clearableSockets.filter(
+        (socket) =>
+            !clearedSocketIndices.has(socket.socketIndex) &&
+            socket.currentPlugHash &&
+            !isEmptySocketPlug(definitionsByHash.get(socket.currentPlugHash))
+    );
+    if (unclearedSockets.length > 0) {
+        console.debug('[rose bungie api] Some armor mod sockets were not cleared', {
+            itemName: item.name,
+            itemId: item.itemInstanceId,
+            sockets: unclearedSockets.map((socket) => ({
+                socketIndex: socket.socketIndex,
+                currentPlugHash: socket.currentPlugHash,
+                currentPlugName: socket.currentPlugName,
+                currentCategory: socket.currentCategory,
+                emptyPlugHash: socket.emptyPlugHash
+            }))
+        });
+    }
+
+    return clearedSocketIndices;
 }
 
 function createDebugExpandedResultReport(builds: ArmorBuild[], expandedBuildKey: string | null) {
