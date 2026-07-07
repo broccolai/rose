@@ -12,6 +12,8 @@ import {
     type StatAdjustment,
     type StatVector
 } from '@armor-calc';
+import { createEventListener } from '@solid-primitives/event-listener';
+import { debounce } from '@solid-primitives/scheduled';
 import type {
     DestinyInventoryItemDefinition,
     DestinyItemComponent,
@@ -1075,6 +1077,9 @@ export default function Home() {
     const [equipProgress, setEquipProgress] = createSignal<EquipProgressState | null>(null);
     const [equipOperationActive, setEquipOperationActive] = createSignal(false);
     const [preferencesLoaded, setPreferencesLoaded] = createSignal(false);
+    const dismissCompletedEquipProgress = debounce(() => {
+        setEquipProgress((current) => (current?.detail === 'Build applied' ? null : current));
+    }, 1400);
     const calculatorProfile = createMemo(() => filterFullyMasterworkedProfile(normalizedProfile(), onlyFullyMasterworkedGear()));
     const selectedCharacter = createMemo(() => getSelectedCharacter(calculatorProfile(), selectedCharacterId()));
     const characterButtons = createMemo(() => getCharacterButtonOptions(normalizedProfile()));
@@ -1444,12 +1449,8 @@ export default function Home() {
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-        onCleanup(() => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-        });
+        createEventListener(window, 'keydown', handleKeyDown);
+        createEventListener(window, 'keyup', handleKeyUp);
     });
 
     onCleanup(() => {
@@ -2236,9 +2237,7 @@ export default function Home() {
                           }
                         : current
                 );
-                window.setTimeout(() => {
-                    setEquipProgress((current) => (current?.detail === 'Build applied' ? null : current));
-                }, 1400);
+                dismissCompletedEquipProgress();
                 setMessage('Equipped build. Refreshing profile...');
                 const nextSnapshot = (await exportVaultSnapshot(token)) as VaultExportSnapshot;
                 await applyLoadedCalculatorData(nextSnapshot, 'Bungie refresh', { preserveSolve: true });

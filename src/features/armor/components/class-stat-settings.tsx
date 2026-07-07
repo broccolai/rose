@@ -211,6 +211,7 @@ const StatScaleNumber = styled('span', {
         fontVariantNumeric: 'tabular-nums',
         '&[data-major="true"]': {
             color: 'var(--rose-text)',
+            fontSize: '0.76rem',
             fontWeight: 750
         }
     }
@@ -224,8 +225,8 @@ const StatSliderFrame = styled('div', {
         alignItems: 'center',
         h: 'var(--rose-control-compact-height)',
         minW: 0,
-        '--stat-tick-color': 'rgba(244, 244, 245, 0.24)',
-        '--stat-major-color': 'rgba(244, 244, 245, 0.72)'
+        '--stat-tick-color': 'rgba(244, 244, 245, 0.34)',
+        '--stat-major-color': 'rgba(244, 244, 245, 0.92)'
     }
 });
 
@@ -253,6 +254,7 @@ const StatSliderTrack = styled('div', {
         '--stat-track-bg':
             'linear-gradient(var(--stat-major-color), var(--stat-major-color)) 50% center / 2px 12px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 12.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 25% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 37.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 62.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 75% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 87.5% center / 1px 7px no-repeat, linear-gradient(to right, var(--rose-accent) 0 var(--stat-value-percent), var(--rose-info) var(--stat-value-percent) var(--stat-cap-percent), transparent var(--stat-cap-percent) 100%) center / 100% 100% no-repeat, repeating-linear-gradient(135deg, #24242a 0 5px, #1b1b20 5px 10px) center / 100% 100% no-repeat',
         '--stat-thumb-size': '14px',
+        '--stat-thumb-half': 'calc(var(--stat-thumb-size) / 2)',
         '--stat-thumb-offset': '-5px',
         '--stat-thumb-radius': '999px',
         '--stat-thumb-border': '0',
@@ -267,8 +269,8 @@ const StatSliderTrack = styled('div', {
         '&::before': {
             content: '""',
             position: 'absolute',
-            left: 0,
-            right: 0,
+            left: 'var(--stat-thumb-half)',
+            right: 'var(--stat-thumb-half)',
             top: '50%',
             transform: 'translateY(-50%)',
             h: 'var(--stat-track-height)',
@@ -294,7 +296,7 @@ const StatSliderThumb = styled('span', {
     base: {
         position: 'absolute',
         zIndex: 2,
-        left: 'var(--stat-value-percent)',
+        left: 'clamp(var(--stat-thumb-half), var(--stat-value-percent), calc(100% - var(--stat-thumb-half)))',
         top: '50%',
         transform: 'translate(-50%, -50%)',
         w: 'var(--stat-thumb-size)',
@@ -455,8 +457,10 @@ function StatTargetSlider(props: {
 
     function valueFromPointer(event: PointerEvent & { currentTarget: HTMLElement }) {
         const bounds = event.currentTarget.getBoundingClientRect();
-        const width = Math.max(1, bounds.width);
-        const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / width));
+        const thumbInset = 7;
+        const left = bounds.left + thumbInset;
+        const width = Math.max(1, bounds.width - thumbInset * 2);
+        const ratio = Math.max(0, Math.min(1, (event.clientX - left) / width));
         return clampDraft(Math.round(ratio * MAX_STAT_TARGET));
     }
 

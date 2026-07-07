@@ -8,6 +8,7 @@ import {
     type SolveArmorResult
 } from '@armor-calc';
 import { styled } from '@panda/jsx';
+import { debounce } from '@solid-primitives/scheduled';
 import { createSignal, For, Show } from 'solid-js';
 
 import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
@@ -309,15 +310,27 @@ async function copyTextToClipboard(text: string) {
 function BuildDetail(props: { build: ArmorBuild; onEquipBuild?: (build: ArmorBuild) => Promise<void>; showTuningResults: boolean }) {
     const [copyState, setCopyState] = createSignal<'idle' | 'copied' | 'failed'>('idle');
     const [equipState, setEquipState] = createSignal<'idle' | 'equipping' | 'done' | 'failed'>('idle');
+    const resetCopiedState = debounce(() => setCopyState('idle'), 1400);
+    const resetCopyFailedState = debounce(() => setCopyState('idle'), 1800);
+    const resetEquippedState = debounce(() => setEquipState('idle'), 1600);
+    const resetEquipFailedState = debounce(() => setEquipState('idle'), 2200);
+
+    function clearPendingButtonResets() {
+        resetCopiedState.clear();
+        resetCopyFailedState.clear();
+        resetEquippedState.clear();
+        resetEquipFailedState.clear();
+    }
 
     async function copyDimQuery() {
+        clearPendingButtonResets();
         try {
             await copyTextToClipboard(formatDimArmorQuery(props.build));
             setCopyState('copied');
-            window.setTimeout(() => setCopyState('idle'), 1400);
+            resetCopiedState();
         } catch {
             setCopyState('failed');
-            window.setTimeout(() => setCopyState('idle'), 1800);
+            resetCopyFailedState();
         }
     }
 
@@ -338,14 +351,15 @@ function BuildDetail(props: { build: ArmorBuild; onEquipBuild?: (build: ArmorBui
             return;
         }
 
+        clearPendingButtonResets();
         try {
             setEquipState('equipping');
             await props.onEquipBuild(props.build);
             setEquipState('done');
-            window.setTimeout(() => setEquipState('idle'), 1600);
+            resetEquippedState();
         } catch {
             setEquipState('failed');
-            window.setTimeout(() => setEquipState('idle'), 2200);
+            resetEquipFailedState();
         }
     }
 

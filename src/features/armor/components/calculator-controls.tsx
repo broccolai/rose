@@ -1,6 +1,6 @@
 import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
 import { styled } from '@panda/jsx';
-import { For } from 'solid-js';
+import { For, type JSX } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption } from '@/features/armor/calculator-view-model';
@@ -167,13 +167,60 @@ const DumpSelectInput = styled(SelectInput, {
     }
 });
 
-const Section = styled('section', {
+const Section = styled('details', {
     base: {
         display: 'grid',
         gap: 'var(--rose-space-sm)',
         minW: 0,
         pt: 'var(--rose-space-md)',
-        borderTop: '1px solid var(--rose-border)'
+        borderTop: '1px solid var(--rose-border)',
+        '& summary::-webkit-details-marker': {
+            display: 'none'
+        },
+        '&[open]': {
+            gap: 'var(--rose-space-sm)'
+        },
+        '&[open] [data-section-chevron]': {
+            transform: 'rotate(45deg)'
+        }
+    }
+});
+
+const SectionSummary = styled('summary', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: 'var(--rose-space-sm)',
+        minW: 0,
+        cursor: 'pointer',
+        listStyle: 'none',
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 34%, transparent)',
+            outlineOffset: '3px',
+            borderRadius: 'var(--rose-radius-sm)'
+        }
+    }
+});
+
+const SectionBody = styled('div', {
+    base: {
+        display: 'grid',
+        gap: 'var(--rose-space-sm)',
+        minW: 0,
+        pt: 'var(--rose-space-sm)'
+    }
+});
+
+const SectionChevron = styled('span', {
+    base: {
+        display: 'block',
+        w: '0.48rem',
+        h: '0.48rem',
+        borderRight: '1.5px solid var(--rose-muted)',
+        borderBottom: '1.5px solid var(--rose-muted)',
+        transform: 'rotate(-45deg)',
+        transition: 'transform 120ms ease, border-color 120ms ease'
     }
 });
 
@@ -265,52 +312,6 @@ const SecondaryButton = styled('button', {
     }
 });
 
-const AdvancedSection = styled('details', {
-    base: {
-        pt: 'var(--rose-space-md)',
-        borderTop: '1px solid var(--rose-border)',
-        '& summary': {
-            cursor: 'pointer',
-            color: 'var(--rose-muted)',
-            fontFamily: MONO_FONT_FAMILY,
-            fontSize: '0.82rem',
-            fontWeight: 720,
-            lineHeight: 1,
-            listStyle: 'revert'
-        },
-        '&[open] summary': {
-            color: 'var(--rose-text)'
-        }
-    }
-});
-
-const AdvancedBody = styled('div', {
-    base: {
-        display: 'grid',
-        gap: 'var(--rose-space-sm)',
-        pt: 'var(--rose-space-sm)'
-    }
-});
-
-const FragmentHeader = styled('div', {
-    base: {
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gap: 'var(--rose-space-sm)',
-        alignItems: 'center'
-    }
-});
-
-const FragmentHeaderActions = styled('div', {
-    base: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 'var(--rose-space-xs)',
-        flexWrap: 'wrap'
-    }
-});
-
 const FragmentSubclassSelect = styled(SelectInput, {
     base: {
         h: 'var(--rose-control-compact-height)',
@@ -319,28 +320,19 @@ const FragmentSubclassSelect = styled(SelectInput, {
     }
 });
 
-const FragmentCount = styled('span', {
-    base: {
-        color: 'var(--rose-muted)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.72rem',
-        fontVariantNumeric: 'tabular-nums',
-        whiteSpace: 'nowrap'
-    }
-});
-
 const FragmentTableFrame = styled('div', {
     base: {
+        minW: 0,
         overflow: 'hidden',
-        borderRadius: 'var(--rose-radius-sm)',
-        bg: 'color-mix(in srgb, var(--rose-surface-soft) 70%, #000 30%)'
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-md)',
+        bg: 'var(--rose-surface)'
     }
 });
 
 const FragmentTableScroll = styled('div', {
     base: {
-        maxH: '13.5rem',
-        overflowY: 'auto'
+        minW: 0
     }
 });
 
@@ -358,78 +350,76 @@ const FragmentFooter = styled('div', {
 const FragmentTable = styled('table', {
     base: {
         w: '100%',
+        minW: 0,
         borderCollapse: 'collapse',
         tableLayout: 'fixed',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.74rem',
         '& th': {
             position: 'sticky',
             top: 0,
-            zIndex: 1,
-            bg: 'color-mix(in srgb, var(--rose-surface-soft) 74%, #000 26%)',
+            zIndex: 2,
+            bg: '#0a0a0c',
             color: 'var(--rose-muted)',
-            fontFamily: MONO_FONT_FAMILY,
             fontSize: '0.68rem',
-            fontWeight: 760,
+            fontWeight: 720,
             lineHeight: 1,
             textAlign: 'left',
-            py: 'var(--rose-space-xs)',
+            p: 'var(--rose-space-sm) var(--rose-space-xs)',
             borderBottom: '1px solid var(--rose-border)'
         },
         '& td': {
-            py: 'var(--rose-space-xs)',
-            borderBottom: '1px solid color-mix(in srgb, var(--rose-border) 72%, transparent)',
+            p: 'var(--rose-space-xs)',
+            borderBottom: '1px solid var(--rose-border)',
             color: 'var(--rose-text)',
-            fontSize: '0.78rem',
-            lineHeight: 1.15,
+            lineHeight: 1.2,
             verticalAlign: 'middle'
         },
         '& tr:last-child td': {
             borderBottom: 0
         },
-        '& tr[data-selected="true"] td': {
-            bg: 'color-mix(in srgb, var(--rose-accent) 10%, transparent)'
+        '& tbody tr[data-selected="true"]': {
+            bg: 'color-mix(in srgb, var(--rose-accent) 9%, transparent)'
         },
-        '& tbody tr:hover td': {
-            bg: 'color-mix(in srgb, var(--rose-accent) 6%, transparent)'
+        '& tbody tr:hover': {
+            bg: 'var(--rose-surface-soft)'
+        },
+        '& tbody tr[data-selected="true"]:hover': {
+            bg: 'color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft))'
         }
     }
 });
 
 const FragmentNameCell = styled('td', {
     base: {
-        px: 'var(--rose-space-xs)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        fontWeight: 660
+        fontWeight: 680
     }
 });
 
 const FragmentNameHeader = styled('th', {
     base: {
-        px: 'var(--rose-space-xs)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        fontWeight: 660
+        fontWeight: 720
     }
 });
 
 const FragmentBonusCell = styled('td', {
     base: {
-        px: 'var(--rose-space-xs)',
         color: 'var(--rose-muted-strong)!',
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.72rem!important',
         textAlign: 'left'
     }
 });
 
 const FragmentBonusHeader = styled('th', {
     base: {
-        px: 'var(--rose-space-xs)',
         color: 'var(--rose-muted-strong)!',
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.72rem!important',
         textAlign: 'left'
     }
 });
@@ -437,16 +427,14 @@ const FragmentBonusHeader = styled('th', {
 const FragmentCheckCell = styled('td', {
     base: {
         w: '3.4rem',
-        pr: 'var(--rose-space-xs)',
-        textAlign: 'right'
+        textAlign: 'center'
     }
 });
 
 const FragmentCheckHeader = styled('th', {
     base: {
         w: '3.4rem',
-        pr: 'var(--rose-space-xs)',
-        textAlign: 'right'
+        textAlign: 'center!'
     }
 });
 
@@ -556,6 +544,18 @@ function ActionControls(props: Pick<CalculatorControlsProps, 'canSolve' | 'onCle
     );
 }
 
+function CollapsibleSection(props: { title: string; children: JSX.Element; defaultOpen?: boolean; ariaLabel?: string }) {
+    return (
+        <Section open={props.defaultOpen ?? true} aria-label={props.ariaLabel ?? props.title}>
+            <SectionSummary>
+                <SectionTitle>{props.title}</SectionTitle>
+                <SectionChevron data-section-chevron aria-hidden="true" />
+            </SectionSummary>
+            <SectionBody>{props.children}</SectionBody>
+        </Section>
+    );
+}
+
 function DumpControls(props: Pick<CalculatorControlsProps, 'dumpStat' | 'onDumpStatChange'>) {
     return (
         <InlineControls>
@@ -579,13 +579,10 @@ function FragmentControls(
     const fragments = () => fragmentsForSubclass(props.selectedSubclass);
 
     return (
-        <Section aria-label="Fragments">
-            <FragmentHeader>
-                <SectionTitle>Fragments</SectionTitle>
-                <FragmentHeaderActions>
-                    <FragmentCount>{props.selectedFragmentIds.length} selected</FragmentCount>
-                </FragmentHeaderActions>
-            </FragmentHeader>
+        <CollapsibleSection
+            title={`Fragments${props.selectedFragmentIds.length > 0 ? ` (${props.selectedFragmentIds.length})` : ''}`}
+            ariaLabel="Fragments"
+        >
             <FragmentSubclassSelect
                 value={props.selectedSubclass}
                 onChange={(event) => props.onSubclassChange(event.currentTarget.value as SubclassType)}
@@ -653,7 +650,7 @@ function FragmentControls(
                     Import
                 </SecondaryButton>
             </FragmentFooter>
-        </Section>
+        </CollapsibleSection>
     );
 }
 
@@ -669,41 +666,38 @@ function AdvancedControls(
     >
 ) {
     return (
-        <AdvancedSection>
-            <summary>Advanced</summary>
-            <AdvancedBody>
-                <FormRow>
-                    <RowLabel>Armor set labels</RowLabel>
-                    <SelectInput
-                        value={props.armorSetDisplayMode}
-                        onChange={(event) => props.onArmorSetDisplayModeChange(event.currentTarget.value as ArmorSetDisplayMode)}
-                    >
-                        <option value="sets">Set names</option>
-                        <option value="sources">Sources</option>
-                    </SelectInput>
-                </FormRow>
-                <AdvancedToggleRow>
-                    <span>Balanced tuning</span>
-                    <FragmentToggle data-selected={props.allowBalancedTuning}>
-                        <input
-                            type="checkbox"
-                            checked={props.allowBalancedTuning}
-                            onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
-                        />
-                    </FragmentToggle>
-                </AdvancedToggleRow>
-                <AdvancedToggleRow>
-                    <span>Only fully masterworked gear</span>
-                    <FragmentToggle data-selected={props.onlyFullyMasterworkedGear}>
-                        <input
-                            type="checkbox"
-                            checked={props.onlyFullyMasterworkedGear}
-                            onChange={(event) => props.onOnlyFullyMasterworkedGearChange(event.currentTarget.checked)}
-                        />
-                    </FragmentToggle>
-                </AdvancedToggleRow>
-            </AdvancedBody>
-        </AdvancedSection>
+        <CollapsibleSection title="Advanced" defaultOpen={false}>
+            <FormRow>
+                <RowLabel>Armor set labels</RowLabel>
+                <SelectInput
+                    value={props.armorSetDisplayMode}
+                    onChange={(event) => props.onArmorSetDisplayModeChange(event.currentTarget.value as ArmorSetDisplayMode)}
+                >
+                    <option value="sets">Set names</option>
+                    <option value="sources">Sources</option>
+                </SelectInput>
+            </FormRow>
+            <AdvancedToggleRow>
+                <span>Balanced tuning</span>
+                <FragmentToggle data-selected={props.allowBalancedTuning}>
+                    <input
+                        type="checkbox"
+                        checked={props.allowBalancedTuning}
+                        onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
+                    />
+                </FragmentToggle>
+            </AdvancedToggleRow>
+            <AdvancedToggleRow>
+                <span>Only fully masterworked gear</span>
+                <FragmentToggle data-selected={props.onlyFullyMasterworkedGear}>
+                    <input
+                        type="checkbox"
+                        checked={props.onlyFullyMasterworkedGear}
+                        onChange={(event) => props.onOnlyFullyMasterworkedGearChange(event.currentTarget.checked)}
+                    />
+                </FragmentToggle>
+            </AdvancedToggleRow>
+        </CollapsibleSection>
     );
 }
 
@@ -713,35 +707,36 @@ export function CalculatorControls(props: CalculatorControlsProps) {
             <SettingsPanel>
                 <PanelTitle>Build Inputs</PanelTitle>
                 <SettingsScroll>
-                    <FormRows>
-                        <FormRow as="div">
-                            <RowLabel>Class</RowLabel>
-                            <CharacterPicker
-                                labelText={false}
-                                options={props.characterOptions}
-                                selectedCharacterId={props.selectedCharacterId}
-                                onSelect={props.onCharacterSelect}
-                            />
-                        </FormRow>
+                    <CollapsibleSection title="Gear">
+                        <FormRows>
+                            <FormRow as="div">
+                                <RowLabel>Class</RowLabel>
+                                <CharacterPicker
+                                    labelText={false}
+                                    options={props.characterOptions}
+                                    selectedCharacterId={props.selectedCharacterId}
+                                    onSelect={props.onCharacterSelect}
+                                />
+                            </FormRow>
 
-                        <FormRow as="div">
-                            <RowLabel>Dump</RowLabel>
-                            <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
-                        </FormRow>
+                            <FormRow as="div">
+                                <RowLabel>Dump</RowLabel>
+                                <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
+                            </FormRow>
 
-                        <FormRow as="div">
-                            <RowLabel>Exotic</RowLabel>
-                            <ExoticPicker
-                                labelText={false}
-                                availableExotics={props.availableExotics}
-                                onExoticChange={props.onExoticChange}
-                                selectedExoticItemHash={props.selectedExoticItemHash}
-                            />
-                        </FormRow>
-                    </FormRows>
+                            <FormRow as="div">
+                                <RowLabel>Exotic</RowLabel>
+                                <ExoticPicker
+                                    labelText={false}
+                                    availableExotics={props.availableExotics}
+                                    onExoticChange={props.onExoticChange}
+                                    selectedExoticItemHash={props.selectedExoticItemHash}
+                                />
+                            </FormRow>
+                        </FormRows>
+                    </CollapsibleSection>
 
-                    <Section aria-label="Targets">
-                        <SectionTitle>Targets</SectionTitle>
+                    <CollapsibleSection title="Targets">
                         <StatTargetFields
                             allowBalancedTuning={props.allowBalancedTuning}
                             dumpStat={props.dumpStat}
@@ -750,7 +745,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                             targetCaps={props.targetCaps}
                             targets={props.targets}
                         />
-                    </Section>
+                    </CollapsibleSection>
 
                     <FragmentControls
                         selectedSubclass={props.selectedSubclass}
@@ -760,15 +755,14 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                         onImportFragmentsFromGame={props.onImportFragmentsFromGame}
                     />
 
-                    <Section aria-label="Sets">
-                        <SectionTitle>Sets</SectionTitle>
+                    <CollapsibleSection title="Sets">
                         <ArmorSetFields
                             armorSetDisplayMode={props.armorSetDisplayMode}
                             onSetRequirementChange={props.onSetRequirementChange}
                             selectableSets={props.selectableSets}
                             setSelections={props.setSelections}
                         />
-                    </Section>
+                    </CollapsibleSection>
 
                     <AdvancedControls
                         allowBalancedTuning={props.allowBalancedTuning}

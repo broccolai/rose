@@ -76,9 +76,9 @@ const Table = styled('table', {
             p: 'var(--rose-space-sm) var(--rose-space-xs)',
             color: 'var(--rose-muted)',
             whiteSpace: 'normal',
-            lineHeight: 1.05,
+            lineHeight: 1,
             letterSpacing: 0,
-            fontWeight: 680
+            fontWeight: 720
         },
         '& thead th': {
             position: 'sticky',

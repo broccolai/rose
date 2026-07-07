@@ -97,162 +97,119 @@ const ExoticSelect = styled('select', {
 
 const SetList = styled('div', {
     base: {
-        display: 'grid',
-        gap: 'var(--rose-space-md)',
         minW: 0,
-        maxH: '21rem',
-        overflowY: 'auto',
-        pr: 'var(--rose-space-xxs)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-md)',
+        bg: 'var(--rose-surface)',
         '--rose-op': '#d8b15f'
     }
 });
 
-const SetSection = styled('section', {
+const SetTable = styled('table', {
     base: {
-        display: 'grid',
-        gap: 'var(--rose-space-sm)',
-        minW: 0
+        w: '100%',
+        minW: 0,
+        tableLayout: 'fixed',
+        borderCollapse: 'collapse',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.74rem',
+        '& th': {
+            position: 'sticky',
+            top: 0,
+            zIndex: 2,
+            p: 'var(--rose-space-sm) var(--rose-space-xs)',
+            borderBottom: '1px solid var(--rose-border)',
+            bg: '#0a0a0c',
+            color: 'var(--rose-muted)',
+            fontSize: '0.68rem',
+            lineHeight: 1,
+            fontWeight: 720,
+            letterSpacing: 0,
+            textAlign: 'left'
+        },
+        '& th[data-action], & td[data-action]': {
+            textAlign: 'center'
+        },
+        '& td': {
+            p: 'var(--rose-space-xs)',
+            borderBottom: '1px solid var(--rose-border)',
+            color: 'var(--rose-text)',
+            lineHeight: 1.2,
+            verticalAlign: 'middle'
+        },
+        '& tbody tr[data-selected="true"]': {
+            bg: 'color-mix(in srgb, var(--rose-accent) 9%, transparent)'
+        },
+        '& tbody tr[data-unavailable="true"]': {
+            opacity: 0.58
+        },
+        '& tbody tr:hover': {
+            bg: 'var(--rose-surface-soft)'
+        },
+        '& tbody tr[data-selected="true"]:hover': {
+            bg: 'color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft))'
+        }
     }
 });
 
-const SetSectionTitle = styled('div', {
+const SetSectionRow = styled('tr', {
     base: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--rose-space-xs)',
-        color: 'var(--rose-muted)',
-        fontSize: '0.68rem',
-        fontWeight: 760,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        _after: {
-            content: '""',
-            h: '1px',
-            flex: 1,
-            bg: 'var(--rose-border)'
+        '& td': {
+            p: 'var(--rose-space-sm) var(--rose-space-xs) var(--rose-space-xs)',
+            bg: 'var(--rose-surface)',
+            color: 'var(--rose-muted)',
+            fontSize: '0.66rem',
+            fontWeight: 760,
+            lineHeight: 1,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase'
         },
-        '&[data-op="true"]': {
+        '&[data-op="true"] td': {
             color: 'var(--rose-op)'
         }
     }
 });
 
-const SetGrid = styled('div', {
+const SetNameCell = styled('td', {
     base: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr))',
-        gap: 'var(--rose-space-sm)',
-        minW: 0
-    }
-});
-
-const SetRow = styled('div', {
-    base: {
-        position: 'relative',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr)',
-        gridTemplateRows: 'auto auto',
-        alignItems: 'start',
-        alignContent: 'space-between',
-        gap: 'var(--rose-space-xs)',
         minW: 0,
-        minH: '4rem',
-        p: 'var(--rose-space-sm)',
-        border: '1px solid transparent',
-        borderRadius: 'var(--rose-radius-sm)',
-        bg: 'color-mix(in srgb, var(--rose-surface-soft) 82%, #000 18%)',
-        transition: 'background-color 130ms ease, opacity 130ms ease, outline-color 130ms ease',
-        '&[data-selected="true"]': {
-            outline: '1px solid color-mix(in srgb, var(--rose-accent) 54%, transparent)',
-            bg: 'color-mix(in srgb, var(--rose-accent) 10%, var(--rose-surface-soft))'
-        },
-        '&[data-unavailable="true"]': {
-            bg: 'color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%)',
-            opacity: 0.72,
-            '& > span': {
-                color: 'color-mix(in srgb, var(--rose-muted) 74%, #000 26%)'
-            }
-        }
+        overflow: 'hidden'
     }
 });
 
 const SetName = styled('span', {
     base: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--rose-space-xs)',
-        minW: 0,
-        pr: 'var(--rose-space-xl)',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        color: 'var(--rose-text)',
-        fontWeight: 680,
-        fontSize: '0.82rem',
-        lineHeight: 1.15
-    }
-});
-
-const SetNameText = styled('span', {
-    base: {
+        display: 'block',
         minW: 0,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        color: 'var(--rose-text)',
+        fontWeight: 680,
+        lineHeight: 1.2,
         whiteSpace: 'nowrap'
     }
 });
 
-const SetCount = styled('span', {
+const SetRequirementButton = styled('button', {
     base: {
-        position: 'absolute',
-        top: 'var(--rose-space-sm)',
-        right: 'var(--rose-space-sm)',
-        color: 'var(--rose-muted)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.76rem',
-        fontWeight: 750,
-        lineHeight: 1
-    }
-});
-
-const SegmentedControl = styled('fieldset', {
-    base: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        m: 0,
-        p: 0,
-        h: 'var(--rose-control-compact-height)',
-        minInlineSize: 0,
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-sm)',
-        overflow: 'hidden',
-        bg: 'var(--rose-surface)'
-    }
-});
-
-const SegmentButton = styled('button', {
-    base: {
-        position: 'relative',
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minH: 0,
-        h: '100%',
-        px: 0,
+        minW: '2.75rem',
+        h: 'var(--rose-control-compact-height)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        px: 'var(--rose-space-sm)',
         py: 0,
-        border: 0,
-        borderInlineEnd: '1px solid var(--rose-border)',
         appearance: 'none',
-        overflow: 'hidden',
-        bg: 'transparent',
+        bg: 'var(--rose-surface-soft)',
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
         fontWeight: 700,
         lineHeight: 1,
         letterSpacing: 0,
-        _last: {
-            borderInlineEnd: 0
-        },
+        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease',
         '&[data-disabled="false"][data-selected="false"]:hover': {
             bg: 'var(--rose-surface-raised)',
             color: 'var(--rose-text)'
@@ -275,13 +232,14 @@ const SegmentButton = styled('button', {
         },
         '&[data-selected="true"]': {
             bg: 'var(--rose-button)',
+            borderColor: 'var(--rose-button)',
             color: 'var(--rose-button-text)',
             boxShadow: 'none'
         },
         '&[data-selected="true"][data-op="true"]': {
             bg: 'var(--rose-button)',
-            color: 'var(--rose-button-text)',
-            boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
+            borderColor: 'var(--rose-button)',
+            color: 'var(--rose-button-text)'
         }
     }
 });
@@ -351,11 +309,11 @@ export function ArmorSetFields(
     const opSets = () => props.selectableSets.filter((set) => set.opBonuses.length > 0);
     const regularSets = () => props.selectableSets.filter((set) => set.opBonuses.length === 0);
 
-    function renderSetCard(set: AvailableArmorSet) {
+    function renderSetRow(set: AvailableArmorSet) {
         const selected = () => props.setSelections[set.id] ?? '0';
         const displayName = () => getArmorSetDisplayName(set, props.armorSetDisplayMode);
         const canRequire = (requiredPieces: 2 | 4) => set.count >= requiredPieces;
-        const cardSelected = () => selected() === '2' || selected() === '4';
+        const rowSelected = () => selected() === '2' || selected() === '4';
         const hasOpBonus = (requiredPieces: 2 | 4) => set.opBonuses.some((bonus) => bonus.requiredPieces === requiredPieces);
         const updateRequirement = (requiredPieces: 2 | 4) => {
             if (!canRequire(requiredPieces)) {
@@ -366,13 +324,12 @@ export function ArmorSetFields(
         };
 
         return (
-            <SetRow data-op={set.opBonuses.length > 0} data-selected={cardSelected()} data-unavailable={set.count < 2}>
-                <SetName title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
-                    <SetNameText>{displayName()}</SetNameText>
-                </SetName>
-                <SetCount title={`${set.count} owned compatible pieces`}>{set.count}</SetCount>
-                <SegmentedControl aria-label={`${displayName()} requirement`}>
-                    <SegmentButton
+            <tr data-op={set.opBonuses.length > 0} data-selected={rowSelected()} data-unavailable={set.count < 2}>
+                <SetNameCell title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
+                    <SetName>{displayName()}</SetName>
+                </SetNameCell>
+                <td data-action>
+                    <SetRequirementButton
                         type="button"
                         title={setBonusTooltip(set, 2)}
                         disabled={!canRequire(2)}
@@ -383,8 +340,10 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(2)}
                     >
                         2
-                    </SegmentButton>
-                    <SegmentButton
+                    </SetRequirementButton>
+                </td>
+                <td data-action>
+                    <SetRequirementButton
                         type="button"
                         title={setBonusTooltip(set, 4)}
                         disabled={!canRequire(4)}
@@ -395,34 +354,46 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(4)}
                     >
                         4
-                    </SegmentButton>
-                </SegmentedControl>
-            </SetRow>
+                    </SetRequirementButton>
+                </td>
+            </tr>
         );
     }
 
     return (
         <Show when={props.selectableSets.length > 0} fallback={<MutedText>No armor set catalog loaded yet.</MutedText>}>
             <SetList>
-                <Show when={opSets().length > 0}>
-                    <SetSection>
-                        <SetSectionTitle data-op="true">OP bonuses</SetSectionTitle>
-                        <SetGrid>
-                            <For each={opSets()}>{(set) => renderSetCard(set)}</For>
-                        </SetGrid>
-                    </SetSection>
-                </Show>
-
-                <Show when={regularSets().length > 0}>
-                    <SetSection>
+                <SetTable>
+                    <colgroup>
+                        <col />
+                        <col style={{ width: '3.75rem' }} />
+                        <col style={{ width: '3.75rem' }} />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Set</th>
+                            <th data-action>2</th>
+                            <th data-action>4</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         <Show when={opSets().length > 0}>
-                            <SetSectionTitle>Other sets</SetSectionTitle>
+                            <SetSectionRow data-op="true">
+                                <td colSpan={3}>OP bonuses</td>
+                            </SetSectionRow>
+                            <For each={opSets()}>{(set) => renderSetRow(set)}</For>
                         </Show>
-                        <SetGrid>
-                            <For each={regularSets()}>{(set) => renderSetCard(set)}</For>
-                        </SetGrid>
-                    </SetSection>
-                </Show>
+
+                        <Show when={regularSets().length > 0}>
+                            <Show when={opSets().length > 0}>
+                                <SetSectionRow>
+                                    <td colSpan={3}>Other sets</td>
+                                </SetSectionRow>
+                            </Show>
+                            <For each={regularSets()}>{(set) => renderSetRow(set)}</For>
+                        </Show>
+                    </tbody>
+                </SetTable>
             </SetList>
         </Show>
     );

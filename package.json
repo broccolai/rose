@@ -22,9 +22,13 @@
         "version:bump": "bun scripts/bump-version.ts"
     },
     "dependencies": {
+        "@solid-primitives/event-listener": "^2.4.6",
+        "@solid-primitives/scheduled": "^1.5.3",
+        "@solid-primitives/storage": "^4.3.5",
         "@solidjs/router": "^0.15.3",
         "@solidjs/start": "alpha",
         "bungie-api-ts": "^5.10.0",
+        "idb-keyval": "^6.2.6",
         "solid-js": "^1.9.11"
     },
     "devDependencies": {

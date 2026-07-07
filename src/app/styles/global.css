@@ -23,9 +23,9 @@
     --rose-space-md: 1rem;
     --rose-space-lg: 1.25rem;
     --rose-space-xl: 1.5rem;
-    --rose-radius-sm: 0.5rem;
-    --rose-radius-md: 0.75rem;
-    --rose-radius-lg: 1rem;
+    --rose-radius-sm: 0.375rem;
+    --rose-radius-md: 0.5rem;
+    --rose-radius-lg: 0.75rem;
     --rose-control-height: 2.75rem;
     --rose-control-compact-height: 2.25rem;
     --rose-control-padding-x: 0.875rem;
