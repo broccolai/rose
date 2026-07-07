@@ -40,7 +40,7 @@ const ResultsShell = styled('div', {
         mx: 'auto',
         w: '100%',
         display: 'grid',
-        gap: '1rem'
+        gap: 'var(--rose-space-md)'
     }
 });
 
@@ -49,8 +49,7 @@ const ResultsHeader = styled('div', {
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', lg: 'auto minmax(0, 1fr)' },
         alignItems: 'center',
-        gap: '0.65rem 1rem',
-        mb: '0.8rem'
+        gap: 'var(--rose-space-sm) var(--rose-space-md)'
     }
 });
 
@@ -69,7 +68,7 @@ const HeaderTools = styled('div', {
     base: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.55rem 0.75rem',
+        gap: 'var(--rose-space-xs) var(--rose-space-sm)',
         flexWrap: 'wrap',
         justifyContent: { base: 'flex-start', lg: 'flex-end' },
         minW: 0
@@ -82,9 +81,9 @@ const EmptyState = styled('div', {
         display: 'grid',
         placeItems: 'center',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.85rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'var(--rose-surface)',
-        p: '1.25rem',
+        p: 'var(--rose-space-lg)',
         '& p': {
             m: 0
         }
@@ -101,43 +100,16 @@ const TinyMuted = styled('span', {
     }
 });
 
-const ActivityPill = styled('span', {
-    base: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-        minH: '1.55rem',
-        px: '0.55rem',
-        border: '1px solid color-mix(in srgb, var(--rose-accent) 34%, var(--rose-border))',
-        borderRadius: '999px',
-        bg: 'color-mix(in srgb, var(--rose-accent) 9%, transparent)',
-        color: 'color-mix(in srgb, var(--rose-accent) 52%, var(--rose-text) 48%)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.68rem',
-        fontWeight: 720,
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        _before: {
-            content: '""',
-            w: '0.42rem',
-            h: '0.42rem',
-            borderRadius: '999px',
-            bg: 'var(--rose-accent)',
-            boxShadow: '0 0 10px color-mix(in srgb, var(--rose-accent) 56%, transparent)'
-        }
-    }
-});
-
 const StateCard = styled('div', {
     base: {
         minH: '8rem',
         display: 'grid',
         alignContent: 'center',
-        gap: '0.45rem',
+        gap: 'var(--rose-space-xs)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.85rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'var(--rose-surface)',
-        p: '1.25rem',
+        p: 'var(--rose-space-lg)',
         '& h3': {
             m: 0,
             color: 'var(--rose-text)',
@@ -155,11 +127,11 @@ const LoadingStateCard = styled('div', {
         minH: '4.8rem',
         display: 'grid',
         alignContent: 'center',
-        gap: '0.5rem',
+        gap: 'var(--rose-space-xs)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.85rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'var(--rose-surface)',
-        p: '1rem 1.1rem',
+        p: 'var(--rose-space-md)',
         '& p': {
             m: 0
         }
@@ -169,7 +141,7 @@ const LoadingStateCard = styled('div', {
 const ProgressTrack = styled('div', {
     base: {
         h: '6px',
-        mt: '0.45rem',
+        mt: 'var(--rose-space-xs)',
         overflow: 'hidden',
         borderRadius: '999px',
         bg: 'var(--rose-surface-soft)'
@@ -203,8 +175,8 @@ const DetailActions = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gap: '0.75rem',
-        p: '14px',
+        gap: 'var(--rose-space-sm)',
+        p: 'var(--rose-space-sm)',
         borderTop: '1px solid var(--rose-border)',
         bg: 'color-mix(in srgb, var(--rose-surface-soft) 36%, var(--rose-surface))',
         '@media (max-width: 560px)': {
@@ -219,10 +191,10 @@ const DetailActionButton = styled('button', {
         alignItems: 'center',
         justifyContent: 'center',
         w: '100%',
-        minH: '44px',
-        px: '1rem',
+        minH: 'var(--rose-control-height)',
+        px: 'var(--rose-control-padding-x)',
         border: '1px solid color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border))',
-        borderRadius: '0.7rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'color-mix(in srgb, var(--rose-accent) 7%, var(--rose-surface-raised))',
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,
@@ -261,7 +233,7 @@ const DetailTable = styled('table', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.74rem',
         '& th': {
-            p: '7px 8px',
+            p: 'var(--rose-space-xs) var(--rose-space-sm)',
             color: 'var(--rose-muted)',
             bg: '#0a0a0c',
             borderBottom: '1px solid var(--rose-border)',
@@ -270,7 +242,7 @@ const DetailTable = styled('table', {
             lineHeight: 1.15
         },
         '& td': {
-            p: '8px',
+            p: 'var(--rose-space-xs) var(--rose-space-sm)',
             borderBottom: '1px solid var(--rose-border)',
             bg: 'color-mix(in srgb, var(--rose-surface-soft) 62%, transparent)',
             lineHeight: 1.2,
@@ -468,9 +440,6 @@ export function ResultsPanel(props: ResultsPanelProps) {
             <ResultsHeader>
                 <ResultsTitle>Results</ResultsTitle>
                 <HeaderTools>
-                    <Show when={props.loading}>
-                        <ActivityPill>{props.progress.label || 'Working'}</ActivityPill>
-                    </Show>
                     <Show when={props.result?.ok}>
                         <TinyMuted>{resultCountLabel()}</TinyMuted>
                     </Show>

@@ -29,7 +29,7 @@ const PrimarySettingsGrid = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', lg: '17rem minmax(0, 1fr)' },
-        gap: { base: '1rem', lg: '1.25rem' },
+        gap: { base: 'var(--rose-space-md)', lg: 'var(--rose-space-lg)' },
         alignItems: 'stretch',
         minW: 0
     }
@@ -38,7 +38,7 @@ const PrimarySettingsGrid = styled('div', {
 const SettingsColumn = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.9rem',
+        gap: 'var(--rose-space-md)',
         minW: 0
     }
 });
@@ -46,7 +46,7 @@ const SettingsColumn = styled('div', {
 const Field = styled('label', {
     base: {
         display: 'grid',
-        gap: '0.42rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0
     }
 });
@@ -54,7 +54,7 @@ const Field = styled('label', {
 const FieldGroup = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.42rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0
     }
 });
@@ -75,11 +75,11 @@ const SelectInput = styled('select', {
         w: '100%',
         minW: 0,
         boxSizing: 'border-box',
-        minH: '38px',
+        minH: 'var(--rose-control-height)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
-        px: '0.72rem',
+        px: 'var(--rose-control-padding-x)',
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.86rem',
@@ -102,7 +102,7 @@ const CharacterButtonGrid = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: '0.55rem',
+        gap: 'var(--rose-space-sm)',
         maxW: 'none'
     }
 });
@@ -112,9 +112,9 @@ const CharacterButton = styled('button', {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minH: '44px',
+        minH: 'var(--rose-control-height)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.65rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'var(--rose-surface-soft)',
         color: 'var(--rose-muted)',
         transition: 'background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease',
@@ -165,7 +165,7 @@ const ClassIconGlyph = styled('span', {
 const StatGrid = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.55rem'
+        gap: 'var(--rose-space-sm)'
     }
 });
 
@@ -174,9 +174,9 @@ const StatSliderRow = styled('div', {
         display: 'grid',
         gridTemplateAreas: '"name value" "slider slider"',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gap: '0.28rem 0.75rem',
+        gap: 'var(--rose-space-xxs) var(--rose-space-sm)',
         alignItems: 'center',
-        py: '0.05rem',
+        py: 0,
         minW: 0
     }
 });
@@ -194,7 +194,7 @@ const StatScale = styled('div', {
     base: {
         position: 'relative',
         h: '1rem',
-        mx: '9px',
+        mx: '7px',
         minW: 0
     }
 });
@@ -222,7 +222,7 @@ const StatSliderFrame = styled('div', {
         position: 'relative',
         display: 'grid',
         alignItems: 'center',
-        h: '36px',
+        h: 'var(--rose-control-compact-height)',
         minW: 0,
         '--stat-tick-color': 'rgba(244, 244, 245, 0.24)',
         '--stat-major-color': 'rgba(244, 244, 245, 0.72)'
@@ -330,7 +330,7 @@ const HiddenCheckboxField = styled('label', {
     base: {
         display: 'none',
         alignItems: 'center',
-        gap: '8px',
+        gap: 'var(--rose-space-xs)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.72rem',
         letterSpacing: 0,

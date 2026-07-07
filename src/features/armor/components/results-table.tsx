@@ -38,7 +38,7 @@ const TableWrap = styled('div', {
         maxH: { base: '28rem', lg: 'calc(100vh - 16rem)' },
         scrollbarGutter: 'stable',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.85rem',
+        borderRadius: 'var(--rose-radius-md)',
         bg: 'var(--rose-surface)'
     }
 });
@@ -56,7 +56,7 @@ const SortButton = styled('button', {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        gap: '2px',
+        gap: 'var(--rose-space-xxs)',
         w: '100%'
     }
 });
@@ -73,7 +73,7 @@ const Table = styled('table', {
             textAlign: 'left',
             borderBottom: '1px solid var(--rose-border)',
             bg: '#0a0a0c',
-            p: '8px 6px',
+            p: 'var(--rose-space-sm) var(--rose-space-xs)',
             color: 'var(--rose-muted)',
             whiteSpace: 'normal',
             lineHeight: 1.05,
@@ -87,7 +87,7 @@ const Table = styled('table', {
         },
         '& td': {
             borderBottom: '1px solid var(--rose-border)',
-            p: '8px 6px',
+            p: 'var(--rose-space-sm) var(--rose-space-xs)',
             verticalAlign: 'middle',
             lineHeight: 1.2,
             h: '42px'
@@ -144,7 +144,7 @@ const BonusText = styled('div', {
     base: {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '0.25rem',
+        gap: 'var(--rose-space-xxs)',
         minW: 0
     }
 });
@@ -155,7 +155,7 @@ const BonusChip = styled('span', {
         alignItems: 'center',
         maxW: '100%',
         minH: '20px',
-        px: '0.42rem',
+        px: 'var(--rose-space-xs)',
         border: '1px solid color-mix(in srgb, var(--rose-success) 52%, var(--rose-border))',
         borderRadius: '999px',
         color: 'var(--rose-success)',

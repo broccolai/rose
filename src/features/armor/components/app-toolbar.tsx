@@ -25,7 +25,7 @@ const TopPanel = styled('div', {
     base: {
         position: 'relative',
         display: 'grid',
-        gap: '0.75rem',
+        gap: 'var(--rose-space-sm)',
         w: '100%'
     }
 });
@@ -37,8 +37,8 @@ const TopBar = styled('div', {
         display: 'grid',
         gridTemplateColumns: { base: '1fr', md: 'auto minmax(0, 1fr)' },
         alignItems: 'center',
-        gap: '1rem',
-        minH: '38px'
+        gap: 'var(--rose-space-md)',
+        minH: 'var(--rose-control-height)'
     }
 });
 
@@ -54,7 +54,7 @@ const Title = styled('h1', {
         m: 0,
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.45rem',
+        gap: 'var(--rose-space-xs)',
         fontFamily: UI_FONT_FAMILY,
         fontSize: { base: '20px', md: '23px' },
         lineHeight: 1.08,
@@ -96,7 +96,7 @@ const Actions = styled('div', {
     base: {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '6px',
+        gap: 'var(--rose-space-xs)',
         justifySelf: { base: 'stretch', md: 'end' },
         alignItems: 'center',
         '& button': {
@@ -107,10 +107,10 @@ const Actions = styled('div', {
 
 const ToolbarButton = styled('button', {
     base: {
-        minH: '38px',
-        px: '0.9rem',
+        minH: 'var(--rose-control-height)',
+        px: 'var(--rose-control-padding-x)',
         border: '1px solid var(--rose-button)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-button)',
         color: 'var(--rose-button-text)',
         fontFamily: MONO_FONT_FAMILY,
@@ -134,12 +134,12 @@ const AvatarButton = styled('div', {
     base: {
         display: 'grid',
         placeItems: 'center',
-        w: '38px',
-        h: '38px',
+        w: 'var(--rose-control-height)',
+        h: 'var(--rose-control-height)',
         p: 0,
         overflow: 'hidden',
         border: '1px solid var(--rose-border-strong)',
-        borderRadius: '0.65rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-raised)',
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,

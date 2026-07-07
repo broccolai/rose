@@ -47,18 +47,22 @@ type CalculatorControlsProps = {
 const ControlGrid = styled('div', {
     base: {
         display: 'grid',
-        gap: '1rem',
+        gap: 'var(--rose-space-md)',
         maxW: 'none',
         mx: 'auto',
-        w: '100%'
+        w: '100%',
+        minH: 0
     }
 });
 
 const SettingsPanel = styled('div', {
     base: {
         display: 'grid',
-        gap: { base: '1rem', md: '1.08rem' },
+        gridTemplateRows: { lg: 'auto minmax(0, 1fr) auto' },
+        gap: 'var(--rose-space-md)',
         minW: 0,
+        minH: 0,
+        h: { lg: '100%' },
         p: 0,
         border: 0,
         borderRadius: 0,
@@ -67,11 +71,23 @@ const SettingsPanel = styled('div', {
     }
 });
 
+const SettingsScroll = styled('div', {
+    base: {
+        display: 'grid',
+        gap: 'var(--rose-space-md)',
+        minW: 0,
+        minH: 0,
+        overflow: { lg: 'auto' },
+        pr: { lg: 'var(--rose-space-xs)' },
+        pb: { lg: 'var(--rose-space-sm)' }
+    }
+});
+
 const FormRows = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', md: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' },
-        gap: '0.72rem',
+        gap: 'var(--rose-space-sm)',
         alignItems: 'start',
         '& > :last-child': {
             gridColumn: { md: '1 / -1' }
@@ -83,7 +99,7 @@ const FormRow = styled('label', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr)',
-        gap: '0.45rem',
+        gap: 'var(--rose-space-xs)',
         alignItems: 'start',
         minW: 0
     }
@@ -104,7 +120,7 @@ const InlineControls = styled('div', {
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
-        gap: '0.55rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0
     }
 });
@@ -121,11 +137,11 @@ const SelectInput = styled('select', {
         w: '100%',
         minW: 0,
         boxSizing: 'border-box',
-        minH: '38px',
+        minH: 'var(--rose-control-height)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
-        px: '0.72rem',
+        px: 'var(--rose-control-padding-x)',
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.86rem',
@@ -146,17 +162,17 @@ const SelectInput = styled('select', {
 
 const DumpSelectInput = styled(SelectInput, {
     base: {
-        h: '44px',
-        minH: '44px'
+        h: 'var(--rose-control-height)',
+        minH: 'var(--rose-control-height)'
     }
 });
 
 const Section = styled('section', {
     base: {
         display: 'grid',
-        gap: '0.8rem',
+        gap: 'var(--rose-space-sm)',
         minW: 0,
-        pt: '1rem',
+        pt: 'var(--rose-space-md)',
         borderTop: '1px solid var(--rose-border)'
     }
 });
@@ -187,8 +203,10 @@ const ActionStack = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
-        gap: '0.55rem',
-        pt: '0.2rem',
+        gap: 'var(--rose-space-sm)',
+        pt: { base: 'var(--rose-space-xxs)', lg: 'var(--rose-space-md)' },
+        borderTop: { lg: '1px solid var(--rose-border)' },
+        bg: 'var(--rose-bg)',
         '& button': {
             minW: 0,
             whiteSpace: 'nowrap'
@@ -198,10 +216,10 @@ const ActionStack = styled('div', {
 
 const PrimaryButton = styled('button', {
     base: {
-        minH: '38px',
-        px: '0.9rem',
+        minH: 'var(--rose-control-height)',
+        px: 'var(--rose-control-padding-x)',
         border: '1px solid var(--rose-button)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-button)',
         color: 'var(--rose-button-text)',
         fontFamily: MONO_FONT_FAMILY,
@@ -223,10 +241,10 @@ const PrimaryButton = styled('button', {
 
 const SecondaryButton = styled('button', {
     base: {
-        minH: '38px',
-        px: '0.9rem',
+        minH: 'var(--rose-control-height)',
+        px: 'var(--rose-control-padding-x)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,
@@ -249,7 +267,7 @@ const SecondaryButton = styled('button', {
 
 const AdvancedSection = styled('details', {
     base: {
-        pt: '0.8rem',
+        pt: 'var(--rose-space-md)',
         borderTop: '1px solid var(--rose-border)',
         '& summary': {
             cursor: 'pointer',
@@ -269,8 +287,8 @@ const AdvancedSection = styled('details', {
 const AdvancedBody = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.42rem',
-        pt: '0.72rem'
+        gap: 'var(--rose-space-sm)',
+        pt: 'var(--rose-space-sm)'
     }
 });
 
@@ -278,7 +296,7 @@ const FragmentHeader = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gap: '0.65rem',
+        gap: 'var(--rose-space-sm)',
         alignItems: 'center'
     }
 });
@@ -288,15 +306,15 @@ const FragmentHeaderActions = styled('div', {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        gap: '0.5rem',
+        gap: 'var(--rose-space-xs)',
         flexWrap: 'wrap'
     }
 });
 
 const FragmentSubclassSelect = styled(SelectInput, {
     base: {
-        h: '34px',
-        minH: '34px',
+        h: 'var(--rose-control-compact-height)',
+        minH: 'var(--rose-control-compact-height)',
         fontSize: '0.78rem'
     }
 });
@@ -314,7 +332,7 @@ const FragmentCount = styled('span', {
 const FragmentTableFrame = styled('div', {
     base: {
         overflow: 'hidden',
-        borderRadius: '0.62rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'color-mix(in srgb, var(--rose-surface-soft) 70%, #000 30%)'
     }
 });
@@ -330,7 +348,7 @@ const FragmentFooter = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr)',
-        pt: '0.2rem',
+        pt: 'var(--rose-space-xxs)',
         '& button': {
             minW: 0
         }
@@ -353,11 +371,11 @@ const FragmentTable = styled('table', {
             fontWeight: 760,
             lineHeight: 1,
             textAlign: 'left',
-            py: '0.5rem',
+            py: 'var(--rose-space-xs)',
             borderBottom: '1px solid var(--rose-border)'
         },
         '& td': {
-            py: '0.5rem',
+            py: 'var(--rose-space-xs)',
             borderBottom: '1px solid color-mix(in srgb, var(--rose-border) 72%, transparent)',
             color: 'var(--rose-text)',
             fontSize: '0.78rem',
@@ -378,7 +396,7 @@ const FragmentTable = styled('table', {
 
 const FragmentNameCell = styled('td', {
     base: {
-        px: '0.35rem',
+        px: 'var(--rose-space-xs)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -388,7 +406,7 @@ const FragmentNameCell = styled('td', {
 
 const FragmentNameHeader = styled('th', {
     base: {
-        px: '0.35rem',
+        px: 'var(--rose-space-xs)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -398,7 +416,7 @@ const FragmentNameHeader = styled('th', {
 
 const FragmentBonusCell = styled('td', {
     base: {
-        px: '0.35rem',
+        px: 'var(--rose-space-xs)',
         color: 'var(--rose-muted-strong)!',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.72rem!important',
@@ -408,7 +426,7 @@ const FragmentBonusCell = styled('td', {
 
 const FragmentBonusHeader = styled('th', {
     base: {
-        px: '0.35rem',
+        px: 'var(--rose-space-xs)',
         color: 'var(--rose-muted-strong)!',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.72rem!important',
@@ -419,7 +437,7 @@ const FragmentBonusHeader = styled('th', {
 const FragmentCheckCell = styled('td', {
     base: {
         w: '3.4rem',
-        pr: '0.45rem',
+        pr: 'var(--rose-space-xs)',
         textAlign: 'right'
     }
 });
@@ -427,7 +445,7 @@ const FragmentCheckCell = styled('td', {
 const FragmentCheckHeader = styled('th', {
     base: {
         w: '3.4rem',
-        pr: '0.45rem',
+        pr: 'var(--rose-space-xs)',
         textAlign: 'right'
     }
 });
@@ -436,7 +454,7 @@ const FragmentBonusList = styled('div', {
     base: {
         display: 'flex',
         justifyContent: 'flex-start',
-        gap: '0.28rem',
+        gap: 'var(--rose-space-xxs)',
         flexWrap: 'wrap',
         minW: 0
     }
@@ -475,7 +493,7 @@ const FragmentToggle = styled('span', {
         w: '1.35rem',
         h: '1.35rem',
         border: '1px solid var(--rose-border-strong)',
-        borderRadius: '0.34rem',
+        borderRadius: '0.375rem',
         bg: 'var(--rose-surface)',
         cursor: 'pointer',
         transition: 'background-color 120ms ease, border-color 120ms ease, transform 120ms ease',
@@ -513,8 +531,8 @@ const AdvancedToggleRow = styled('label', {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         alignItems: 'center',
-        gap: '0.8rem',
-        minH: '2rem',
+        gap: 'var(--rose-space-sm)',
+        minH: 'var(--rose-control-compact-height)',
         color: 'var(--rose-text)',
         fontSize: '0.78rem',
         fontWeight: 680
@@ -694,71 +712,73 @@ export function CalculatorControls(props: CalculatorControlsProps) {
         <ControlGrid>
             <SettingsPanel>
                 <PanelTitle>Build Inputs</PanelTitle>
-                <FormRows>
-                    <FormRow as="div">
-                        <RowLabel>Class</RowLabel>
-                        <CharacterPicker
-                            labelText={false}
-                            options={props.characterOptions}
-                            selectedCharacterId={props.selectedCharacterId}
-                            onSelect={props.onCharacterSelect}
+                <SettingsScroll>
+                    <FormRows>
+                        <FormRow as="div">
+                            <RowLabel>Class</RowLabel>
+                            <CharacterPicker
+                                labelText={false}
+                                options={props.characterOptions}
+                                selectedCharacterId={props.selectedCharacterId}
+                                onSelect={props.onCharacterSelect}
+                            />
+                        </FormRow>
+
+                        <FormRow as="div">
+                            <RowLabel>Dump</RowLabel>
+                            <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
+                        </FormRow>
+
+                        <FormRow as="div">
+                            <RowLabel>Exotic</RowLabel>
+                            <ExoticPicker
+                                labelText={false}
+                                availableExotics={props.availableExotics}
+                                onExoticChange={props.onExoticChange}
+                                selectedExoticItemHash={props.selectedExoticItemHash}
+                            />
+                        </FormRow>
+                    </FormRows>
+
+                    <Section aria-label="Targets">
+                        <SectionTitle>Targets</SectionTitle>
+                        <StatTargetFields
+                            allowBalancedTuning={props.allowBalancedTuning}
+                            dumpStat={props.dumpStat}
+                            onTargetChange={props.onTargetChange}
+                            targetCapsPending={props.targetCapsPending}
+                            targetCaps={props.targetCaps}
+                            targets={props.targets}
                         />
-                    </FormRow>
+                    </Section>
 
-                    <FormRow as="div">
-                        <RowLabel>Dump</RowLabel>
-                        <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
-                    </FormRow>
+                    <FragmentControls
+                        selectedSubclass={props.selectedSubclass}
+                        selectedFragmentIds={props.selectedFragmentIds}
+                        onSubclassChange={props.onSubclassChange}
+                        onFragmentToggle={props.onFragmentToggle}
+                        onImportFragmentsFromGame={props.onImportFragmentsFromGame}
+                    />
 
-                    <FormRow as="div">
-                        <RowLabel>Exotic</RowLabel>
-                        <ExoticPicker
-                            labelText={false}
-                            availableExotics={props.availableExotics}
-                            onExoticChange={props.onExoticChange}
-                            selectedExoticItemHash={props.selectedExoticItemHash}
+                    <Section aria-label="Sets">
+                        <SectionTitle>Sets</SectionTitle>
+                        <ArmorSetFields
+                            armorSetDisplayMode={props.armorSetDisplayMode}
+                            onSetRequirementChange={props.onSetRequirementChange}
+                            selectableSets={props.selectableSets}
+                            setSelections={props.setSelections}
                         />
-                    </FormRow>
-                </FormRows>
+                    </Section>
 
-                <Section aria-label="Targets">
-                    <SectionTitle>Targets</SectionTitle>
-                    <StatTargetFields
+                    <AdvancedControls
                         allowBalancedTuning={props.allowBalancedTuning}
-                        dumpStat={props.dumpStat}
-                        onTargetChange={props.onTargetChange}
-                        targetCapsPending={props.targetCapsPending}
-                        targetCaps={props.targetCaps}
-                        targets={props.targets}
-                    />
-                </Section>
-
-                <FragmentControls
-                    selectedSubclass={props.selectedSubclass}
-                    selectedFragmentIds={props.selectedFragmentIds}
-                    onSubclassChange={props.onSubclassChange}
-                    onFragmentToggle={props.onFragmentToggle}
-                    onImportFragmentsFromGame={props.onImportFragmentsFromGame}
-                />
-
-                <Section aria-label="Sets">
-                    <SectionTitle>Sets</SectionTitle>
-                    <ArmorSetFields
                         armorSetDisplayMode={props.armorSetDisplayMode}
-                        onSetRequirementChange={props.onSetRequirementChange}
-                        selectableSets={props.selectableSets}
-                        setSelections={props.setSelections}
+                        onlyFullyMasterworkedGear={props.onlyFullyMasterworkedGear}
+                        onArmorSetDisplayModeChange={props.onArmorSetDisplayModeChange}
+                        onBalancedTuningChange={props.onBalancedTuningChange}
+                        onOnlyFullyMasterworkedGearChange={props.onOnlyFullyMasterworkedGearChange}
                     />
-                </Section>
-
-                <AdvancedControls
-                    allowBalancedTuning={props.allowBalancedTuning}
-                    armorSetDisplayMode={props.armorSetDisplayMode}
-                    onlyFullyMasterworkedGear={props.onlyFullyMasterworkedGear}
-                    onArmorSetDisplayModeChange={props.onArmorSetDisplayModeChange}
-                    onBalancedTuningChange={props.onBalancedTuningChange}
-                    onOnlyFullyMasterworkedGearChange={props.onOnlyFullyMasterworkedGearChange}
-                />
+                </SettingsScroll>
 
                 <ActionControls
                     canSolve={props.canSolve}

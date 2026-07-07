@@ -20,7 +20,7 @@ type GearSettingsProps = {
 const GearGrid = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.75rem',
+        gap: 'var(--rose-space-sm)',
         alignItems: 'start',
         minW: 0,
         '--rose-op': '#d8b15f'
@@ -30,7 +30,7 @@ const GearGrid = styled('div', {
 const Field = styled('label', {
     base: {
         display: 'grid',
-        gap: '0.42rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0
     }
 });
@@ -40,7 +40,7 @@ const LabelLine = styled('span', {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '0.5rem',
+        gap: 'var(--rose-space-xs)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.76rem',
         lineHeight: 1,
@@ -70,11 +70,11 @@ const ExoticSelect = styled('select', {
         w: '100%',
         minW: 0,
         boxSizing: 'border-box',
-        minH: '38px',
+        minH: 'var(--rose-control-height)',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
-        px: '0.72rem',
+        px: 'var(--rose-control-padding-x)',
         color: 'var(--rose-text)',
         colorScheme: 'dark',
         fontFamily: MONO_FONT_FAMILY,
@@ -98,11 +98,11 @@ const ExoticSelect = styled('select', {
 const SetList = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.8rem',
+        gap: 'var(--rose-space-md)',
         minW: 0,
         maxH: '21rem',
         overflowY: 'auto',
-        pr: '0.25rem',
+        pr: 'var(--rose-space-xxs)',
         '--rose-op': '#d8b15f'
     }
 });
@@ -110,7 +110,7 @@ const SetList = styled('div', {
 const SetSection = styled('section', {
     base: {
         display: 'grid',
-        gap: '0.45rem',
+        gap: 'var(--rose-space-sm)',
         minW: 0
     }
 });
@@ -119,7 +119,7 @@ const SetSectionTitle = styled('div', {
     base: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.45rem',
+        gap: 'var(--rose-space-xs)',
         color: 'var(--rose-muted)',
         fontSize: '0.68rem',
         fontWeight: 760,
@@ -141,7 +141,7 @@ const SetGrid = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr))',
-        gap: '0.55rem',
+        gap: 'var(--rose-space-sm)',
         minW: 0
     }
 });
@@ -154,12 +154,12 @@ const SetRow = styled('div', {
         gridTemplateRows: 'auto auto',
         alignItems: 'start',
         alignContent: 'space-between',
-        gap: '0.42rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0,
-        minH: '58px',
-        p: '0.48rem',
+        minH: '4rem',
+        p: 'var(--rose-space-sm)',
         border: '1px solid transparent',
-        borderRadius: '0.5rem',
+        borderRadius: 'var(--rose-radius-sm)',
         bg: 'color-mix(in srgb, var(--rose-surface-soft) 82%, #000 18%)',
         transition: 'background-color 130ms ease, opacity 130ms ease, outline-color 130ms ease',
         '&[data-selected="true"]': {
@@ -180,9 +180,9 @@ const SetName = styled('span', {
     base: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.38rem',
+        gap: 'var(--rose-space-xs)',
         minW: 0,
-        pr: '1.7rem',
+        pr: 'var(--rose-space-xl)',
         overflow: 'hidden',
         whiteSpace: 'nowrap',
         color: 'var(--rose-text)',
@@ -204,8 +204,8 @@ const SetNameText = styled('span', {
 const SetCount = styled('span', {
     base: {
         position: 'absolute',
-        top: '0.46rem',
-        right: '0.5rem',
+        top: 'var(--rose-space-sm)',
+        right: 'var(--rose-space-sm)',
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.76rem',
@@ -220,10 +220,10 @@ const SegmentedControl = styled('fieldset', {
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
         m: 0,
         p: 0,
-        h: '28px',
+        h: 'var(--rose-control-compact-height)',
         minInlineSize: 0,
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.42rem',
+        borderRadius: 'var(--rose-radius-sm)',
         overflow: 'hidden',
         bg: 'var(--rose-surface)'
     }

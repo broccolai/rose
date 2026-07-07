@@ -57,7 +57,7 @@ const paneBase = {
     boxSizing: 'border-box',
     border: '0',
     borderRadius: '0',
-    p: { base: '16px', md: '20px 28px' },
+    p: { base: 'var(--rose-space-md)', md: 'var(--rose-space-lg) var(--rose-space-xl)' },
     boxShadow: 'none'
 } as const;
 
@@ -73,10 +73,13 @@ const ControlsPane = styled('section', {
     base: {
         ...paneBase,
         gridArea: 'controls',
+        display: 'grid',
         borderBottom: { base: '1px solid var(--rose-border)', lg: 0 },
         borderRight: { lg: '1px solid var(--rose-border)' },
         position: { lg: 'sticky' },
-        top: { lg: 0 }
+        top: { lg: 0 },
+        h: { lg: 'calc(100vh - 4.5rem)' },
+        overflow: { lg: 'hidden' }
     }
 });
 

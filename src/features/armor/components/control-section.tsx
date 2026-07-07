@@ -11,8 +11,8 @@ type ControlSectionProps = {
 const SectionStack = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.58rem',
-        pb: '0.76rem',
+        gap: 'var(--rose-space-sm)',
+        pb: 'var(--rose-space-sm)',
         borderBottom: '1px solid var(--rose-border)',
         _last: {
             pb: 0,
