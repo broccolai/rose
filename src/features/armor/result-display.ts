@@ -10,16 +10,18 @@ export type ArmorBonusDefinitionSet = {
     bonuses: Array<{
         requiredPieces: number;
         name: string;
-        description?: string;
+        description?: string | undefined;
     }>;
-    opBonuses?: Array<{
-        requiredPieces: 2 | 4;
-        source: string;
-        category: string;
-        trigger: string;
-        effect: string;
-        bugged?: boolean;
-    }>;
+    opBonuses?:
+        | Array<{
+              requiredPieces: 2 | 4;
+              source: string;
+              category: string;
+              trigger: string;
+              effect: string;
+              bugged?: boolean | undefined;
+          }>
+        | undefined;
 };
 
 export type ArmorBonusDisplay = {
@@ -29,7 +31,7 @@ export type ArmorBonusDisplay = {
 };
 
 export function getArmorSetDisplayName(
-    set: { name: string; opBonuses?: Array<{ source: string }> },
+    set: { name: string; opBonuses?: Array<{ source: string }> | undefined },
     displayMode: ArmorSetDisplayMode = 'sets'
 ) {
     if (displayMode !== 'sources') {

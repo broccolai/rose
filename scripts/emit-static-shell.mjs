@@ -1,43 +1,14 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
-const clientDir = 'dist/client';
-const manifestPath = join(clientDir, '.vite/manifest.json');
-const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-const entry = manifest['src/entry-client.tsx'];
+const publicDir = '.output/public';
+const legacyClientDir = 'dist/client';
+const indexPath = join(publicDir, 'index.html');
+const html = await readFile(indexPath, 'utf8');
 
-if (!entry?.file) {
-    throw new Error('Missing src/entry-client.tsx in Vite client manifest.');
-}
+await writeFile(join(publicDir, '_redirects'), '/* /index.html 200\n');
+await mkdir(join(publicDir, 'auth/bungie/callback'), { recursive: true });
+await writeFile(join(publicDir, 'auth/bungie/callback/index.html'), html);
 
-const cssLinks = (entry.css ?? [])
-    .map((href) => `        <link rel="stylesheet" href="/${href}">`)
-    .join('\n');
-const modulePreloads = (entry.imports ?? [])
-    .map((importKey) => manifest[importKey]?.file)
-    .filter(Boolean)
-    .map((href) => `        <link rel="modulepreload" href="/${href}">`)
-    .join('\n');
-
-const html = `<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>ARMOR</title>
-        <link rel="icon" type="image/png" href="/canvas.png">
-        <link rel="apple-touch-icon" href="/canvas.png">
-${modulePreloads}
-${cssLinks}
-    </head>
-    <body>
-        <div id="app"></div>
-        <script type="module" src="/${entry.file}"></script>
-    </body>
-</html>
-`;
-
-await writeFile(join(clientDir, 'index.html'), html);
-await writeFile(join(clientDir, '_redirects'), '/* /index.html 200\n');
-await mkdir(dirname(join(clientDir, 'auth/bungie/callback/index.html')), { recursive: true });
-await writeFile(join(clientDir, 'auth/bungie/callback/index.html'), html);
+await rm(legacyClientDir, { recursive: true, force: true });
+await cp(publicDir, legacyClientDir, { recursive: true });

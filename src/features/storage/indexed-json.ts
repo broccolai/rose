@@ -11,12 +11,12 @@ type StoredJson<T> = {
 
 const jsonStore = createStore(DATABASE_NAME, STORE_NAME);
 
-export async function readJsonCache<T>(key: string): Promise<StoredJson<T> | null> {
+export const readJsonCache = async <T>(key: string): Promise<StoredJson<T> | null> => {
     const cached = await get<StoredJson<T>>(key, jsonStore);
     return cached ?? null;
-}
+};
 
-export async function writeJsonCache<T>(key: string, value: T): Promise<void> {
+export const writeJsonCache = async <T>(key: string, value: T): Promise<void> => {
     await set(
         key,
         {
@@ -26,8 +26,8 @@ export async function writeJsonCache<T>(key: string, value: T): Promise<void> {
         } satisfies StoredJson<T>,
         jsonStore
     );
-}
+};
 
-export async function deleteJsonCache(key: string): Promise<void> {
+export const deleteJsonCache = async (key: string): Promise<void> => {
     await del(key, jsonStore);
-}
+};

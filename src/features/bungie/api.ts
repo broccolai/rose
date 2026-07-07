@@ -93,15 +93,19 @@ function createBungieHttp(token: BungieToken, options: BungieFetchOptions = {}):
             url.searchParams.set(key, value);
         }
 
-        const response = await fetch(url, {
+        const requestInit: RequestInit = {
             method: request.method,
             headers: {
                 Authorization: `Bearer ${token.accessToken}`,
                 ...(request.body ? { 'Content-Type': 'application/json' } : {}),
                 'X-API-Key': config.apiKey
-            },
-            body: request.body ? JSON.stringify(request.body) : undefined
-        });
+            }
+        };
+        if (request.body) {
+            requestInit.body = JSON.stringify(request.body);
+        }
+
+        const response = await fetch(url, requestInit);
         const payload = (await response.json().catch(() => null)) as unknown;
 
         if (!response.ok || !isServerResponse(payload)) {

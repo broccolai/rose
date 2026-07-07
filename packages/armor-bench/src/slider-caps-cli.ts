@@ -44,7 +44,7 @@ function measure<T>(label: string, run: () => T) {
 console.log(`Warlock armor: ${warlockArmor.length}`);
 console.log(`Raw slot product: ${rawSlotProduct(input.armor).toLocaleString()}`);
 
-if (process.env.ROSE_CAP_BENCH_SORTED_SOLVE === '1') {
+if (process.env['ROSE_CAP_BENCH_SORTED_SOLVE'] === '1') {
     const sortedSolveCap = measure('priority grenade cap via sorted solve', () =>
         solveArmor({
             ...input,
@@ -72,7 +72,7 @@ if (process.env.ROSE_CAP_BENCH_SORTED_SOLVE === '1') {
     console.log('priority grenade cap via sorted solve: skipped; set ROSE_CAP_BENCH_SORTED_SOLVE=1 to run the known-slow experiment');
 }
 
-if (process.env.ROSE_CAP_BENCH_SLOW !== '0') {
+if (process.env['ROSE_CAP_BENCH_SLOW'] !== '0') {
     const priority = measure('priority grenade cap', () => calculateArmorStatTargetCap(input, 'grenade'));
     console.log(`priority grenade cap result: ${priority}`);
 } else {

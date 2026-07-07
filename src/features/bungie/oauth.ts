@@ -10,8 +10,8 @@ export type BungieToken = {
     accessToken: string;
     tokenType: string;
     expiresAt: number;
-    refreshToken?: string;
-    refreshExpiresAt?: number;
+    refreshToken?: string | undefined;
+    refreshExpiresAt?: number | undefined;
     raw: unknown;
 };
 

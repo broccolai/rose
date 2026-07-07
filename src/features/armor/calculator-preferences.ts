@@ -8,17 +8,17 @@ export type SetSelectionValue = '0' | '2' | '4';
 export const MAX_TWO_PIECE_SET_SELECTIONS = 2;
 
 export type CalculatorPreferences = {
-    selectedCharacterId?: string;
-    selectedExoticItemHash?: string;
-    armorSetDisplayMode?: ArmorSetDisplayMode;
-    selectedSubclass?: SubclassType;
-    selectedFragmentIds?: string[];
-    dumpStat?: ArmorStat | '';
-    allowBalancedTuning?: boolean;
-    onlyFullyMasterworkedGear?: boolean;
-    targets?: Partial<StatVector>;
-    setSelections?: Record<string, SetSelectionValue>;
-    resultSort?: ArmorBuildSort;
+    selectedCharacterId?: string | undefined;
+    selectedExoticItemHash?: string | undefined;
+    armorSetDisplayMode?: ArmorSetDisplayMode | undefined;
+    selectedSubclass?: SubclassType | undefined;
+    selectedFragmentIds?: string[] | undefined;
+    dumpStat?: ArmorStat | '' | undefined;
+    allowBalancedTuning?: boolean | undefined;
+    onlyFullyMasterworkedGear?: boolean | undefined;
+    targets?: Partial<StatVector> | undefined;
+    setSelections?: Record<string, SetSelectionValue> | undefined;
+    resultSort?: ArmorBuildSort | undefined;
 };
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

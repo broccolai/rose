@@ -22,5 +22,12 @@
                 "organizeImports": "on"
             }
         }
+    },
+    "linter": {
+        "rules": {
+            "complexity": {
+                "useLiteralKeys": "off"
+            }
+        }
     }
 }

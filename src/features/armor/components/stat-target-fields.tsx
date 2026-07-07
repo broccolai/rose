@@ -1,9 +1,7 @@
 import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
 import { styled } from '@panda/jsx';
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { createEffect, createSignal, For } from 'solid-js';
 
-import type { CharacterButtonClass, CharacterButtonOption } from '@/features/armor/calculator-view-model';
-import { ControlSection } from '@/features/armor/components/control-section';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 import { snapStatTarget, statTargetMax, statTargetStep } from '@/features/armor/target-cap-state';
@@ -11,53 +9,14 @@ import { snapStatTarget, statTargetMax, statTargetStep } from '@/features/armor/
 const MAX_STAT_TARGET = 200;
 const STAT_SCALE_VALUES = [0, 25, 50, 75, 100, 125, 150, 175, 200] as const;
 
-type ClassStatSettingsProps = {
-    characterOptions: CharacterButtonOption[];
-    selectedCharacterId: string;
-    dumpStat: ArmorStat | '';
+interface StatTargetFieldsProps {
     allowBalancedTuning: boolean;
+    dumpStat: ArmorStat | '';
     targets: StatVector;
     targetCaps: StatVector;
     targetCapsPending: boolean;
-    onCharacterSelect: (characterId: string) => void;
-    onDumpStatChange: (stat: string) => void;
-    onBalancedTuningChange: (enabled: boolean) => void;
     onTargetChange: (stat: ArmorStat, value: string) => void;
-};
-
-const PrimarySettingsGrid = styled('div', {
-    base: {
-        display: 'grid',
-        gridTemplateColumns: { base: 'minmax(0, 1fr)', lg: '17rem minmax(0, 1fr)' },
-        gap: { base: 'var(--rose-space-md)', lg: 'var(--rose-space-lg)' },
-        alignItems: 'stretch',
-        minW: 0
-    }
-});
-
-const SettingsColumn = styled('div', {
-    base: {
-        display: 'grid',
-        gap: 'var(--rose-space-md)',
-        minW: 0
-    }
-});
-
-const Field = styled('label', {
-    base: {
-        display: 'grid',
-        gap: 'var(--rose-space-xs)',
-        minW: 0
-    }
-});
-
-const FieldGroup = styled('div', {
-    base: {
-        display: 'grid',
-        gap: 'var(--rose-space-xs)',
-        minW: 0
-    }
-});
+}
 
 const FieldLabel = styled('span', {
     base: {
@@ -67,98 +26,6 @@ const FieldLabel = styled('span', {
         letterSpacing: 0,
         fontWeight: 650,
         color: 'var(--rose-muted)'
-    }
-});
-
-const SelectInput = styled('select', {
-    base: {
-        w: '100%',
-        minW: 0,
-        boxSizing: 'border-box',
-        minH: 'var(--rose-control-height)',
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-sm)',
-        bg: 'var(--rose-surface-soft)',
-        px: 'var(--rose-control-padding-x)',
-        color: 'var(--rose-text)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.86rem',
-        lineHeight: 1.2,
-        outline: 'none',
-        transition: 'background-color 120ms ease, border-color 120ms ease, opacity 120ms ease',
-        _focusVisible: {
-            borderColor: 'var(--rose-accent)',
-            bg: 'var(--rose-surface-raised)',
-            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
-            outlineOffset: '2px'
-        },
-        _disabled: {
-            opacity: 0.42
-        }
-    }
-});
-
-const CharacterButtonGrid = styled('div', {
-    base: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 'var(--rose-space-sm)',
-        maxW: 'none'
-    }
-});
-
-const CharacterButton = styled('button', {
-    base: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minH: 'var(--rose-control-height)',
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-md)',
-        bg: 'var(--rose-surface-soft)',
-        color: 'var(--rose-muted)',
-        transition: 'background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease',
-        _hover: {
-            color: 'var(--rose-muted-strong)',
-            borderColor: 'var(--rose-border-strong)',
-            bg: 'var(--rose-surface-raised)'
-        },
-        _disabled: {
-            opacity: 0.22,
-            cursor: 'not-allowed'
-        },
-        '&[data-selected="true"]': {
-            color: 'var(--rose-accent)',
-            borderColor: 'var(--rose-accent)',
-            bg: 'color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised))'
-        }
-    }
-});
-
-const ClassIconGlyph = styled('span', {
-    base: {
-        w: '22px',
-        h: '22px',
-        display: 'block',
-        bg: 'currentColor',
-        maskPosition: 'center',
-        maskRepeat: 'no-repeat',
-        maskSize: 'contain',
-        WebkitMaskPosition: 'center',
-        WebkitMaskRepeat: 'no-repeat',
-        WebkitMaskSize: 'contain',
-        '&[data-class="hunter"]': {
-            maskImage: 'url("/assets/classes/hunter.svg")',
-            WebkitMaskImage: 'url("/assets/classes/hunter.svg")'
-        },
-        '&[data-class="warlock"]': {
-            maskImage: 'url("/assets/classes/warlock.svg")',
-            WebkitMaskImage: 'url("/assets/classes/warlock.svg")'
-        },
-        '&[data-class="titan"]': {
-            maskImage: 'url("/assets/classes/titan.svg")',
-            WebkitMaskImage: 'url("/assets/classes/titan.svg")'
-        }
     }
 });
 
@@ -255,12 +122,10 @@ const StatSliderTrack = styled('div', {
             'linear-gradient(var(--stat-major-color), var(--stat-major-color)) 50% center / 2px 12px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 12.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 25% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 37.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 62.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 75% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 87.5% center / 1px 7px no-repeat, linear-gradient(to right, var(--rose-accent) 0 var(--stat-value-percent), var(--rose-info) var(--stat-value-percent) var(--stat-cap-percent), transparent var(--stat-cap-percent) 100%) center / 100% 100% no-repeat, repeating-linear-gradient(135deg, #24242a 0 5px, #1b1b20 5px 10px) center / 100% 100% no-repeat',
         '--stat-thumb-size': '14px',
         '--stat-thumb-half': 'calc(var(--stat-thumb-size) / 2)',
-        '--stat-thumb-offset': '-5px',
         '--stat-thumb-radius': '999px',
         '--stat-thumb-border': '0',
         '--stat-thumb-bg': 'var(--rose-accent)',
         '--stat-thumb-shadow': 'none',
-        '--stat-thumb-transform': 'none',
         _focusVisible: {
             outline: '2px solid color-mix(in srgb, var(--rose-accent) 34%, transparent)',
             outlineOffset: '3px',
@@ -328,111 +193,7 @@ const StatCap = styled('span', {
     }
 });
 
-const HiddenCheckboxField = styled('label', {
-    base: {
-        display: 'none',
-        alignItems: 'center',
-        gap: 'var(--rose-space-xs)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.72rem',
-        letterSpacing: 0,
-        color: 'var(--rose-muted-strong)'
-    }
-});
-
-function ClassIcon(props: { classType: CharacterButtonClass }) {
-    return <ClassIconGlyph data-class={props.classType} aria-hidden="true" />;
-}
-
-export function CharacterPicker(props: {
-    labelText?: string | false;
-    options: CharacterButtonOption[];
-    selectedCharacterId: string;
-    onSelect: (characterId: string) => void;
-}) {
-    return (
-        <FieldGroup>
-            <Show when={props.labelText !== false}>
-                <FieldLabel>{props.labelText ?? 'Character'}</FieldLabel>
-            </Show>
-            <CharacterButtonGrid>
-                <For each={props.options}>
-                    {({ classType, character }) => (
-                        <CharacterButton
-                            type="button"
-                            title={character?.label ?? classType}
-                            aria-label={`Select ${classType}`}
-                            data-selected={character?.characterId === props.selectedCharacterId}
-                            disabled={!character}
-                            onClick={() => {
-                                if (character) {
-                                    props.onSelect(character.characterId);
-                                }
-                            }}
-                        >
-                            <ClassIcon classType={classType} />
-                        </CharacterButton>
-                    )}
-                </For>
-            </CharacterButtonGrid>
-        </FieldGroup>
-    );
-}
-
-export function CharacterControls(props: Pick<ClassStatSettingsProps, 'characterOptions' | 'onCharacterSelect' | 'selectedCharacterId'>) {
-    return (
-        <ControlSection title="Class">
-            <CharacterPicker
-                options={props.characterOptions}
-                selectedCharacterId={props.selectedCharacterId}
-                onSelect={props.onCharacterSelect}
-            />
-        </ControlSection>
-    );
-}
-
-export function TuningFields(
-    props: Pick<ClassStatSettingsProps, 'allowBalancedTuning' | 'dumpStat' | 'onBalancedTuningChange' | 'onDumpStatChange'>
-) {
-    return (
-        <>
-            <Field>
-                <FieldLabel>Dump Stat</FieldLabel>
-                <SelectInput value={props.dumpStat} onChange={(event) => props.onDumpStatChange(event.currentTarget.value)}>
-                    <option value="">None</option>
-                    <For each={ARMOR_STATS}>{(stat) => <option value={stat}>{STAT_LABELS[stat]}</option>}</For>
-                </SelectInput>
-            </Field>
-            <HiddenCheckboxField aria-hidden="true">
-                <input
-                    type="checkbox"
-                    checked={props.allowBalancedTuning}
-                    disabled
-                    tabIndex={-1}
-                    onChange={(event) => props.onBalancedTuningChange(event.currentTarget.checked)}
-                />
-                Balanced Tuning
-            </HiddenCheckboxField>
-        </>
-    );
-}
-
-export function TuningControls(
-    props: Pick<ClassStatSettingsProps, 'allowBalancedTuning' | 'dumpStat' | 'onBalancedTuningChange' | 'onDumpStatChange'>
-) {
-    return (
-        <ControlSection title="Tuning">
-            <TuningFields
-                allowBalancedTuning={props.allowBalancedTuning}
-                dumpStat={props.dumpStat}
-                onBalancedTuningChange={props.onBalancedTuningChange}
-                onDumpStatChange={props.onDumpStatChange}
-            />
-        </ControlSection>
-    );
-}
-
-function StatTargetSlider(props: {
+interface StatTargetSliderProps {
     allowBalancedTuning: boolean;
     cap: number;
     disabled: boolean;
@@ -441,7 +202,11 @@ function StatTargetSlider(props: {
     stat: ArmorStat;
     value: number;
     onCommit: (stat: ArmorStat, value: string) => void;
-}) {
+}
+
+const percent = (value: number): number => Math.max(0, Math.min(100, (value / MAX_STAT_TARGET) * 100));
+
+function StatTargetSlider(props: StatTargetSliderProps) {
     const maxValue = () => statTargetMax(props.cap, props.allowBalancedTuning);
     const committedValue = () => snapStatTarget(props.value, props.cap, props.allowBalancedTuning);
     const [draftValue, setDraftValue] = createSignal(committedValue());
@@ -451,29 +216,27 @@ function StatTargetSlider(props: {
         setDraftValue(committedValue());
     });
 
-    function clampDraft(value: string | number) {
-        return snapStatTarget(Number(value) || 0, props.cap, props.allowBalancedTuning);
-    }
+    const clampDraft = (value: string | number) => snapStatTarget(Number(value) || 0, props.cap, props.allowBalancedTuning);
 
-    function valueFromPointer(event: PointerEvent & { currentTarget: HTMLElement }) {
+    const valueFromPointer = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         const bounds = event.currentTarget.getBoundingClientRect();
         const thumbInset = 7;
         const left = bounds.left + thumbInset;
         const width = Math.max(1, bounds.width - thumbInset * 2);
         const ratio = Math.max(0, Math.min(1, (event.clientX - left) / width));
         return clampDraft(Math.round(ratio * MAX_STAT_TARGET));
-    }
+    };
 
-    function commit(value: string | number = draftValue()) {
+    const commit = (value: string | number = draftValue()) => {
         const nextValue = clampDraft(value);
         setDraftValue(nextValue);
 
         if (nextValue !== props.value) {
             props.onCommit(props.stat, String(nextValue));
         }
-    }
+    };
 
-    function startDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+    const startDrag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         if (props.disabled || props.pending || maxValue() <= 0) {
             return;
         }
@@ -482,18 +245,18 @@ function StatTargetSlider(props: {
         event.currentTarget.setPointerCapture(event.pointerId);
         setDraggingPointerId(event.pointerId);
         setDraftValue(valueFromPointer(event));
-    }
+    };
 
-    function drag(event: PointerEvent & { currentTarget: HTMLElement }) {
+    const drag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         if (draggingPointerId() !== event.pointerId) {
             return;
         }
 
         event.preventDefault();
         setDraftValue(valueFromPointer(event));
-    }
+    };
 
-    function finishDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+    const finishDrag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         if (draggingPointerId() !== event.pointerId) {
             return;
         }
@@ -505,9 +268,9 @@ function StatTargetSlider(props: {
             event.currentTarget.releasePointerCapture(event.pointerId);
         }
         commit(nextValue);
-    }
+    };
 
-    function cancelDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
+    const cancelDrag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         if (draggingPointerId() !== event.pointerId) {
             return;
         }
@@ -517,9 +280,9 @@ function StatTargetSlider(props: {
             event.currentTarget.releasePointerCapture(event.pointerId);
         }
         setDraftValue(committedValue());
-    }
+    };
 
-    function commitKeyboardChange(event: KeyboardEvent) {
+    const commitKeyboardChange = (event: KeyboardEvent) => {
         if (props.disabled || props.pending || maxValue() <= 0) {
             return;
         }
@@ -548,11 +311,7 @@ function StatTargetSlider(props: {
             event.preventDefault();
             commit(nextValue);
         }
-    }
-
-    function percent(value: number) {
-        return Math.max(0, Math.min(100, (value / MAX_STAT_TARGET) * 100));
-    }
+    };
 
     return (
         <StatSliderRow>
@@ -591,16 +350,7 @@ function StatTargetSlider(props: {
     );
 }
 
-export function StatTargetFields(
-    props: Pick<
-        ClassStatSettingsProps,
-        'allowBalancedTuning' | 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'
-    >
-) {
-    function percent(value: number) {
-        return Math.max(0, Math.min(100, (value / MAX_STAT_TARGET) * 100));
-    }
-
+export function StatTargetFields(props: StatTargetFieldsProps) {
     return (
         <StatGrid>
             <StatScaleRow aria-hidden="true">
@@ -634,81 +384,5 @@ export function StatTargetFields(
                 }}
             </For>
         </StatGrid>
-    );
-}
-
-export function StatTargetControls(
-    props: Pick<
-        ClassStatSettingsProps,
-        'allowBalancedTuning' | 'dumpStat' | 'onTargetChange' | 'targetCaps' | 'targetCapsPending' | 'targets'
-    >
-) {
-    return (
-        <ControlSection title="Stat targets">
-            <StatTargetFields
-                dumpStat={props.dumpStat}
-                allowBalancedTuning={props.allowBalancedTuning}
-                onTargetChange={props.onTargetChange}
-                targetCapsPending={props.targetCapsPending}
-                targetCaps={props.targetCaps}
-                targets={props.targets}
-            />
-        </ControlSection>
-    );
-}
-
-function SideControls(
-    props: Pick<
-        ClassStatSettingsProps,
-        | 'allowBalancedTuning'
-        | 'characterOptions'
-        | 'dumpStat'
-        | 'onBalancedTuningChange'
-        | 'onCharacterSelect'
-        | 'onDumpStatChange'
-        | 'selectedCharacterId'
-    >
-) {
-    return (
-        <SettingsColumn>
-            <CharacterControls
-                characterOptions={props.characterOptions}
-                onCharacterSelect={props.onCharacterSelect}
-                selectedCharacterId={props.selectedCharacterId}
-            />
-            <TuningControls
-                allowBalancedTuning={props.allowBalancedTuning}
-                dumpStat={props.dumpStat}
-                onBalancedTuningChange={props.onBalancedTuningChange}
-                onDumpStatChange={props.onDumpStatChange}
-            />
-        </SettingsColumn>
-    );
-}
-
-export function ClassStatSettings(props: ClassStatSettingsProps) {
-    return (
-        <PrimarySettingsGrid>
-            <SideControls
-                allowBalancedTuning={props.allowBalancedTuning}
-                characterOptions={props.characterOptions}
-                dumpStat={props.dumpStat}
-                onBalancedTuningChange={props.onBalancedTuningChange}
-                onCharacterSelect={props.onCharacterSelect}
-                onDumpStatChange={props.onDumpStatChange}
-                selectedCharacterId={props.selectedCharacterId}
-            />
-
-            <SettingsColumn>
-                <StatTargetControls
-                    allowBalancedTuning={props.allowBalancedTuning}
-                    dumpStat={props.dumpStat}
-                    onTargetChange={props.onTargetChange}
-                    targetCapsPending={props.targetCapsPending}
-                    targetCaps={props.targetCaps}
-                    targets={props.targets}
-                />
-            </SettingsColumn>
-        </PrimarySettingsGrid>
     );
 }

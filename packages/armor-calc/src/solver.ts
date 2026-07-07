@@ -43,8 +43,8 @@ type PreparedArmorItem = {
 type PreparedArmorBySlot = Record<ArmorSlot, PreparedArmorItem[]>;
 
 type AddonChoice = {
-    statMod?: StatAdjustment;
-    tuning?: StatAdjustment;
+    statMod?: StatAdjustment | undefined;
+    tuning?: StatAdjustment | undefined;
     deltas: StatVector;
 };
 
@@ -78,11 +78,11 @@ type SearchContext = {
     targets: StatVector;
     targetValues: StatTuple;
     statBonusValues: StatTuple;
-    dumpStat?: ArmorStat;
+    dumpStat?: ArmorStat | undefined;
     dumpStatIndex: number;
     tuningMode: TuningMode;
     maxResults: number;
-    resultSort?: ArmorBuildSort;
+    resultSort?: ArmorBuildSort | undefined;
     setRequirements: ArmorSetRequirement[];
     builds: ArmorBuild[];
     counters: SearchCounters;

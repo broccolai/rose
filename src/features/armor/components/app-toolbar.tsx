@@ -14,8 +14,8 @@ export type LoadProgress = {
 
 type AppToolbarProps = {
     authenticated: boolean;
-    avatarLabel?: string;
-    avatarUrl?: string;
+    avatarLabel?: string | undefined;
+    avatarUrl?: string | undefined;
     loading: boolean;
     onSignIn: () => void;
     onRefresh: () => void;

@@ -24,7 +24,7 @@ export type CharacterButtonOption = {
 export type AvailableExotic = {
     itemHash: number;
     name: string;
-    iconUrl?: string;
+    iconUrl?: string | undefined;
     slot: ArmorSlot;
     count: number;
 };

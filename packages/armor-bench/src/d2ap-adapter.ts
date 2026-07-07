@@ -48,12 +48,12 @@ export function createD2APBenchmarkAdapter() {
                 config: createD2APConfig(scenario)
             });
             const elapsedMs = performance.now() - start;
-            const doneMessage = [...messages].reverse().find((message) => message.done);
-            const stats = doneMessage?.stats as D2APDoneStats | undefined;
+            const doneMessage = [...messages].reverse().find((message) => message['done']);
+            const stats = doneMessage?.['stats'] as D2APDoneStats | undefined;
 
             return {
                 elapsedMs,
-                checkedCalculations: Number(doneMessage?.checkedCalculations ?? 0),
+                checkedCalculations: Number(doneMessage?.['checkedCalculations'] ?? 0),
                 computedPermutations: stats?.computedPermutations ?? 0,
                 savedResults: stats?.savedResults ?? 0,
                 workerReportedMs: stats?.totalTime ?? 0

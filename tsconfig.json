@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2022",
+        "target": "ESNext",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "module": "ESNext",
         "moduleResolution": "Bundler",
         "jsx": "preserve",
@@ -8,16 +9,21 @@
         "strict": true,
         "isolatedModules": true,
         "verbatimModuleSyntax": true,
+        "moduleDetection": "force",
+        "noUncheckedSideEffectImports": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "erasableSyntaxOnly": true,
         "skipLibCheck": true,
         "noEmit": true,
         "types": ["@solidjs/start/env", "vite/client", "node"],
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["src/*"],
-            "@armor-calc": ["packages/armor-calc/src/index.ts"],
-            "@panda/*": [".panda/*"]
+            "@/*": ["./src/*"],
+            "@armor-calc": ["./packages/armor-calc/src/index.ts"],
+            "@panda/*": ["./.panda/*"]
         }
     },
-    "include": ["src", "packages", "vite.config.ts", "panda.config.ts"],
+    "include": ["src", "packages", "app.config.ts", "panda.config.ts"],
     "exclude": ["dist", ".panda", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }

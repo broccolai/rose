@@ -9,23 +9,25 @@ import type {
 import type { UserMembershipData } from 'bungie-api-ts/user';
 
 type SelectedDestinyMembership = UserMembershipData['destinyMemberships'][number] & {
-    selectionReason?: string;
+    selectionReason?: string | undefined;
 };
 
 export type VaultExportSnapshot = {
-    metadata?: {
-        exportedAt?: string;
-        [key: string]: unknown;
-    };
-    selectedMembership?: SelectedDestinyMembership;
-    membershipsResponse?: ServerResponse<UserMembershipData>;
-    profileResponse?: ServerResponse<DestinyProfileResponse>;
+    metadata?:
+        | {
+              exportedAt?: string | undefined;
+              [key: string]: unknown;
+          }
+        | undefined;
+    selectedMembership?: SelectedDestinyMembership | undefined;
+    membershipsResponse?: ServerResponse<UserMembershipData> | undefined;
+    profileResponse?: ServerResponse<DestinyProfileResponse> | undefined;
 };
 
 export type ManifestResolver = {
     getInventoryItem(hash: number): Promise<DestinyInventoryItemDefinition | null>;
-    getEquipableItemSetDefinitions?(): LoadedManifestEquipableItemSetDefinition[];
-    getSandboxPerk?(hash: number): Promise<DestinySandboxPerkDefinition | null>;
+    getEquipableItemSetDefinitions?: (() => LoadedManifestEquipableItemSetDefinition[]) | undefined;
+    getSandboxPerk?: ((hash: number) => Promise<DestinySandboxPerkDefinition | null>) | undefined;
 };
 
 export type LoadedManifestDefinition = {
@@ -40,22 +42,24 @@ export type LoadedManifestEquipableItemSetDefinition = {
 
 export type LoadedManifestResolver = ManifestResolver & {
     getLoadedInventoryItemDefinitions(): LoadedManifestDefinition[];
-    getInventoryItemDefinitionsByPlugCategory?(plugCategoryIdentifier: string): LoadedManifestDefinition[];
-    getManifestCacheMetadata?(): {
-        version?: string;
-        cachedAt?: string;
-        definitionCount: number;
-        equipableItemSetDefinitionCount?: number;
-        sandboxPerkDefinitionCount?: number;
-        fullCacheAvailable: boolean;
-    };
+    getInventoryItemDefinitionsByPlugCategory?: ((plugCategoryIdentifier: string) => LoadedManifestDefinition[]) | undefined;
+    getManifestCacheMetadata?:
+        | (() => {
+              version?: string | undefined;
+              cachedAt?: string | undefined;
+              definitionCount: number;
+              equipableItemSetDefinitionCount?: number | undefined;
+              sandboxPerkDefinitionCount?: number | undefined;
+              fullCacheAvailable: boolean;
+          })
+        | undefined;
 };
 
 export type NormalizedCharacter = {
     characterId: string;
     classType: DestinyClass;
     label: string;
-    light?: number;
+    light?: number | undefined;
 };
 
 export type NormalizedArmorProfile = {
@@ -68,17 +72,17 @@ export type NormalizedArmorProfile = {
 
 export type ArmorSetBonusInfo = {
     requiredPieces: number;
-    sandboxPerkHash?: number;
+    sandboxPerkHash?: number | undefined;
     name: string;
-    description?: string;
-    iconUrl?: string;
+    description?: string | undefined;
+    iconUrl?: string | undefined;
 };
 
 export type ArmorSetCatalogEntry = {
     id: string;
     name: string;
     equipableItemSetHash: number;
-    iconUrl?: string;
+    iconUrl?: string | undefined;
     itemHashes: number[];
     classTypes: DestinyClass[];
     slots: ArmorSlot[];
@@ -92,5 +96,5 @@ export type NormalizeProgress = {
 };
 
 export type NormalizeVaultExportOptions = {
-    onProgress?: (progress: NormalizeProgress) => void;
+    onProgress?: ((progress: NormalizeProgress) => void) | undefined;
 };

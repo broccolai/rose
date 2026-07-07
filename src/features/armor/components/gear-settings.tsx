@@ -3,7 +3,7 @@ import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic } from '@/features/armor/calculator-view-model';
-import { ControlSection } from '@/features/armor/components/control-section';
+import { SelectInput } from '@/features/armor/components/calculator-control-primitives';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/armor/result-display';
 
@@ -16,16 +16,6 @@ type GearSettingsProps = {
     onExoticChange: (itemHash: string) => void;
     onSetRequirementChange: (setId: string, value: string) => void;
 };
-
-const GearGrid = styled('div', {
-    base: {
-        display: 'grid',
-        gap: 'var(--rose-space-sm)',
-        alignItems: 'start',
-        minW: 0,
-        '--rose-op': '#d8b15f'
-    }
-});
 
 const Field = styled('label', {
     base: {
@@ -62,36 +52,6 @@ const ExoticBadge = styled('span', {
         bg: 'color-mix(in srgb, var(--rose-exotic) 10%, var(--rose-surface))',
         fontSize: '0.66rem',
         fontWeight: 760
-    }
-});
-
-const ExoticSelect = styled('select', {
-    base: {
-        w: '100%',
-        minW: 0,
-        boxSizing: 'border-box',
-        minH: 'var(--rose-control-height)',
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-sm)',
-        bg: 'var(--rose-surface-soft)',
-        px: 'var(--rose-control-padding-x)',
-        color: 'var(--rose-text)',
-        colorScheme: 'dark',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.86rem',
-        lineHeight: 1.2,
-        outline: 'none',
-        cursor: 'pointer',
-        transition: 'background-color 120ms ease, border-color 120ms ease, opacity 120ms ease',
-        _focusVisible: {
-            borderColor: 'var(--rose-accent)',
-            bg: 'var(--rose-surface-raised)',
-            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
-            outlineOffset: '2px'
-        },
-        _disabled: {
-            opacity: 0.42
-        }
     }
 });
 
@@ -268,23 +228,11 @@ export function ExoticPicker(
                     </Show>
                 </LabelLine>
             </Show>
-            <ExoticSelect value={props.selectedExoticItemHash} onChange={(event) => props.onExoticChange(event.currentTarget.value)}>
+            <SelectInput value={props.selectedExoticItemHash} onChange={(event) => props.onExoticChange(event.currentTarget.value)}>
                 <option value="">None</option>
                 <For each={props.availableExotics}>{(exotic) => <option value={String(exotic.itemHash)}>{exotic.name}</option>}</For>
-            </ExoticSelect>
+            </SelectInput>
         </Field>
-    );
-}
-
-export function ExoticControls(props: Pick<GearSettingsProps, 'availableExotics' | 'onExoticChange' | 'selectedExoticItemHash'>) {
-    return (
-        <ControlSection title="Exotic armor">
-            <ExoticPicker
-                availableExotics={props.availableExotics}
-                onExoticChange={props.onExoticChange}
-                selectedExoticItemHash={props.selectedExoticItemHash}
-            />
-        </ControlSection>
     );
 }
 
@@ -396,39 +344,5 @@ export function ArmorSetFields(
                 </SetTable>
             </SetList>
         </Show>
-    );
-}
-
-export function ArmorSetControls(
-    props: Pick<GearSettingsProps, 'armorSetDisplayMode' | 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>
-) {
-    return (
-        <ControlSection title="Sets">
-            <ArmorSetFields
-                armorSetDisplayMode={props.armorSetDisplayMode}
-                onSetRequirementChange={props.onSetRequirementChange}
-                selectableSets={props.selectableSets}
-                setSelections={props.setSelections}
-            />
-        </ControlSection>
-    );
-}
-
-export function GearSettings(props: GearSettingsProps) {
-    return (
-        <GearGrid>
-            <ExoticControls
-                availableExotics={props.availableExotics}
-                onExoticChange={props.onExoticChange}
-                selectedExoticItemHash={props.selectedExoticItemHash}
-            />
-
-            <ArmorSetControls
-                armorSetDisplayMode={props.armorSetDisplayMode}
-                onSetRequirementChange={props.onSetRequirementChange}
-                selectableSets={props.selectableSets}
-                setSelections={props.setSelections}
-            />
-        </GearGrid>
     );
 }

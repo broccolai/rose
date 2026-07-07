@@ -16,26 +16,26 @@ export type StatAdjustment = {
 export type ArmorSetInfo = {
     id: string;
     name: string;
-    equipableItemSetHash?: number;
+    equipableItemSetHash?: number | undefined;
 };
 
 export type ArmorItem = {
     itemInstanceId: string;
-    equivalentItemInstanceIds?: string[];
+    equivalentItemInstanceIds?: string[] | undefined;
     itemHash: number;
     name: string;
-    iconUrl?: string;
+    iconUrl?: string | undefined;
     slot: ArmorSlot;
     classType: DestinyClass;
     isExotic: boolean;
-    set?: ArmorSetInfo;
-    tier?: 1 | 2 | 3 | 4 | 5;
-    isCurrentMasterworked?: boolean;
-    fullyMasterworkedItemInstanceIds?: string[];
+    set?: ArmorSetInfo | undefined;
+    tier?: 1 | 2 | 3 | 4 | 5 | undefined;
+    isCurrentMasterworked?: boolean | undefined;
+    fullyMasterworkedItemInstanceIds?: string[] | undefined;
     baseStats: StatVector;
     statModOptions: StatAdjustment[];
     tuningOptions: StatAdjustment[];
-    debugWarnings?: string[];
+    debugWarnings?: string[] | undefined;
 };
 
 export type ArmorInventoryBySlot = Record<ArmorSlot, ArmorItem[]>;
@@ -56,37 +56,37 @@ export type ArmorBuildSort = {
 export type SolveArmorInput = {
     characterId: string;
     classType: DestinyClass;
-    selectedExoticItemHash?: number;
-    dumpStat?: ArmorStat;
-    allowBalancedTuning?: boolean;
+    selectedExoticItemHash?: number | undefined;
+    dumpStat?: ArmorStat | undefined;
+    allowBalancedTuning?: boolean | undefined;
     statTargets: Partial<StatVector>;
-    statBonuses?: Partial<StatVector>;
+    statBonuses?: Partial<StatVector> | undefined;
     setRequirements: ArmorSetRequirement[];
     armor: ArmorInventoryBySlot;
     /**
      * Maximum rich builds to retain and return. The solver still counts all valid
      * builds so callers can show "showing N of M" without materializing M builds.
      */
-    maxResults?: number;
+    maxResults?: number | undefined;
     /**
      * When provided, the retained build cap means "top N by this sort" across
      * every valid build, not "first N found by search order".
      */
-    resultSort?: ArmorBuildSort;
+    resultSort?: ArmorBuildSort | undefined;
     /**
      * Stop searching as soon as maxResults valid builds have been found. This is
      * useful for interactive UIs where responsiveness matters more than an exact
      * total count.
      */
-    stopWhenResultLimitReached?: boolean;
+    stopWhenResultLimitReached?: boolean | undefined;
 };
 
 export type ArmorStatTargetCapsInput = Omit<SolveArmorInput, 'maxResults' | 'resultSort'>;
 
 export type BuildArmorPiece = {
     item: ArmorItem;
-    statMod?: StatAdjustment;
-    tuning?: StatAdjustment;
+    statMod?: StatAdjustment | undefined;
+    tuning?: StatAdjustment | undefined;
 };
 
 export type ActiveArmorSetBonus = {

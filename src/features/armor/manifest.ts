@@ -120,10 +120,11 @@ async function readOrRefreshManifestCache(options: ManifestResolverOptions) {
         return cachedManifest;
     }
 
+    const englishManifestPaths = manifest.jsonWorldComponentContentPaths?.['en'];
     if (
-        !manifest.jsonWorldComponentContentPaths?.en?.[INVENTORY_ITEM_DEFINITION] ||
-        !manifest.jsonWorldComponentContentPaths.en[EQUIPABLE_ITEM_SET_DEFINITION] ||
-        !manifest.jsonWorldComponentContentPaths.en[SANDBOX_PERK_DEFINITION]
+        !englishManifestPaths?.[INVENTORY_ITEM_DEFINITION] ||
+        !englishManifestPaths[EQUIPABLE_ITEM_SET_DEFINITION] ||
+        !englishManifestPaths[SANDBOX_PERK_DEFINITION]
     ) {
         options.onStatus?.(
             cachedManifest ? 'Using cached manifest definitions; manifest paths missing' : 'Manifest definition paths missing'
@@ -171,13 +172,17 @@ function createManifestHttp(): HttpClient {
             url.searchParams.set(key, value);
         }
 
-        const response = await fetch(url, {
+        const requestInit: RequestInit = {
             method: request.method,
             headers: {
                 'X-API-Key': config.apiKey
-            },
-            body: request.body ? JSON.stringify(request.body) : undefined
-        });
+            }
+        };
+        if (request.body) {
+            requestInit.body = JSON.stringify(request.body);
+        }
+
+        const response = await fetch(url, requestInit);
         const payload = (await response.json().catch(() => null)) as Return | null;
 
         if (!response.ok || !payload) {
