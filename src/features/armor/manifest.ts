@@ -25,6 +25,7 @@ const MANIFEST_COMPONENTS = [
 ] as const satisfies readonly DestinyManifestComponentName[];
 const MANIFEST_CACHE_KEY = 'manifest.calculator-definitions.v2';
 const BUNGIE_SUCCESS_ERROR_CODE = 1 satisfies PlatformErrorCodes;
+const BUNGIE_CONTENT_PATH_PREFIX = '/common/destiny2_content/';
 
 type ManifestCache = {
     version?: string;
@@ -173,11 +174,11 @@ function createManifestHttp(): HttpClient {
         }
 
         const requestInit: RequestInit = {
-            method: request.method,
-            headers: {
-                'X-API-Key': config.apiKey
-            }
+            method: request.method
         };
+        if (!isBungieManifestContentUrl(url)) {
+            requestInit.headers = { 'X-API-Key': config.apiKey };
+        }
         if (request.body) {
             requestInit.body = JSON.stringify(request.body);
         }
@@ -191,6 +192,10 @@ function createManifestHttp(): HttpClient {
 
         return payload;
     };
+}
+
+export function isBungieManifestContentUrl(url: URL): boolean {
+    return url.hostname === 'www.bungie.net' && url.pathname.startsWith(BUNGIE_CONTENT_PATH_PREFIX);
 }
 
 function assertManifestResponse<T>(payload: ServerResponse<T>) {
