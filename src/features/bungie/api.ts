@@ -127,6 +127,7 @@ async function bungieFetch<T>(path: string, token: BungieToken, options: BungieF
             path,
             method,
             status: response.status,
+            requestBody: options.body,
             payload
         });
         throw new Error(`Bungie request failed (${response.status})`);

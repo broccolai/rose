@@ -723,6 +723,50 @@
     background: var(--rose-button);
 }
 
+  .hWgZTB {
+    inset: var(--fcTUxn);
+}
+
+  .dSXBfT {
+    padding: 1rem;
+}
+
+  .kaykho {
+    background: color-mix(in srgb, #030305 86%, transparent);
+}
+
+  .jzVgmr {
+    border: 1px solid color-mix(in srgb, var(--rose-accent) 22%, var(--rose-border));
+}
+
+  .gXlUIR {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--rose-surface-raised) 88%, #000 12%), var(--rose-surface));
+}
+
+  .ggdEMM {
+    padding: 1.1rem;
+}
+
+  .jzIORq {
+    padding: 0.75rem;
+}
+
+  .jxGckS {
+    padding: 0.8rem 0.9rem;
+}
+
+  .bijAUj {
+    background: color-mix(in srgb, var(--rose-surface-soft) 70%, transparent);
+}
+
+  .hcTVrT {
+    background: var(--rose-border);
+}
+
+  .hiNqxU {
+    padding: 0 1rem 1rem;
+}
+
   .bSlexM {
     background: color-mix(in srgb, var(--rose-bg) 34%, transparent);
 }
@@ -943,6 +987,22 @@
     gap: 0.32rem;
 }
 
+  .hyFXQI {
+    border-radius: 1.1rem;
+}
+
+  .dlDteq {
+    gap: 0.8rem;
+}
+
+  .jzNNuE {
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+  .fvAxXK {
+    gap: 0.22rem;
+}
+
   .eioztc {
     grid-column: 1 / -1;
 }
@@ -953,10 +1013,6 @@
 
   .eUwWlI {
     place-items: start center;
-}
-
-  .dlDteq {
-    gap: 0.8rem;
 }
 
   .fyUCwZ {
@@ -1385,6 +1441,51 @@
     color: var(--rose-button-text);
 }
 
+  .hdAwi {
+    position: fixed;
+}
+
+  .fzoCXu {
+    z-index: 80;
+}
+
+  .cCpkmE {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+  .cOJMbD {
+    box-shadow: 0 30px 110px color-mix(in srgb, #000 72%, transparent);
+}
+
+  .jSrPRf {
+    font-weight: 820;
+}
+
+  .jAjOES {
+    line-height: 1.05;
+}
+
+  .jrJYfp {
+    font-size: 0.8rem;
+}
+
+  .kpUJsv {
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+}
+
+  .jbWSYQ {
+    font-size: 0.9rem;
+}
+
+  .jKnLOw {
+    line-height: 1.25;
+}
+
+  .koqhlK {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rose-border) 18%, transparent);
+}
+
   .hKujQS {
     display: contents;
 }
@@ -1621,6 +1722,22 @@
     padding-bottom: 0.76rem;
 }
 
+  .cORoQQ {
+    width: min(920px, 100%);
+}
+
+  .ksOxky {
+    min-height: 58px;
+}
+
+  .fNDdIU {
+    width: 12px;
+}
+
+  .fNDdJn {
+    height: 12px;
+}
+
   .dnRYAO {
     padding-top: 4rem;
 }
@@ -1741,6 +1858,30 @@
     border: var(--stat-track-border);
 }
 
+  .hTxQbg[data-status="active"] {
+    background: color-mix(in srgb, var(--rose-accent) 13%, var(--rose-surface-soft));
+}
+
+  .cYMWXy[data-status="done"] {
+    background: color-mix(in srgb, #46d37d 10%, var(--rose-surface-soft));
+}
+
+  .dMTKqA[data-status="failed"] {
+    background: color-mix(in srgb, #ff5a72 12%, var(--rose-surface-soft));
+}
+
+  .jkXFHd[data-status="active"] {
+    background: var(--rose-accent);
+}
+
+  .kKQFtM[data-status="done"] {
+    background: #46d37d;
+}
+
+  .hiqBYU[data-status="failed"] {
+    background: #ff5a72;
+}
+
   .eIchPt th {
     background: color-mix(in srgb, var(--rose-surface-soft) 74%, #000 26%);
 }
@@ -1787,6 +1928,18 @@
 
   .eFADwl:last-child {
     border-bottom: 0;
+}
+
+  .kmlfbj[data-status="active"] {
+    border-color: color-mix(in srgb, var(--rose-accent) 64%, var(--rose-border));
+}
+
+  .LMVHz[data-status="done"] {
+    border-color: color-mix(in srgb, #46d37d 52%, var(--rose-border));
+}
+
+  .bzEOUq[data-status="failed"] {
+    border-color: color-mix(in srgb, #ff5a72 60%, var(--rose-border));
 }
 
   .iEEags summary {
@@ -2045,6 +2198,18 @@
     opacity: 0.55;
 }
 
+  .ikjWxd[data-status="active"] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rose-accent) 22%, transparent);
+}
+
+  .gumDng[data-status="done"] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, #46d37d 22%, transparent);
+}
+
+  .evYMQG[data-status="failed"] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, #ff5a72 24%, transparent);
+}
+
   .kxbQLU button {
     white-space: nowrap;
 }
@@ -2284,6 +2449,15 @@
     .jPyDkw {
       padding: 20px 28px;
 }
+    .jImDoP {
+      padding: 2rem;
+}
+    .nxyoj {
+      padding: 1.35rem 1.45rem;
+}
+    .jNoCJw {
+      padding: 1rem;
+}
     .dJerro {
       gap: 1.08rem;
 }
@@ -2298,6 +2472,9 @@
 }
     .btPanr {
       display: grid;
+}
+    .bwTgCB {
+      font-size: 1.2rem;
 }
     .iTfUnz {
       grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -2355,6 +2532,15 @@
 }
     .czWwAH {
       max-height: calc(100vh - 16rem);
+}
+}
+
+  @media (max-width: 620px) {
+    .grUJof {
+      grid-template-columns: 1fr auto;
+}
+    .iZRCee {
+      display: none;
 }
 }
 
