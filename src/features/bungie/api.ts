@@ -1,17 +1,22 @@
 import {
-    type DestinyInsertPlugsFreeActionRequest as BungieDestinyInsertPlugsFreeActionRequest,
-    type DestinyItemActionRequest as BungieDestinyItemActionRequest,
-    type DestinyItemSetActionRequest as BungieDestinyItemSetActionRequest,
-    type DestinyItemTransferRequest as BungieDestinyItemTransferRequest,
     equipItem as bungieEquipItem,
     equipItems as bungieEquipItems,
     getProfile as bungieGetProfile,
     insertSocketPlugFree as bungieInsertSocketPlugFree,
     transferItem as bungieTransferItem,
-    type DestinyEquipItemResults
+    type DestinyComponentType,
+    type DestinyEquipItemResults,
+    type DestinyInsertPlugsFreeActionRequest,
+    type DestinyItemActionRequest,
+    type DestinyItemChangeResponse,
+    type DestinyItemSetActionRequest,
+    type DestinyItemTransferRequest,
+    type DestinyProfileResponse,
+    type PlatformErrorCodes,
+    type ServerResponse
 } from 'bungie-api-ts/destiny2';
 import type { HttpClient, HttpClientConfig } from 'bungie-api-ts/http';
-import { getMembershipDataForCurrentUser } from 'bungie-api-ts/user';
+import { getMembershipDataForCurrentUser, type UserMembershipData } from 'bungie-api-ts/user';
 
 import { getBungieConfig } from '@/features/bungie/config';
 import type { BungieToken } from '@/features/bungie/oauth';
@@ -21,6 +26,7 @@ const VAULT_SNAPSHOT_CACHE_KEY = 'bungie.vault-snapshot';
 const STADIA_MEMBERSHIP_TYPE = 5;
 const TRANSFER_OR_EQUIP_ACTION_INTERVAL_MS = 100;
 const SOCKET_ACTION_INTERVAL_MS = 500;
+const BUNGIE_SUCCESS_ERROR_CODE = 1 satisfies PlatformErrorCodes;
 
 export const DESTINY_PROFILE_COMPONENTS = {
     Profiles: 100,
@@ -35,81 +41,39 @@ export const DESTINY_PROFILE_COMPONENTS = {
     ItemPlugStates: 308,
     ItemReusablePlugs: 310,
     Collectibles: 800
-} as const;
-
-type BungieResponse<T> = {
-    Response?: T;
-    ErrorCode?: number;
-    ErrorStatus?: string;
-    Message?: string;
-    [key: string]: unknown;
-};
-
-type DestinyMembership = {
-    membershipId: string;
-    membershipType: number;
-    displayName?: string;
-    bungieGlobalDisplayName?: string;
-    bungieGlobalDisplayNameCode?: number;
-    crossSaveOverride?: number;
-    [key: string]: unknown;
-};
-
-type CurrentMembershipsPayload = {
-    destinyMemberships?: DestinyMembership[];
-    primaryMembershipId?: string;
-    bungieNetUser?: unknown;
-    [key: string]: unknown;
-};
-
-type SelectedMembership = DestinyMembership & {
-    selectionReason: string;
-};
+} as const satisfies Record<string, DestinyComponentType>;
 
 type BungieFetchOptions = {
     logLabel?: string;
 };
 
-export type DestinyItemTransferRequest = {
-    itemReferenceHash: number;
-    stackSize: number;
-    transferToVault: boolean;
-    itemId: string;
-    characterId: string;
-    membershipType: number;
+/*
+ * Keep the selected membership as a named rose type because we add a local
+ * selectionReason for debugging/export metadata.
+ */
+type DestinyMembership = UserMembershipData['destinyMemberships'][number];
+
+type SelectedMembership = DestinyMembership & {
+    selectionReason: string;
 };
 
-export type DestinyEquipItemRequest = {
-    itemId: string;
-    characterId: string;
-    membershipType: number;
-};
-
-export type DestinyEquipItemsRequest = {
-    itemIds: string[];
-    characterId: string;
-    membershipType: number;
-};
-
-export type DestinyInsertPlugsRequestEntry = {
-    socketIndex: number;
-    socketArrayType: number;
-    plugItemHash: number;
-};
-
-export type DestinyInsertPlugsFreeActionRequest = {
-    plug: DestinyInsertPlugsRequestEntry;
-    itemId: string;
-    characterId: string;
-    membershipType: number;
-};
-
-function requestedComponentIds() {
+function requestedComponentIds(): DestinyComponentType[] {
     return Object.values(DESTINY_PROFILE_COMPONENTS);
 }
 
-function assertBungieSuccess<T>(payload: BungieResponse<T>, fallbackMessage: string, logDetails?: Record<string, unknown>) {
-    if (payload.ErrorCode !== undefined && payload.ErrorCode !== 1) {
+function isServerResponse(value: unknown): value is ServerResponse<unknown> {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'Response' in value &&
+        'ErrorCode' in value &&
+        'ErrorStatus' in value &&
+        'Message' in value
+    );
+}
+
+function assertBungieSuccess(payload: ServerResponse<unknown>, fallbackMessage: string, logDetails?: Record<string, unknown>) {
+    if (payload.ErrorCode !== BUNGIE_SUCCESS_ERROR_CODE) {
         console.error('[rose bungie api] Bungie returned an error', {
             ...logDetails,
             errorCode: payload.ErrorCode,
@@ -138,9 +102,9 @@ function createBungieHttp(token: BungieToken, options: BungieFetchOptions = {}):
             },
             body: request.body ? JSON.stringify(request.body) : undefined
         });
-        const payload = (await response.json().catch(() => null)) as BungieResponse<Return> | null;
+        const payload = (await response.json().catch(() => null)) as unknown;
 
-        if (!response.ok || !payload) {
+        if (!response.ok || !isServerResponse(payload)) {
             console.error('[rose bungie api] Request failed', {
                 label: options.logLabel,
                 url: url.toString(),
@@ -179,26 +143,24 @@ async function paceBungieAction(group: string, intervalMs: number) {
 async function callBungieApi<T>(
     token: BungieToken,
     logLabel: string,
-    call: (http: HttpClient) => Promise<unknown>
-): Promise<BungieResponse<T>> {
-    return (await call(createBungieHttp(token, { logLabel }))) as BungieResponse<T>;
+    call: (http: HttpClient) => Promise<ServerResponse<T>>
+): Promise<ServerResponse<T>> {
+    return call(createBungieHttp(token, { logLabel }));
 }
 
 async function bungieFetch<T>(
     token: BungieToken,
     options: BungieFetchOptions,
-    call: (http: HttpClient) => Promise<unknown>
-): Promise<BungieResponse<T>> {
+    call: (http: HttpClient) => Promise<ServerResponse<T>>
+): Promise<ServerResponse<T>> {
     return callBungieApi(token, options.logLabel ?? 'bungie api', call);
 }
 
-export async function fetchCurrentMemberships(token: BungieToken) {
-    return bungieFetch<CurrentMembershipsPayload>(token, { logLabel: 'current memberships' }, (http) =>
-        getMembershipDataForCurrentUser(http)
-    );
+export async function fetchCurrentMemberships(token: BungieToken): Promise<ServerResponse<UserMembershipData>> {
+    return bungieFetch<UserMembershipData>(token, { logLabel: 'current memberships' }, (http) => getMembershipDataForCurrentUser(http));
 }
 
-export function selectDestinyMembership(membershipsResponse: BungieResponse<CurrentMembershipsPayload>): SelectedMembership {
+export function selectDestinyMembership(membershipsResponse: ServerResponse<UserMembershipData>): SelectedMembership {
     const response = membershipsResponse.Response;
     const memberships = response?.destinyMemberships ?? [];
 
@@ -225,8 +187,8 @@ export function selectDestinyMembership(membershipsResponse: BungieResponse<Curr
     };
 }
 
-export async function fetchProfile(token: BungieToken, membership: SelectedMembership) {
-    return bungieFetch<Record<string, unknown>>(token, { logLabel: 'profile' }, (http) =>
+export async function fetchProfile(token: BungieToken, membership: SelectedMembership): Promise<ServerResponse<DestinyProfileResponse>> {
+    return bungieFetch<DestinyProfileResponse>(token, { logLabel: 'profile' }, (http) =>
         bungieGetProfile(http, {
             components: requestedComponentIds(),
             destinyMembershipId: membership.membershipId,
@@ -235,31 +197,31 @@ export async function fetchProfile(token: BungieToken, membership: SelectedMembe
     );
 }
 
-export async function transferDestinyItem(token: BungieToken, request: DestinyItemTransferRequest) {
+export async function transferDestinyItem(token: BungieToken, request: DestinyItemTransferRequest): Promise<ServerResponse<number>> {
     await paceBungieAction('transfer-or-equip', TRANSFER_OR_EQUIP_ACTION_INTERVAL_MS);
-    return bungieFetch<number>(token, { logLabel: 'transfer item' }, (http) =>
-        bungieTransferItem(http, request as BungieDestinyItemTransferRequest)
-    );
+    return bungieFetch<number>(token, { logLabel: 'transfer item' }, (http) => bungieTransferItem(http, request));
 }
 
-export async function equipDestinyItem(token: BungieToken, request: DestinyEquipItemRequest) {
+export async function equipDestinyItem(token: BungieToken, request: DestinyItemActionRequest): Promise<ServerResponse<number>> {
     await paceBungieAction('transfer-or-equip', TRANSFER_OR_EQUIP_ACTION_INTERVAL_MS);
-    return bungieFetch<number>(token, { logLabel: 'equip item' }, (http) =>
-        bungieEquipItem(http, request as BungieDestinyItemActionRequest)
-    );
+    return bungieFetch<number>(token, { logLabel: 'equip item' }, (http) => bungieEquipItem(http, request));
 }
 
-export async function equipDestinyItems(token: BungieToken, request: DestinyEquipItemsRequest) {
+export async function equipDestinyItems(
+    token: BungieToken,
+    request: DestinyItemSetActionRequest
+): Promise<ServerResponse<DestinyEquipItemResults>> {
     await paceBungieAction('transfer-or-equip', TRANSFER_OR_EQUIP_ACTION_INTERVAL_MS);
-    return bungieFetch<DestinyEquipItemResults>(token, { logLabel: 'equip items' }, (http) =>
-        bungieEquipItems(http, request as BungieDestinyItemSetActionRequest)
-    );
+    return bungieFetch<DestinyEquipItemResults>(token, { logLabel: 'equip items' }, (http) => bungieEquipItems(http, request));
 }
 
-export async function insertSocketPlugFree(token: BungieToken, request: DestinyInsertPlugsFreeActionRequest) {
+export async function insertSocketPlugFree(
+    token: BungieToken,
+    request: DestinyInsertPlugsFreeActionRequest
+): Promise<ServerResponse<DestinyItemChangeResponse>> {
     await paceBungieAction('socket insert', SOCKET_ACTION_INTERVAL_MS);
-    return bungieFetch<unknown>(token, { logLabel: 'insert socket plug free' }, (http) =>
-        bungieInsertSocketPlugFree(http, request as BungieDestinyInsertPlugsFreeActionRequest)
+    return bungieFetch<DestinyItemChangeResponse>(token, { logLabel: 'insert socket plug free' }, (http) =>
+        bungieInsertSocketPlugFree(http, request)
     );
 }
 

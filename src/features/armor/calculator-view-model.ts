@@ -8,7 +8,7 @@ import {
     type SolveArmorResult
 } from '@armor-calc';
 
-import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
+import { limitSetSelections, type SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { getArmorForClass, getAvailableArmorSets } from '@/features/armor/normalize';
 import { getOpArmorSetBonuses, type OpArmorSetBonus, opArmorSetSortRank } from '@/features/armor/op-set-bonuses';
 import type { ArmorSetBonusInfo, NormalizedArmorProfile, NormalizedCharacter } from '@/features/armor/types';
@@ -121,10 +121,12 @@ export function getSelectedSetRequirements(
     selectableSets: AvailableArmorSet[],
     setSelections: Record<string, SetSelectionValue>
 ): ArmorSetRequirement[] {
+    const limitedSelections = limitSetSelections(setSelections);
+
     return selectableSets
         .map((set) => ({
             setId: set.id,
-            requiredPieces: Number(setSelections[set.id] ?? '0') as 0 | 2 | 4,
+            requiredPieces: Number(limitedSelections[set.id] ?? '0') as 0 | 2 | 4,
             ownedPieces: set.count
         }))
         .filter(
@@ -184,7 +186,7 @@ export function reconcileSetSelections(
         nextSelections[setId] = selection === '4' && set.count < 4 ? '2' : selection;
     }
 
-    return nextSelections;
+    return limitSetSelections(nextSelections);
 }
 
 function armorBuildSortValue(build: ArmorBuild, key: ResultSortKey) {

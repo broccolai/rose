@@ -26,6 +26,7 @@ const TUNING_MODES = ['off', 'pair', 'all'] as const;
 const itemMaximumStatsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
 const simpleAddonCapabilityCache = new WeakMap<ArmorItem, Map<string, boolean>>();
 const preparedArmorItemCache = new WeakMap<ArmorItem, Map<string, PreparedArmorItem>>();
+const itemOutcomeCache = new WeakMap<ArmorItem, Map<string, StatTuple[]>>();
 
 type StatTuple = [number, number, number, number, number, number];
 type TuningMode = (typeof TUNING_MODES)[number];
@@ -200,6 +201,18 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
         baseTargets[input.dumpStat] = 0;
     }
 
+    if (input.setRequirements.length === 0) {
+        return calculatePreparedArmorStatTargetCapByDp(
+            plans,
+            baseTargets,
+            statBonuses,
+            ARMOR_STATS.indexOf(stat),
+            dumpStatIndex,
+            tuningMode,
+            input.dumpStat
+        );
+    }
+
     const maxTargetResult = solveArmor({
         ...input,
         statTargets: {
@@ -297,6 +310,10 @@ function canReachPreparedArmorStatTargets(
     tuningMode: TuningMode,
     setRequirements: ArmorSetRequirement[]
 ) {
+    if (setRequirements.length === 0) {
+        return canReachPreparedArmorStatTargetsByDp(plans, targets, statBonuses, dumpStatIndex, tuningMode, dumpStat);
+    }
+
     const context: SearchContext = {
         targets,
         targetValues: toStatTuple(targets),
@@ -332,6 +349,114 @@ function canReachPreparedArmorStatTargets(
     }
 
     return false;
+}
+
+function canReachPreparedArmorStatTargetsByDp(
+    plans: CandidatePlan[],
+    targets: StatVector,
+    statBonuses: StatVector,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    dumpStat: ArmorStat | undefined
+) {
+    const targetValues = toStatTuple(targets);
+    const targetIndexes = targetValues
+        .map((target, index) => ({ index, target }))
+        .filter(({ index, target }) => index !== dumpStatIndex && target > 0)
+        .map(({ index }) => index);
+
+    if (targetIndexes.length === 0) {
+        return true;
+    }
+
+    for (const plan of plans) {
+        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
+            continue;
+        }
+
+        let states: StatTuple[] = [capTupleToTargets(toStatTuple(statBonuses), targetValues, targetIndexes)];
+
+        for (const slot of ARMOR_SLOTS) {
+            const nextStates: StatTuple[] = [];
+
+            for (const state of states) {
+                for (const item of plan.armor[slot]) {
+                    for (const outcome of itemOutcomeTuples(item.item, tuningMode, dumpStat)) {
+                        const nextState = capTupleToTargets(addTuples(state, outcome), targetValues, targetIndexes);
+                        if (tupleMeetsTargetIndexes(nextState, targetValues, targetIndexes)) {
+                            return true;
+                        }
+
+                        nextStates.push(nextState);
+                    }
+                }
+            }
+
+            states = pruneDominatedTargetStates(nextStates, targetIndexes);
+            if (states.length === 0) {
+                break;
+            }
+        }
+    }
+
+    return false;
+}
+
+function calculatePreparedArmorStatTargetCapByDp(
+    plans: CandidatePlan[],
+    targets: StatVector,
+    statBonuses: StatVector,
+    statIndex: number,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    dumpStat: ArmorStat | undefined
+) {
+    if (statIndex === dumpStatIndex) {
+        return 0;
+    }
+
+    const targetValues = toStatTuple(targets);
+    const targetIndexes = targetValues
+        .map((target, index) => ({ index, target }))
+        .filter(({ index, target }) => index !== dumpStatIndex && index !== statIndex && target > 0)
+        .map(({ index }) => index);
+    const scoreIndexes = [...targetIndexes, statIndex];
+    let best = 0;
+
+    for (const plan of plans) {
+        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
+            continue;
+        }
+
+        let states: StatTuple[] = [capTupleForCapSearch(toStatTuple(statBonuses), targetValues, targetIndexes, statIndex)];
+
+        for (const slot of ARMOR_SLOTS) {
+            const nextStates: StatTuple[] = [];
+
+            for (const state of states) {
+                for (const item of plan.armor[slot]) {
+                    for (const outcome of itemOutcomeTuples(item.item, tuningMode, dumpStat)) {
+                        const nextState = capTupleForCapSearch(addTuples(state, outcome), targetValues, targetIndexes, statIndex);
+                        if (tupleMeetsTargetIndexes(nextState, targetValues, targetIndexes)) {
+                            best = Math.max(best, nextState[statIndex]);
+                            if (best >= MAX_DISPLAY_STAT) {
+                                return MAX_DISPLAY_STAT;
+                            }
+                        }
+
+                        nextStates.push(nextState);
+                    }
+                }
+            }
+
+            states = pruneDominatedTargetStates(nextStates, scoreIndexes);
+            if (states.length === 0) {
+                break;
+            }
+        }
+    }
+
+    return best;
 }
 
 function createCandidatePlans(
@@ -937,6 +1062,94 @@ function maxAdjustmentValue(options: StatAdjustment[], stat: keyof StatVector) {
 
 function addTuples(left: StatTuple, right: StatTuple): StatTuple {
     return [left[0] + right[0], left[1] + right[1], left[2] + right[2], left[3] + right[3], left[4] + right[4], left[5] + right[5]];
+}
+
+function itemOutcomeTuples(item: ArmorItem, tuningMode: TuningMode, dumpStat: ArmorStat | undefined) {
+    const cache = getItemCache(itemOutcomeCache, item);
+    const key = tuningCacheKey(tuningMode, dumpStat);
+    const cached = cache.get(key);
+
+    if (cached) {
+        return cached;
+    }
+
+    const outcomes = new Map<string, StatTuple>();
+    const tuningOptions = tuningMode === 'off' ? [undefined] : tuningOptionsForMode(item, tuningMode, dumpStat);
+
+    for (const statMod of item.statModOptions) {
+        for (const tuning of tuningOptions) {
+            const outcome = toStatTuple(addStats(addStats(item.baseStats, statMod.deltas), tuning?.deltas ?? {}));
+            outcomes.set(tupleKey(outcome), outcome);
+        }
+    }
+
+    const values = [...outcomes.values()];
+    cache.set(key, values);
+    return values;
+}
+
+function capTupleToTargets(tuple: StatTuple, targets: StatTuple, targetIndexes: number[]): StatTuple {
+    const capped = [...tuple] as StatTuple;
+
+    for (const index of targetIndexes) {
+        capped[index] = Math.min(capped[index], targets[index]);
+    }
+
+    return capped;
+}
+
+function capTupleForCapSearch(tuple: StatTuple, targets: StatTuple, targetIndexes: number[], statIndex: number): StatTuple {
+    const capped = capTupleToTargets(tuple, targets, targetIndexes);
+    capped[statIndex] = Math.min(capped[statIndex], MAX_DISPLAY_STAT);
+    return capped;
+}
+
+function tupleMeetsTargetIndexes(tuple: StatTuple, targets: StatTuple, targetIndexes: number[]) {
+    return targetIndexes.every((index) => tuple[index] >= targets[index]);
+}
+
+function pruneDominatedTargetStates(states: StatTuple[], targetIndexes: number[]) {
+    const unique = new Map<string, StatTuple>();
+
+    for (const state of states) {
+        unique.set(tupleTargetKey(state, targetIndexes), state);
+    }
+
+    const pruned: StatTuple[] = [];
+    for (const state of unique.values()) {
+        let dominated = false;
+
+        for (let index = pruned.length - 1; index >= 0; index--) {
+            const existing = pruned[index];
+
+            if (dominatesTargetState(existing, state, targetIndexes)) {
+                dominated = true;
+                break;
+            }
+
+            if (dominatesTargetState(state, existing, targetIndexes)) {
+                pruned.splice(index, 1);
+            }
+        }
+
+        if (!dominated) {
+            pruned.push(state);
+        }
+    }
+
+    return pruned;
+}
+
+function dominatesTargetState(left: StatTuple, right: StatTuple, targetIndexes: number[]) {
+    return targetIndexes.every((index) => left[index] >= right[index]);
+}
+
+function tupleKey(tuple: StatTuple) {
+    return tuple.join(',');
+}
+
+function tupleTargetKey(tuple: StatTuple, targetIndexes: number[]) {
+    return targetIndexes.map((index) => tuple[index]).join(',');
 }
 
 function canStillReachTargets(currentPotential: StatTuple, remainingPotential: StatTuple, targets: StatTuple, dumpStatIndex: number) {

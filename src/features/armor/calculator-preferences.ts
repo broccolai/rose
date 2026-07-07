@@ -5,6 +5,8 @@ import { isSubclassType, type SubclassType, sanitizeFragmentIds } from '@/featur
 
 export type SetSelectionValue = '0' | '2' | '4';
 
+export const MAX_TWO_PIECE_SET_SELECTIONS = 2;
+
 export type CalculatorPreferences = {
     selectedCharacterId?: string;
     selectedExoticItemHash?: string;
@@ -131,7 +133,42 @@ export function sanitizeSetSelectionRecord(value: unknown): Record<string, SetSe
         }
     }
 
-    return selections;
+    return limitSetSelections(selections);
+}
+
+export function applySetSelectionLimit(
+    current: Record<string, SetSelectionValue>,
+    setId: string,
+    nextValue: SetSelectionValue
+): Record<string, SetSelectionValue> {
+    const next = { ...current };
+
+    if (nextValue === '0') {
+        delete next[setId];
+        return limitSetSelections(next);
+    }
+
+    if (nextValue === '4') {
+        return {
+            [setId]: '4'
+        };
+    }
+
+    delete next[setId];
+    next[setId] = '2';
+    return limitSetSelections(next);
+}
+
+export function limitSetSelections(selections: Record<string, SetSelectionValue>): Record<string, SetSelectionValue> {
+    const selectedEntries = Object.entries(selections).filter(([, value]) => value === '2' || value === '4');
+    const fourPieceSelection = [...selectedEntries].reverse().find(([, value]) => value === '4');
+    if (fourPieceSelection) {
+        return {
+            [fourPieceSelection[0]]: '4'
+        };
+    }
+
+    return Object.fromEntries(selectedEntries.filter(([, value]) => value === '2').slice(-MAX_TWO_PIECE_SET_SELECTIONS));
 }
 
 export function sanitizeResultSort(value: unknown): ArmorBuildSort {

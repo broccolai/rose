@@ -1,158 +1,41 @@
 import type { ArmorInventoryBySlot, ArmorItem, ArmorSlot, DestinyClass } from '@armor-calc';
+import type {
+    DestinyEquipableItemSetDefinition,
+    DestinyInventoryItemDefinition,
+    DestinyProfileResponse,
+    DestinySandboxPerkDefinition,
+    ServerResponse
+} from 'bungie-api-ts/destiny2';
+import type { UserMembershipData } from 'bungie-api-ts/user';
+
+type SelectedDestinyMembership = UserMembershipData['destinyMemberships'][number] & {
+    selectionReason?: string;
+};
 
 export type VaultExportSnapshot = {
     metadata?: {
         exportedAt?: string;
         [key: string]: unknown;
     };
-    selectedMembership?: unknown;
-    membershipsResponse?: unknown;
-    profileResponse?: {
-        Response?: DestinyProfileResponse;
-        [key: string]: unknown;
-    };
-};
-
-export type DestinyProfileResponse = {
-    profileInventory?: { data?: { items?: DestinyProfileItem[] } };
-    characterInventories?: { data?: Record<string, { items?: DestinyProfileItem[] }> };
-    characterEquipment?: { data?: Record<string, { items?: DestinyProfileItem[] }> };
-    characters?: { data?: Record<string, DestinyCharacter> };
-    itemComponents?: {
-        stats?: { data?: Record<string, { stats?: Record<string, { value?: number }> }> };
-        sockets?: { data?: Record<string, { sockets?: Array<{ plugHash?: number }> }> };
-        reusablePlugs?: {
-            data?: Record<
-                string,
-                {
-                    plugs?: Record<string, Array<{ plugItemHash?: number; canInsert?: boolean; enabled?: boolean }>>;
-                }
-            >;
-        };
-        perks?: { data?: Record<string, { perks?: Array<{ perkHash?: number }> }> };
-        instances?: {
-            data?: Record<string, { primaryStat?: { value?: number }; quality?: number; gearTier?: number; [key: string]: unknown }>;
-        };
-        [key: string]: unknown;
-    };
-};
-
-export type DestinyProfileItem = {
-    itemHash: number;
-    itemInstanceId?: string;
-    bucketHash?: number;
-    location?: number;
-    transferStatus?: number;
-    bindStatus?: number;
-    [key: string]: unknown;
-};
-
-export type DestinyCharacter = {
-    classType: number;
-    light?: number;
-    stats?: Record<string, number>;
-    emblemHash?: number;
-    [key: string]: unknown;
-};
-
-export type ManifestInventoryItemDefinition = {
-    hash?: number;
-    displayProperties?: {
-        name?: string;
-        description?: string;
-        icon?: string;
-    };
-    itemType?: number;
-    itemSubType?: number;
-    classType?: number;
-    itemCategoryHashes?: number[];
-    inventory?: {
-        bucketTypeHash?: number;
-        tierType?: number;
-        tierTypeName?: string;
-    };
-    equippingBlock?: {
-        equipableItemSetHash?: number;
-        [key: string]: unknown;
-    };
-    investmentStats?: Array<{
-        statTypeHash: number;
-        value: number;
-    }>;
-    sockets?: {
-        socketEntries?: Array<{
-            singleInitialItemHash?: number;
-            reusablePlugItems?: Array<{ plugItemHash?: number }>;
-            randomPlugSetHash?: number;
-            reusablePlugSetHash?: number;
-            socketTypeHash?: number;
-        }>;
-    };
-    plug?: {
-        plugCategoryIdentifier?: string;
-        plugCategoryHash?: number;
-    };
-    perks?: Array<{
-        perkHash?: number;
-        requirementDisplayString?: string;
-    }>;
-    [key: string]: unknown;
-};
-
-export type ManifestEquipableItemSetDefinition = {
-    hash?: number;
-    displayProperties?: {
-        name?: string;
-        description?: string;
-        icon?: string;
-    };
-    setItems?: number[];
-    setPerks?: Array<{
-        requiredSetCount?: number;
-        sandboxPerkHash?: number;
-    }>;
-    redacted?: boolean;
-    [key: string]: unknown;
-};
-
-export type ManifestSandboxPerkDefinition = {
-    hash?: number;
-    displayProperties?: {
-        name?: string;
-        description?: string;
-        icon?: string;
-    };
-    [key: string]: unknown;
-};
-
-export type ManifestResponse<T> = {
-    Response?: T;
-    ErrorCode?: number;
-    ErrorStatus?: string;
-    Message?: string;
-};
-
-export type DestinyManifest = {
-    version?: string;
-    jsonWorldComponentContentPaths?: Record<string, Record<string, string>>;
-    mobileWorldContentPaths?: Record<string, string>;
-    [key: string]: unknown;
+    selectedMembership?: SelectedDestinyMembership;
+    membershipsResponse?: ServerResponse<UserMembershipData>;
+    profileResponse?: ServerResponse<DestinyProfileResponse>;
 };
 
 export type ManifestResolver = {
-    getInventoryItem(hash: number): Promise<ManifestInventoryItemDefinition | null>;
+    getInventoryItem(hash: number): Promise<DestinyInventoryItemDefinition | null>;
     getEquipableItemSetDefinitions?(): LoadedManifestEquipableItemSetDefinition[];
-    getSandboxPerk?(hash: number): Promise<ManifestSandboxPerkDefinition | null>;
+    getSandboxPerk?(hash: number): Promise<DestinySandboxPerkDefinition | null>;
 };
 
 export type LoadedManifestDefinition = {
     hash: number;
-    definition: ManifestInventoryItemDefinition;
+    definition: DestinyInventoryItemDefinition;
 };
 
 export type LoadedManifestEquipableItemSetDefinition = {
     hash: number;
-    definition: ManifestEquipableItemSetDefinition;
+    definition: DestinyEquipableItemSetDefinition;
 };
 
 export type LoadedManifestResolver = ManifestResolver & {

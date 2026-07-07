@@ -81,6 +81,7 @@ export const SUBCLASS_FRAGMENTS: SubclassFragment[] = [
 
 const FRAGMENTS_BY_ID = new Map(SUBCLASS_FRAGMENTS.map((fragment) => [fragment.id, fragment]));
 const FRAGMENTS_BY_HASH = new Map(SUBCLASS_FRAGMENTS.map((fragment) => [fragment.hash, fragment]));
+const STAT_SORT_ORDER = new Map(ARMOR_STATS.map((stat, index) => [stat, index]));
 
 const SUBCLASS_NAME_MATCHERS: Array<{ subclass: SubclassType; names: string[] }> = [
     { subclass: 'Prismatic', names: ['prismatic'] },
@@ -116,7 +117,7 @@ export function sanitizeFragmentIds(ids: unknown, subclass: SubclassType) {
 }
 
 export function fragmentsForSubclass(subclass: SubclassType) {
-    return SUBCLASS_FRAGMENTS.filter((fragment) => fragment.subclass === subclass);
+    return [...SUBCLASS_FRAGMENTS.filter((fragment) => fragment.subclass === subclass)].sort(compareFragmentsByStat);
 }
 
 export function getFragmentByHash(hash: number) {
@@ -161,6 +162,46 @@ function emptyStats(): StatVector {
         class: 0,
         weapons: 0
     };
+}
+
+function compareFragmentsByStat(left: SubclassFragment, right: SubclassFragment) {
+    const leftPrimaryStat = primaryFragmentStat(left);
+    const rightPrimaryStat = primaryFragmentStat(right);
+    const statDifference = statSortIndex(leftPrimaryStat) - statSortIndex(rightPrimaryStat);
+    if (statDifference !== 0) {
+        return statDifference;
+    }
+
+    const valueDifference = primaryFragmentValue(right, rightPrimaryStat) - primaryFragmentValue(left, leftPrimaryStat);
+    if (valueDifference !== 0) {
+        return valueDifference;
+    }
+
+    return left.name.localeCompare(right.name);
+}
+
+function primaryFragmentStat(fragment: SubclassFragment) {
+    let bestStat: ArmorStat | null = null;
+
+    for (const stat of ARMOR_STATS) {
+        if (!fragment.bonuses[stat]) {
+            continue;
+        }
+
+        if (!bestStat || statSortIndex(stat) < statSortIndex(bestStat)) {
+            bestStat = stat;
+        }
+    }
+
+    return bestStat;
+}
+
+function primaryFragmentValue(fragment: SubclassFragment, stat: ArmorStat | null) {
+    return stat ? (fragment.bonuses[stat] ?? 0) : 0;
+}
+
+function statSortIndex(stat: ArmorStat | null) {
+    return stat ? (STAT_SORT_ORDER.get(stat) ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
 }
 
 export function formatFragmentBonus(fragment: SubclassFragment) {

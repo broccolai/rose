@@ -15,14 +15,18 @@ import {
     type StatVector,
     subtractStats
 } from '@armor-calc';
+import type {
+    DestinyEquipableItemSetDefinition,
+    DestinyInventoryItemDefinition,
+    DestinyItemComponent,
+    DestinyItemSocketState,
+    DestinyItemStatsComponent
+} from 'bungie-api-ts/destiny2';
 
 import { CLASS_BY_BUNGIE_CLASS_TYPE, CLASS_LABELS, STAT_BY_HASH } from '@/features/armor/stat-hashes';
 import type {
     ArmorSetBonusInfo,
     ArmorSetCatalogEntry,
-    DestinyProfileItem,
-    ManifestEquipableItemSetDefinition,
-    ManifestInventoryItemDefinition,
     ManifestResolver,
     NormalizedArmorProfile,
     NormalizeVaultExportOptions,
@@ -111,7 +115,7 @@ export async function normalizeVaultExport(
     };
 }
 
-export function collectProfileItems(snapshot: VaultExportSnapshot): DestinyProfileItem[] {
+export function collectProfileItems(snapshot: VaultExportSnapshot): DestinyItemComponent[] {
     const profile = snapshot.profileResponse?.Response;
     if (!profile) {
         return [];
@@ -120,7 +124,7 @@ export function collectProfileItems(snapshot: VaultExportSnapshot): DestinyProfi
     const inventoryItems = profile.profileInventory?.data?.items ?? [];
     const characterInventoryItems = Object.values(profile.characterInventories?.data ?? {}).flatMap((bucket) => bucket.items ?? []);
     const equippedItems = Object.values(profile.characterEquipment?.data ?? {}).flatMap((bucket) => bucket.items ?? []);
-    const byInstanceId = new Map<string, DestinyProfileItem>();
+    const byInstanceId = new Map<string, DestinyItemComponent>();
 
     for (const item of [...inventoryItems, ...characterInventoryItems, ...equippedItems]) {
         if (item.itemInstanceId) {
@@ -141,8 +145,8 @@ function hasArmorStatComponent(profile: NonNullable<VaultExportSnapshot['profile
 }
 
 async function normalizeArmorItem(
-    item: DestinyProfileItem,
-    definition: ManifestInventoryItemDefinition | null,
+    item: DestinyItemComponent,
+    definition: DestinyInventoryItemDefinition | null,
     snapshot: VaultExportSnapshot,
     manifest: ManifestResolver,
     warnings: string[]
@@ -271,7 +275,7 @@ async function buildArmorSetCatalog(manifest: ManifestResolver, ownedArmor: Armo
                     item
                 ): item is {
                     itemHash: number;
-                    definition: ManifestInventoryItemDefinition;
+                    definition: DestinyInventoryItemDefinition;
                     slot: ArmorSlot;
                 } => item.definition?.itemType === ARMOR_ITEM_TYPE && item.slot !== null
             );
@@ -305,7 +309,7 @@ async function buildArmorSetCatalog(manifest: ManifestResolver, ownedArmor: Armo
     return catalog.sort((left, right) => left.name.localeCompare(right.name));
 }
 
-async function readArmorSetBonuses(definition: ManifestEquipableItemSetDefinition, manifest: ManifestResolver) {
+async function readArmorSetBonuses(definition: DestinyEquipableItemSetDefinition, manifest: ManifestResolver) {
     const bonuses: ArmorSetBonusInfo[] = [];
 
     for (const setPerk of definition.setPerks ?? []) {
@@ -337,7 +341,7 @@ function uniqueArmorSlots(slots: ArmorSlot[]) {
     return ARMOR_SLOTS.filter((slot) => slots.includes(slot));
 }
 
-function readItemStats(stats: Record<string, { value?: number }>): StatVector {
+function readItemStats(stats: DestinyItemStatsComponent['stats']): StatVector {
     const normalized = emptyStats();
 
     for (const [statHash, statValue] of Object.entries(stats)) {
@@ -399,7 +403,7 @@ function hasModernArmorStatShape(stats: StatVector) {
     return ARMOR_STATS.every((stat) => stats[stat] % 5 === 0);
 }
 
-async function readSocketedStatAdjustments(sockets: Array<{ plugHash?: number }>, manifest: ManifestResolver) {
+async function readSocketedStatAdjustments(sockets: DestinyItemSocketState[], manifest: ManifestResolver) {
     const adjustments: StatAdjustment[] = [];
 
     for (const socket of sockets) {
@@ -418,11 +422,11 @@ async function readSocketedStatAdjustments(sockets: Array<{ plugHash?: number }>
     return adjustments;
 }
 
-async function readSocketedMasterworkAdjustment(sockets: Array<{ plugHash?: number }>, manifest: ManifestResolver) {
+async function readSocketedMasterworkAdjustment(sockets: DestinyItemSocketState[], manifest: ManifestResolver) {
     return sumAdjustments(await readMasterworkAdjustmentsFromSockets(sockets, manifest));
 }
 
-async function readMasterworkAdjustmentsFromSockets(sockets: Array<{ plugHash?: number }>, manifest: ManifestResolver) {
+async function readMasterworkAdjustmentsFromSockets(sockets: DestinyItemSocketState[], manifest: ManifestResolver) {
     const adjustments: StatAdjustment[] = [];
 
     for (const socket of sockets) {
@@ -443,7 +447,7 @@ async function readMasterworkAdjustmentsFromSockets(sockets: Array<{ plugHash?: 
 
 async function readTuningOptions(
     itemInstanceId: string,
-    sockets: Array<{ plugHash?: number }>,
+    sockets: DestinyItemSocketState[],
     profile: NonNullable<VaultExportSnapshot['profileResponse']>['Response'] | undefined,
     manifest: ManifestResolver,
     baseStats: StatVector,
@@ -459,7 +463,7 @@ async function readTuningOptions(
     options.set(NO_TUNING.id, NO_TUNING);
 
     for (const socketIndex of tuningSocketIndexes) {
-        for (const plug of reusablePlugs[String(socketIndex)] ?? []) {
+        for (const plug of reusablePlugs[socketIndex] ?? []) {
             if (!plug.plugItemHash || plug.canInsert === false || plug.enabled === false) {
                 continue;
             }
@@ -480,16 +484,16 @@ async function readTuningOptions(
     return createTierFiveTuningOptions({ baseStats, tier: 5 });
 }
 
-async function hasSocketPlugCategory(sockets: Array<{ plugHash?: number }>, manifest: ManifestResolver, category: string) {
+async function hasSocketPlugCategory(sockets: DestinyItemSocketState[], manifest: ManifestResolver, category: string) {
     return (await socketIndexesForPlugCategory(sockets, manifest, category)).length > 0;
 }
 
-async function socketIndexesForPlugCategory(sockets: Array<{ plugHash?: number }>, manifest: ManifestResolver, category: string) {
+async function socketIndexesForPlugCategory(sockets: DestinyItemSocketState[], manifest: ManifestResolver, category: string) {
     return socketIndexesMatchingPlugCategory(sockets, manifest, (plugCategory) => plugCategory === category);
 }
 
 async function socketIndexesMatchingPlugCategory(
-    sockets: Array<{ plugHash?: number }>,
+    sockets: DestinyItemSocketState[],
     manifest: ManifestResolver,
     matchesCategory: (plugCategory: string) => boolean
 ) {
@@ -509,7 +513,7 @@ async function socketIndexesMatchingPlugCategory(
     return indexes;
 }
 
-function statAdjustmentFromDefinition(definition: ManifestInventoryItemDefinition): StatAdjustment | null {
+function statAdjustmentFromDefinition(definition: DestinyInventoryItemDefinition): StatAdjustment | null {
     const name = definition.displayProperties?.name ?? `Plug ${definition.hash ?? 'unknown'}`;
     const plugCategory = definition.plug?.plugCategoryIdentifier ?? '';
     if (plugCategory === ARMOR_STATS_PLUG_CATEGORY || plugCategory.startsWith(MASTERWORK_PLUG_CATEGORY_PREFIX)) {
@@ -526,7 +530,7 @@ function statAdjustmentFromDefinition(definition: ManifestInventoryItemDefinitio
     return statAdjustmentFromInvestmentStats(definition, name);
 }
 
-function masterworkAdjustmentFromDefinition(definition: ManifestInventoryItemDefinition): StatAdjustment | null {
+function masterworkAdjustmentFromDefinition(definition: DestinyInventoryItemDefinition): StatAdjustment | null {
     const plugCategory = definition.plug?.plugCategoryIdentifier ?? '';
     if (!plugCategory.startsWith(MASTERWORK_PLUG_CATEGORY_PREFIX)) {
         return null;
@@ -536,7 +540,7 @@ function masterworkAdjustmentFromDefinition(definition: ManifestInventoryItemDef
     return statAdjustmentFromInvestmentStats(definition, name);
 }
 
-function statAdjustmentFromInvestmentStats(definition: ManifestInventoryItemDefinition, name: string): StatAdjustment | null {
+function statAdjustmentFromInvestmentStats(definition: DestinyInventoryItemDefinition, name: string): StatAdjustment | null {
     const deltas = emptyStats();
     let hasDelta = false;
 
@@ -585,7 +589,7 @@ function isZeroAdjustment(adjustment: StatAdjustment) {
     return ARMOR_STATS.every((stat) => (adjustment.deltas[stat] ?? 0) === 0);
 }
 
-function getArmorSlot(definition: ManifestInventoryItemDefinition): ArmorSlot | null {
+function getArmorSlot(definition: DestinyInventoryItemDefinition): ArmorSlot | null {
     const bucketHash = definition.inventory?.bucketTypeHash;
     return bucketHash ? (BUCKET_SLOT_BY_HASH[bucketHash] ?? null) : null;
 }
@@ -594,7 +598,7 @@ function normalizeClass(classType?: number): DestinyClass {
     return classType === undefined ? 'any' : (CLASS_BY_BUNGIE_CLASS_TYPE[classType] ?? 'any');
 }
 
-function inferArmorTier(definition: ManifestInventoryItemDefinition): 1 | 2 | 3 | 4 | 5 | undefined {
+function inferArmorTier(definition: DestinyInventoryItemDefinition): 1 | 2 | 3 | 4 | 5 | undefined {
     const text = stringifyDefinitionSearchText(definition);
     const match = text.match(/\b(?:tier|t)\s*([1-5])\b/i);
     const tier = match?.[1] ? Number(match[1]) : undefined;
@@ -602,7 +606,7 @@ function inferArmorTier(definition: ManifestInventoryItemDefinition): 1 | 2 | 3 
     return tier === 1 || tier === 2 || tier === 3 || tier === 4 || tier === 5 ? tier : undefined;
 }
 
-function inferArmorSet(definition: ManifestInventoryItemDefinition, fallbackName?: string): ArmorSetInfo | undefined {
+function inferArmorSet(definition: DestinyInventoryItemDefinition, fallbackName?: string): ArmorSetInfo | undefined {
     const setHash = definition.equippingBlock?.equipableItemSetHash;
 
     if (!Number.isFinite(setHash)) {
@@ -616,7 +620,7 @@ function inferArmorSet(definition: ManifestInventoryItemDefinition, fallbackName
     };
 }
 
-function stringifyDefinitionSearchText(definition: ManifestInventoryItemDefinition) {
+function stringifyDefinitionSearchText(definition: DestinyInventoryItemDefinition) {
     const textParts = [
         definition.displayProperties?.name,
         definition.displayProperties?.description,

@@ -12,9 +12,18 @@ import {
     type StatAdjustment,
     type StatVector
 } from '@armor-calc';
+import type {
+    DestinyInventoryItemDefinition,
+    DestinyItemComponent,
+    DestinyItemInstanceComponent,
+    DestinyItemSocketsComponent,
+    DestinyItemStatsComponent
+} from 'bungie-api-ts/destiny2';
+import type { UserMembershipData } from 'bungie-api-ts/user';
 import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
 import {
+    applySetSelectionLimit,
     type CalculatorPreferences,
     clampTarget,
     clearCalculatorPreferences,
@@ -68,12 +77,7 @@ import {
     snapStatTarget,
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
-import type {
-    LoadedManifestDefinition,
-    ManifestInventoryItemDefinition,
-    NormalizedArmorProfile,
-    VaultExportSnapshot
-} from '@/features/armor/types';
+import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
 import {
     downloadJsonFile,
     equipDestinyItems,
@@ -86,9 +90,11 @@ import { getMissingConfigKeys } from '@/features/bungie/config';
 import { type BungieToken, createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
+type BackgroundSolveStatus = 'idle' | 'queued' | 'running';
 
 const SOLVER_RESULT_POOL_LIMIT = 30_000;
 const VISIBLE_RESULT_LIMIT = 25;
+const BACKGROUND_SOLVE_DELAY_MS = 220;
 const BALANCED_TUNING_ENABLED = true;
 const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
 const DEV_TIMING = import.meta.env.DEV;
@@ -101,31 +107,18 @@ const DEFAULT_SOCKET_ARRAY_TYPE = 0;
 const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 const SUBCLASS_BUCKET_HASH = 3284755031;
 
-type CachedBungieUser = {
-    cachedBungieGlobalDisplayName?: string;
-    displayName?: string;
-    profilePicturePath?: string;
-    uniqueName?: string;
-};
-
-type CachedMembershipsResponse = {
-    Response?: {
-        bungieNetUser?: CachedBungieUser;
-    };
-};
-
 type LoadedBenchmarkBundle = {
     vaultSnapshot?: VaultExportSnapshot;
     normalizedProfile?: NormalizedArmorProfile;
     loadedManifestDefinitions?: LoadedManifestDefinition[];
     manifest?: {
-        inventoryItemDefinitions?: Record<string, ManifestInventoryItemDefinition>;
+        inventoryItemDefinitions?: Record<string, DestinyInventoryItemDefinition>;
     };
 };
 
-type DebugStatComponents = Record<string, { stats?: Record<string, { value?: number }> }>;
-type DebugSocketComponents = Record<string, { sockets?: Array<{ plugHash?: number }> }>;
-type DebugInstanceComponents = Record<string, { gearTier?: number; [key: string]: unknown }>;
+type DebugStatComponents = Record<string, DestinyItemStatsComponent>;
+type DebugSocketComponents = Record<string, DestinyItemSocketsComponent>;
+type DebugInstanceComponents = Record<string, DestinyItemInstanceComponent>;
 type EquippedSubclassImport = {
     subclass: SubclassType;
     fragmentIds: string[];
@@ -138,24 +131,24 @@ type EquipItemLocation =
     | {
           location: 'selected-character';
           rank: number;
-          item: { itemHash: number; itemInstanceId?: string };
+          item: DestinyItemComponent;
       }
     | {
           location: 'vault';
           rank: number;
-          item: { itemHash: number; itemInstanceId?: string };
+          item: DestinyItemComponent;
       }
     | {
           location: 'other-character';
           rank: number;
           characterId: string;
-          item: { itemHash: number; itemInstanceId?: string };
+          item: DestinyItemComponent;
       }
     | {
           location: 'other-character-equipped';
           rank: number;
           characterId: string;
-          item: { itemHash: number; itemInstanceId?: string };
+          item: DestinyItemComponent;
       };
 type EquipProgressUpdate = {
     slot?: ArmorSlot;
@@ -163,12 +156,12 @@ type EquipProgressUpdate = {
     detail: string;
 };
 
-function readBungieUser(snapshot: VaultExportSnapshot | null): CachedBungieUser | undefined {
-    return (snapshot?.membershipsResponse as CachedMembershipsResponse | undefined)?.Response?.bungieNetUser;
+function readBungieUser(snapshot: VaultExportSnapshot | null): UserMembershipData['bungieNetUser'] | undefined {
+    return snapshot?.membershipsResponse?.Response?.bungieNetUser;
 }
 
 function readSnapshotMembershipType(snapshot: VaultExportSnapshot | null) {
-    const membershipType = (snapshot?.selectedMembership as { membershipType?: unknown } | undefined)?.membershipType;
+    const membershipType = snapshot?.selectedMembership?.membershipType;
     return typeof membershipType === 'number' ? membershipType : null;
 }
 
@@ -422,7 +415,7 @@ function createDebugArmorInstanceReport(
     statComponents: DebugStatComponents,
     socketComponents: DebugSocketComponents,
     instanceComponents: DebugInstanceComponents,
-    definitionByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionByHash: Map<number, DestinyInventoryItemDefinition>
 ) {
     const rawStats = readDebugStats(statComponents?.[itemInstanceId]?.stats ?? {});
     const sockets = socketComponents?.[itemInstanceId]?.sockets ?? [];
@@ -459,7 +452,7 @@ function createDebugArmorInstanceReport(
 function createDebugSocketReport(
     plugHash: number | undefined,
     socketIndex: number,
-    definitionByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionByHash: Map<number, DestinyInventoryItemDefinition>
 ) {
     const definition = plugHash ? definitionByHash.get(plugHash) : undefined;
 
@@ -473,7 +466,7 @@ function createDebugSocketReport(
     };
 }
 
-function readDebugStats(stats: Record<string, { value?: number }>): StatVector {
+function readDebugStats(stats: DestinyItemStatsComponent['stats']): StatVector {
     const normalized = emptyDebugStats();
 
     for (const [statHash, statValue] of Object.entries(stats)) {
@@ -486,7 +479,7 @@ function readDebugStats(stats: Record<string, { value?: number }>): StatVector {
     return normalized;
 }
 
-function readDebugInvestmentStats(definition: ManifestInventoryItemDefinition): StatVector {
+function readDebugInvestmentStats(definition: DestinyInventoryItemDefinition): StatVector {
     const normalized = emptyDebugStats();
 
     for (const investmentStat of definition.investmentStats ?? []) {
@@ -539,7 +532,7 @@ function statVectorMatchesAdjustment(stats: StatVector, adjustment: StatAdjustme
 }
 
 function definitionMatchesAdjustment(
-    definition: ManifestInventoryItemDefinition | undefined,
+    definition: DestinyInventoryItemDefinition | undefined,
     plugCategory: string,
     adjustment: StatAdjustment
 ) {
@@ -565,7 +558,7 @@ function readReusablePlugHashes(
     options: { includeUnavailable?: boolean } = {}
 ) {
     const plugs = snapshot.profileResponse?.Response?.itemComponents?.reusablePlugs?.data?.[itemInstanceId]?.plugs ?? {};
-    return (plugs[String(socketIndex)] ?? [])
+    return (plugs[socketIndex] ?? [])
         .filter((plug) => options.includeUnavailable || (plug.canInsert !== false && plug.enabled !== false))
         .map((plug) => plug.plugItemHash)
         .filter((hash): hash is number => typeof hash === 'number');
@@ -595,7 +588,7 @@ function collectItemSocketPlugHashes(snapshot: VaultExportSnapshot, itemInstance
     return [...hashes];
 }
 
-function isEmptySocketPlug(definition: ManifestInventoryItemDefinition | undefined) {
+function isEmptySocketPlug(definition: DestinyInventoryItemDefinition | undefined) {
     const name = definition?.displayProperties?.name?.toLowerCase() ?? '';
     return name.includes('empty') && definition ? statTotalDebug(readDebugInvestmentStats(definition)) === 0 : false;
 }
@@ -608,7 +601,7 @@ function findEmptyPlugHashForSocket(
     snapshot: VaultExportSnapshot,
     itemInstanceId: string,
     socketIndex: number,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>
 ) {
     return (
         readReusablePlugHashes(snapshot, itemInstanceId, socketIndex, { includeUnavailable: true }).find((plugHash) =>
@@ -620,7 +613,7 @@ function findEmptyPlugHashForSocket(
 function readClearableArmorModSockets(
     snapshot: VaultExportSnapshot,
     itemInstanceId: string,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>
 ) {
     const sockets = snapshot.profileResponse?.Response?.itemComponents?.sockets?.data?.[itemInstanceId]?.sockets ?? [];
     return sockets
@@ -653,7 +646,7 @@ function currentSocketMatchesAdjustment(
     socketIndex: number,
     plugCategory: string,
     adjustment: StatAdjustment,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>
 ) {
     const currentPlugHash = readItemSocketPlugHash(snapshot, itemInstanceId, socketIndex);
     return currentPlugHash ? definitionMatchesAdjustment(definitionsByHash.get(currentPlugHash), plugCategory, adjustment) : false;
@@ -662,7 +655,7 @@ function currentSocketMatchesAdjustment(
 function findSocketIndexForPlugCategory(
     snapshot: VaultExportSnapshot,
     itemInstanceId: string,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>,
     plugCategory: string
 ) {
     const sockets = snapshot.profileResponse?.Response?.itemComponents?.sockets?.data?.[itemInstanceId]?.sockets ?? [];
@@ -695,7 +688,7 @@ function findPlugHashForAdjustment(
     socketIndex: number,
     plugCategory: string,
     adjustment: StatAdjustment,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>,
     categoryDefinitions: LoadedManifestDefinition[]
 ) {
     const directPlugHash = parsePlugHashFromAdjustment(adjustment);
@@ -886,7 +879,7 @@ async function clearOtherArmorMods(
     membershipType: number,
     characterId: string,
     item: ArmorItem,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    definitionsByHash: Map<number, DestinyInventoryItemDefinition>,
     onProgress: ((update: EquipProgressUpdate) => void) | undefined,
     slot: ArmorSlot
 ) {
@@ -988,7 +981,7 @@ async function readEquippedSubclassImport(
     snapshot: VaultExportSnapshot,
     characterId: string,
     definitions: LoadedManifestDefinition[],
-    loadDefinition: (hash: number) => Promise<ManifestInventoryItemDefinition | null>
+    loadDefinition: (hash: number) => Promise<DestinyInventoryItemDefinition | null>
 ): Promise<EquippedSubclassImport | null> {
     const profile = snapshot.profileResponse?.Response;
     const equippedItems = profile?.characterEquipment?.data?.[characterId]?.items ?? [];
@@ -1047,6 +1040,8 @@ async function readEquippedSubclassImport(
 export default function Home() {
     let targetCapRequestId = 0;
     let solveRequestId = 0;
+    let backgroundSolveTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+    let backgroundSolveRefreshRequested = false;
     let debugExportChordActive = false;
     let solveInvalidationSuspended = 0;
     const armorSolver = createArmorSolverClient();
@@ -1074,8 +1069,10 @@ export default function Home() {
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
     const [targetCaps, setTargetCaps] = createSignal<StatVector>({ ...MAX_STAT_TARGET_CAPS });
     const [targetCapsPending, setTargetCapsPending] = createSignal(false);
+    const [targetCapCalculationActive, setTargetCapCalculationActive] = createSignal(false);
     const [targetCapPriorityStat, setTargetCapPriorityStat] = createSignal<ArmorStat | null>(null);
     const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
+    const [backgroundSolveStatus, setBackgroundSolveStatus] = createSignal<BackgroundSolveStatus>('idle');
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
@@ -1098,6 +1095,7 @@ export default function Home() {
     });
     const resultFailure = createMemo(() => getResultFailure(solveResult()));
     const showTuningResults = createMemo(() => true);
+    const backgroundSolveActive = createMemo(() => backgroundSolveStatus() !== 'idle');
     const calculatorLocked = createMemo(() => !AUTH_LOCK_DISABLED && !isLocalDevHost() && !authenticated());
     const bungieUser = createMemo(() => readBungieUser(loadedSnapshot()));
     const avatarUrl = createMemo(() => absoluteBungieAssetUrl(bungieUser()?.profilePicturePath));
@@ -1152,6 +1150,45 @@ export default function Home() {
         return targetCapRequestId;
     }
 
+    function clearBackgroundSolveTimer() {
+        if (backgroundSolveTimer === null) {
+            return;
+        }
+
+        globalThis.clearTimeout(backgroundSolveTimer);
+        backgroundSolveTimer = null;
+    }
+
+    function setBackgroundSolveProgress(status: BackgroundSolveStatus) {
+        setBackgroundSolveStatus(status);
+
+        if (status === 'idle') {
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            return;
+        }
+
+        setLoadProgress({
+            active: true,
+            label: status === 'queued' ? 'Queued solve' : 'Solving builds',
+            current: 0,
+            total: 0,
+            percent: status === 'queued' ? 16 : 45
+        });
+    }
+
+    function queueBackgroundSolve() {
+        if (!backgroundSolveRefreshRequested || equipOperationActive()) {
+            return;
+        }
+
+        clearBackgroundSolveTimer();
+        setBackgroundSolveProgress('queued');
+        backgroundSolveTimer = globalThis.setTimeout(() => {
+            backgroundSolveTimer = null;
+            void runBackgroundSolve();
+        }, BACKGROUND_SOLVE_DELAY_MS);
+    }
+
     async function calculateTargetCapsIncrementally(
         input: ArmorStatTargetCapsInput,
         requestId: number,
@@ -1192,6 +1229,7 @@ export default function Home() {
                     setNextTargetCapRefreshBackground(true);
                     setTargets((current) => clampTargetsToCaps(current, verifiedCaps, dumpStat(), effectiveAllowBalancedTuning()));
                     invalidateSolve();
+                    setTargetCapCalculationActive(false);
                     logDevTiming('priority cap clamped target', {
                         requestId,
                         priorityStat,
@@ -1221,6 +1259,7 @@ export default function Home() {
             });
             if (requestId === targetCapRequestId) {
                 setTargetCapsPending(false);
+                setTargetCapCalculationActive(false);
                 logDevTiming('cap batch completed', {
                     requestId,
                     ms: elapsedMs(startedAt),
@@ -1254,6 +1293,7 @@ export default function Home() {
 
             setMessage(error instanceof Error ? error.message : 'Unknown armor stat cap worker failure.');
             setTargetCapsPending(false);
+            setTargetCapCalculationActive(false);
             logDevTiming('cap batch failed', {
                 requestId,
                 ms: elapsedMs(startedAt),
@@ -1271,8 +1311,14 @@ export default function Home() {
         }
 
         solveRequestId += 1;
+        clearBackgroundSolveTimer();
         setSolveResult(null);
         setExpandedBuildKey(null);
+        if (backgroundSolveRefreshRequested) {
+            queueBackgroundSolve();
+        } else {
+            setBackgroundSolveProgress('idle');
+        }
     }
 
     async function preserveSolveDuring<T>(operation: () => Promise<T>) {
@@ -1335,6 +1381,7 @@ export default function Home() {
         setTargets({ ...EMPTY_STAT_TARGETS });
         setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
         setTargetCapsPending(false);
+        setTargetCapCalculationActive(false);
         setTargetCapPriorityStat(null);
         setNextTargetCapRefreshBackground(false);
         setSetSelections({});
@@ -1348,6 +1395,7 @@ export default function Home() {
 
         setSelectedCharacterId(characterId);
         resetBuildChoices();
+        backgroundSolveRefreshRequested = false;
         invalidateSolve();
     }
 
@@ -1451,6 +1499,7 @@ export default function Home() {
     });
 
     onCleanup(() => {
+        clearBackgroundSolveTimer();
         armorSolver.dispose();
     });
 
@@ -1540,14 +1589,30 @@ export default function Home() {
         if (!input) {
             setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
             setTargetCapsPending(false);
+            setTargetCapCalculationActive(false);
             return;
         }
 
         const initialCaps = createPendingTargetCaps(untrack(targets), currentDumpStat);
         setTargetCaps(initialCaps);
         setTargetCapsPending(!backgroundOnly);
+        setTargetCapCalculationActive(true);
 
         void calculateTargetCapsIncrementally(input, requestId, initialCaps, priorityStat);
+    });
+
+    createEffect(() => {
+        if (
+            !backgroundSolveRefreshRequested ||
+            backgroundSolveStatus() !== 'queued' ||
+            targetCapsPending() ||
+            targetCapCalculationActive() ||
+            backgroundSolveTimer !== null
+        ) {
+            return;
+        }
+
+        queueBackgroundSolve();
     });
 
     function signIn() {
@@ -1870,25 +1935,32 @@ export default function Home() {
         };
     }
 
-    async function solveCurrentBuilds() {
+    function solveCurrentBuilds() {
+        backgroundSolveRefreshRequested = true;
+        queueBackgroundSolve();
+    }
+
+    async function runBackgroundSolve() {
         const profile = calculatorProfile();
         const character = selectedCharacter();
 
         if (!profile || !character) {
             setStatus('error');
+            backgroundSolveRefreshRequested = false;
+            setBackgroundSolveProgress('idle');
             setMessage('Load calculator data before solving.');
             return;
         }
 
-        if (targetCapsPending()) {
-            setMessage('Waiting for stat caps to finish updating.');
+        if (targetCapsPending() || targetCapCalculationActive()) {
+            clearBackgroundSolveTimer();
+            setBackgroundSolveProgress('queued');
             return;
         }
 
         if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat(), effectiveAllowBalancedTuning())) {
             setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat(), effectiveAllowBalancedTuning()));
             invalidateSolve();
-            setMessage('Stat targets were adjusted to verified caps. Solve again.');
             return;
         }
 
@@ -1903,14 +1975,7 @@ export default function Home() {
             setRequirements: selectedSetRequirements().length,
             armorCounts: armorSlotCounts(solveInput)
         });
-        setStatus('solving');
-        setLoadProgress({
-            active: true,
-            label: 'Solving builds',
-            current: 0,
-            total: 0,
-            percent: 35
-        });
+        setBackgroundSolveProgress('running');
         let result: SolveArmorResult;
         try {
             result = await armorSolver.solve(solveInput);
@@ -1925,7 +1990,8 @@ export default function Home() {
             }
 
             setStatus('error');
-            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            backgroundSolveRefreshRequested = false;
+            setBackgroundSolveProgress('idle');
             setMessage(error instanceof Error ? error.message : 'Unknown armor solver worker failure.');
             logDevTiming('solve failed', {
                 requestId,
@@ -1946,7 +2012,7 @@ export default function Home() {
 
         setSolveResult(result);
         setStatus(result.ok ? 'done' : 'error');
-        setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+        setBackgroundSolveProgress('idle');
         setMessage(
             result.ok
                 ? [
@@ -2300,10 +2366,7 @@ export default function Home() {
     }
 
     function updateSetRequirement(setId: string, value: string) {
-        setSetSelections((current) => ({
-            ...current,
-            [setId]: value === '2' || value === '4' ? value : '0'
-        }));
+        setSetSelections((current) => applySetSelectionLimit(current, setId, value === '2' || value === '4' ? value : '0'));
         invalidateSolve();
     }
 
@@ -2339,6 +2402,7 @@ export default function Home() {
     function clearSavedCalculatorChoices() {
         clearCalculatorPreferences();
         resetBuildChoices();
+        backgroundSolveRefreshRequested = false;
         invalidateSolve();
         setStatus('idle');
         setMessage('Calculator choices cleared.');
@@ -2376,7 +2440,7 @@ export default function Home() {
                         availableExotics={availableExotics()}
                         selectableSets={selectableSets()}
                         canSolve={!calculatorLocked() && Boolean(normalizedProfile()) && status() !== 'loading' && !targetCapsPending()}
-                        solving={status() === 'loading' || status() === 'solving'}
+                        solving={status() === 'loading' || backgroundSolveActive()}
                         onCharacterSelect={selectCharacter}
                         onArmorSetDisplayModeChange={setArmorSetDisplayMode}
                         onSubclassChange={updateSubclass}
@@ -2410,7 +2474,7 @@ export default function Home() {
                         resultFailure={resultFailure()}
                         sort={resultSort()}
                         dumpStat={dumpStat()}
-                        loading={status() === 'loading' || status() === 'solving'}
+                        loading={status() === 'loading' || backgroundSolveActive()}
                         progress={loadProgress()}
                         showTuningResults={showTuningResults()}
                         visibleLimit={VISIBLE_RESULT_LIMIT}

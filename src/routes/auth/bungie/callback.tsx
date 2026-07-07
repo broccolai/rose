@@ -1,28 +1,34 @@
-import { css } from '@panda/css';
+import { styled } from '@panda/jsx';
 import { createSignal, onMount } from 'solid-js';
 
 import { exchangeAuthorizationCode, takeStoredOAuthState } from '@/features/bungie/oauth';
 
-const page = css({
-    minH: '100vh',
-    display: 'grid',
-    placeItems: 'center',
-    p: '20px'
+const Page = styled('main', {
+    base: {
+        minH: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        p: '20px'
+    }
 });
 
-const panel = css({
-    w: 'min(560px, 100%)',
-    p: '24px',
-    bg: 'panel',
-    border: '1px solid token(colors.line)',
-    borderRadius: '8px',
-    boxShadow: '0 20px 50px rgba(22, 24, 29, 0.08)'
+const Panel = styled('section', {
+    base: {
+        w: 'min(560px, 100%)',
+        p: '24px',
+        bg: 'panel',
+        border: '1px solid token(colors.line)',
+        borderRadius: '8px',
+        boxShadow: '0 20px 50px rgba(22, 24, 29, 0.08)'
+    }
 });
 
-const text = css({
-    m: 0,
-    color: 'muted',
-    lineHeight: 1.6
+const Text = styled('p', {
+    base: {
+        m: 0,
+        color: 'muted',
+        lineHeight: 1.6
+    }
 });
 
 export default function BungieCallback() {
@@ -55,10 +61,10 @@ export default function BungieCallback() {
     });
 
     return (
-        <main class={page}>
-            <section class={panel}>
-                <p class={text}>{message()}</p>
-            </section>
-        </main>
+        <Page>
+            <Panel>
+                <Text>{message()}</Text>
+            </Panel>
+        </Page>
     );
 }

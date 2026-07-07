@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 
 import { ARMOR_STATS, solveArmor } from '@armor-calc';
-
+import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 import { getAvailableArmorSets, makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { ARMOR_STAT_HASHES } from '@/features/armor/stat-hashes';
-import type { ManifestInventoryItemDefinition, ManifestResolver, VaultExportSnapshot } from '@/features/armor/types';
+import type { ManifestResolver, VaultExportSnapshot } from '@/features/armor/types';
 
 const privateBundlePath = 'data/private/rose-loaded-benchmark-bundle-2026-07-04T14-56-53-877Z.json';
 
@@ -21,7 +21,7 @@ describe('loaded benchmark bundle input', () => {
         const grenadeStatHash = 3002;
         const superStatHash = 3003;
 
-        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+        const definitions = new Map<number, DestinyInventoryItemDefinition>([
             [
                 itemHash,
                 {
@@ -121,7 +121,7 @@ describe('loaded benchmark bundle input', () => {
         const itemHash = 1101;
         const partialMasterworkHash = 1102;
         const armorStatsPlugHash = 1103;
-        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+        const definitions = new Map<number, DestinyInventoryItemDefinition>([
             [
                 itemHash,
                 {
@@ -203,7 +203,7 @@ describe('loaded benchmark bundle input', () => {
         const weaponsStatHash = 1205;
         const superStatHash = 1206;
         const classStatHash = 1207;
-        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+        const definitions = new Map<number, DestinyInventoryItemDefinition>([
             [
                 itemHash,
                 {
@@ -295,7 +295,7 @@ describe('loaded benchmark bundle input', () => {
         const itemInstanceId = 'tier-3-armor';
         const armorStatsPlugHash = 4002;
         const tuningPlugHash = 4003;
-        const definitions = new Map<number, ManifestInventoryItemDefinition>([
+        const definitions = new Map<number, DestinyInventoryItemDefinition>([
             [
                 itemHash,
                 {
@@ -455,7 +455,7 @@ describe('loaded benchmark bundle input', () => {
         const definitions = new Map(
             Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => [
                 Number(hash),
-                definition as ManifestInventoryItemDefinition
+                definition as DestinyInventoryItemDefinition
             ])
         );
         const profile = await normalizeVaultExport(bundle.vaultSnapshot as VaultExportSnapshot, {
@@ -480,7 +480,7 @@ describe('loaded benchmark bundle input', () => {
         const definitions = new Map(
             Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => [
                 Number(hash),
-                definition as ManifestInventoryItemDefinition
+                definition as DestinyInventoryItemDefinition
             ])
         );
         const profile = await normalizeVaultExport(bundle.vaultSnapshot as VaultExportSnapshot, {
@@ -515,7 +515,7 @@ function syntheticArmorSetFixture(setHashes: Array<number | undefined>): [VaultE
     const armorStatsPlugHash = 8001;
     const buckets = [3448274439, 3551918588, 14239492, 20886954, 1585787867];
     const names = ['Roseshard Helmet', 'Roseshard Arms', 'Roseshard Chest', 'Roseshard Legs', 'Roseshard Bond'];
-    const definitions = new Map<number, ManifestInventoryItemDefinition>([
+    const definitions = new Map<number, DestinyInventoryItemDefinition>([
         [armorStatsPlugHash, plug(armorStatsPlugHash, '', 'armor_stats', [{ statTypeHash: ARMOR_STAT_HASHES.health, value: 10 }])]
     ]);
     const items = setHashes.map((setHash, index) => {
@@ -576,7 +576,7 @@ function syntheticArmorSetFixture(setHashes: Array<number | undefined>): [VaultE
 
 function syntheticCatalogManifest(): ManifestResolver {
     const buckets = [3448274439, 3551918588, 14239492, 20886954];
-    const definitions = new Map<number, ManifestInventoryItemDefinition>();
+    const definitions = new Map<number, DestinyInventoryItemDefinition>();
 
     for (const [index, bucketTypeHash] of buckets.entries()) {
         const itemHash = 7100 + index;
@@ -642,7 +642,7 @@ function plug(
     name: string,
     plugCategoryIdentifier: string,
     investmentStats: Array<{ statTypeHash: number; value: number }>
-): ManifestInventoryItemDefinition {
+): DestinyInventoryItemDefinition {
     return {
         hash,
         displayProperties: { name, description: '' },

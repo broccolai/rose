@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    applySetSelectionLimit,
     CALCULATOR_PREFERENCES_KEY,
     clearCalculatorPreferences,
+    limitSetSelections,
     mergeCalculatorPreferencesForStorage,
     readCalculatorPreferences,
     sanitizeCalculatorPreferences,
@@ -58,14 +60,52 @@ describe('calculator preferences', () => {
                 weapons: 100
             },
             setSelections: {
-                keep2: '2',
-                keep4: '4',
-                keep0: '0'
+                keep4: '4'
             },
             resultSort: {
                 key: 'weapons',
                 direction: 'desc'
             }
+        });
+    });
+
+    test('limits set selections to either two 2-piece sets or one 4-piece set', () => {
+        expect(
+            applySetSelectionLimit(
+                {
+                    first: '2',
+                    second: '2'
+                },
+                'third',
+                '2'
+            )
+        ).toEqual({
+            second: '2',
+            third: '2'
+        });
+
+        expect(
+            applySetSelectionLimit(
+                {
+                    first: '2',
+                    second: '2'
+                },
+                'raid',
+                '4'
+            )
+        ).toEqual({
+            raid: '4'
+        });
+
+        expect(
+            limitSetSelections({
+                first: '2',
+                second: '2',
+                third: '2',
+                raid: '4'
+            })
+        ).toEqual({
+            raid: '4'
         });
     });
 

@@ -117,6 +117,7 @@ describe('calculator view model', () => {
         expect(getSelectedSetRequirements(sets, { 'set:a': '2' })).toEqual([{ setId: 'set:a', requiredPieces: 2 }]);
         expect(getSelectedSetRequirements(sets, { 'set:b': '2', 'set:c': '2' })).toEqual([]);
         expect(getSelectedSetRequirements(sets, { 'set:a': '0' })).toEqual([]);
+        expect(getSelectedSetRequirements(sets, { 'set:a': '2', 'set:c': '4' })).toEqual([]);
     });
 
     test('pins op armor sets before ordinary sets', () => {

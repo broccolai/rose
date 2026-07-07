@@ -1,27 +1,37 @@
-import type {
-    DestinyManifest,
-    LoadedManifestResolver,
-    ManifestEquipableItemSetDefinition,
-    ManifestInventoryItemDefinition,
-    ManifestResponse,
-    ManifestSandboxPerkDefinition
-} from '@/features/armor/types';
+import {
+    type DestinyEquipableItemSetDefinition,
+    type DestinyInventoryItemDefinition,
+    type DestinyManifestComponentName,
+    type DestinySandboxPerkDefinition,
+    getDestinyEntityDefinition,
+    getDestinyManifest,
+    getDestinyManifestSlice,
+    type PlatformErrorCodes,
+    type ServerResponse
+} from 'bungie-api-ts/destiny2';
+import type { HttpClient, HttpClientConfig } from 'bungie-api-ts/http';
+
+import type { LoadedManifestResolver } from '@/features/armor/types';
 import { getBungieConfig } from '@/features/bungie/config';
 import { readJsonCache, writeJsonCache } from '@/features/storage/indexed-json';
 
-const BUNGIE_ORIGIN = 'https://www.bungie.net';
-const BUNGIE_PLATFORM_BASE_URL = `${BUNGIE_ORIGIN}/Platform`;
-const INVENTORY_ITEM_DEFINITION = 'DestinyInventoryItemDefinition';
-const EQUIPABLE_ITEM_SET_DEFINITION = 'DestinyEquipableItemSetDefinition';
-const SANDBOX_PERK_DEFINITION = 'DestinySandboxPerkDefinition';
+const INVENTORY_ITEM_DEFINITION = 'DestinyInventoryItemDefinition' satisfies DestinyManifestComponentName;
+const EQUIPABLE_ITEM_SET_DEFINITION = 'DestinyEquipableItemSetDefinition' satisfies DestinyManifestComponentName;
+const SANDBOX_PERK_DEFINITION = 'DestinySandboxPerkDefinition' satisfies DestinyManifestComponentName;
+const MANIFEST_COMPONENTS = [
+    INVENTORY_ITEM_DEFINITION,
+    EQUIPABLE_ITEM_SET_DEFINITION,
+    SANDBOX_PERK_DEFINITION
+] as const satisfies readonly DestinyManifestComponentName[];
 const MANIFEST_CACHE_KEY = 'manifest.calculator-definitions.v2';
+const BUNGIE_SUCCESS_ERROR_CODE = 1 satisfies PlatformErrorCodes;
 
 type ManifestCache = {
     version?: string;
     cachedAt: string;
-    inventoryItemDefinitions: Record<string, ManifestInventoryItemDefinition>;
-    equipableItemSetDefinitions: Record<string, ManifestEquipableItemSetDefinition>;
-    sandboxPerkDefinitions: Record<string, ManifestSandboxPerkDefinition>;
+    inventoryItemDefinitions: Record<string, DestinyInventoryItemDefinition>;
+    equipableItemSetDefinitions: Record<string, DestinyEquipableItemSetDefinition>;
+    sandboxPerkDefinitions: Record<string, DestinySandboxPerkDefinition>;
 };
 
 type ManifestResolverOptions = {
@@ -29,8 +39,8 @@ type ManifestResolverOptions = {
 };
 
 export async function createBungieManifestResolver(options: ManifestResolverOptions = {}): Promise<LoadedManifestResolver> {
-    const memoryCache = new Map<number, ManifestInventoryItemDefinition | null>();
-    const sandboxPerkMemoryCache = new Map<number, ManifestSandboxPerkDefinition | null>();
+    const memoryCache = new Map<number, DestinyInventoryItemDefinition | null>();
+    const sandboxPerkMemoryCache = new Map<number, DestinySandboxPerkDefinition | null>();
     const manifestCache = await readOrRefreshManifestCache(options);
 
     return {
@@ -42,7 +52,7 @@ export async function createBungieManifestResolver(options: ManifestResolverOpti
         },
         getLoadedInventoryItemDefinitions() {
             return [...memoryCache.entries()]
-                .filter((entry): entry is [number, ManifestInventoryItemDefinition] => entry[1] !== null)
+                .filter((entry): entry is [number, DestinyInventoryItemDefinition] => entry[1] !== null)
                 .map(([hash, definition]) => ({
                     hash,
                     definition
@@ -110,10 +120,11 @@ async function readOrRefreshManifestCache(options: ManifestResolverOptions) {
         return cachedManifest;
     }
 
-    const inventoryPath = manifest.jsonWorldComponentContentPaths?.en?.[INVENTORY_ITEM_DEFINITION];
-    const equipableItemSetPath = manifest.jsonWorldComponentContentPaths?.en?.[EQUIPABLE_ITEM_SET_DEFINITION];
-    const sandboxPerkPath = manifest.jsonWorldComponentContentPaths?.en?.[SANDBOX_PERK_DEFINITION];
-    if (!inventoryPath || !equipableItemSetPath || !sandboxPerkPath) {
+    if (
+        !manifest.jsonWorldComponentContentPaths?.en?.[INVENTORY_ITEM_DEFINITION] ||
+        !manifest.jsonWorldComponentContentPaths.en[EQUIPABLE_ITEM_SET_DEFINITION] ||
+        !manifest.jsonWorldComponentContentPaths.en[SANDBOX_PERK_DEFINITION]
+    ) {
         options.onStatus?.(
             cachedManifest ? 'Using cached manifest definitions; manifest paths missing' : 'Manifest definition paths missing'
         );
@@ -121,11 +132,14 @@ async function readOrRefreshManifestCache(options: ManifestResolverOptions) {
     }
 
     options.onStatus?.(`Downloading manifest ${manifest.version ?? 'unknown version'}`);
-    const [inventoryItemDefinitions, equipableItemSetDefinitions, sandboxPerkDefinitions] = await Promise.all([
-        fetchWorldComponent<ManifestInventoryItemDefinition>(inventoryPath),
-        fetchWorldComponent<ManifestEquipableItemSetDefinition>(equipableItemSetPath),
-        fetchWorldComponent<ManifestSandboxPerkDefinition>(sandboxPerkPath)
-    ]);
+    const manifestSlice = await getDestinyManifestSlice(createManifestHttp(), {
+        destinyManifest: manifest,
+        tableNames: [...MANIFEST_COMPONENTS],
+        language: 'en'
+    });
+    const inventoryItemDefinitions = manifestSlice.DestinyInventoryItemDefinition;
+    const equipableItemSetDefinitions = manifestSlice.DestinyEquipableItemSetDefinition;
+    const sandboxPerkDefinitions = manifestSlice.DestinySandboxPerkDefinition;
     const nextCache: ManifestCache = {
         version: manifest.version,
         cachedAt: new Date().toISOString(),
@@ -149,45 +163,53 @@ function isCompleteManifestCache(cache: ManifestCache) {
     );
 }
 
-async function fetchManifestIndex() {
-    const config = getBungieConfig();
-    const response = await fetch(`${BUNGIE_PLATFORM_BASE_URL}/Destiny2/Manifest/`, {
-        headers: {
-            'X-API-Key': config.apiKey
+function createManifestHttp(): HttpClient {
+    return async <Return>(request: HttpClientConfig) => {
+        const config = getBungieConfig();
+        const url = new URL(request.url);
+        for (const [key, value] of Object.entries(request.params ?? {})) {
+            url.searchParams.set(key, value);
         }
-    });
-    const payload = (await response.json().catch(() => null)) as ManifestResponse<DestinyManifest> | null;
 
-    if (!response.ok || !payload?.Response || (payload.ErrorCode && payload.ErrorCode !== 1)) {
-        throw new Error(`Bungie manifest request failed (${response.status})`);
-    }
+        const response = await fetch(url, {
+            method: request.method,
+            headers: {
+                'X-API-Key': config.apiKey
+            },
+            body: request.body ? JSON.stringify(request.body) : undefined
+        });
+        const payload = (await response.json().catch(() => null)) as Return | null;
 
-    return payload.Response;
+        if (!response.ok || !payload) {
+            throw new Error(`Bungie manifest request failed (${response.status})`);
+        }
+
+        return payload;
+    };
 }
 
-async function fetchWorldComponent<T>(path: string) {
-    const response = await fetch(`${BUNGIE_ORIGIN}${path}`);
-    const payload = (await response.json().catch(() => null)) as Record<string, T> | null;
-
-    if (!response.ok || !payload) {
-        throw new Error(`Bungie manifest component request failed (${response.status})`);
+function assertManifestResponse<T>(payload: ServerResponse<T>) {
+    if (payload.ErrorCode !== BUNGIE_SUCCESS_ERROR_CODE) {
+        throw new Error(payload.Message || payload.ErrorStatus || 'Bungie manifest request failed');
     }
+}
 
-    return payload;
+async function fetchManifestIndex() {
+    const payload = await getDestinyManifest(createManifestHttp());
+    assertManifestResponse(payload);
+
+    return payload.Response;
 }
 
 async function fetchInventoryItemDefinition(hash: number) {
-    const config = getBungieConfig();
-    const response = await fetch(`${BUNGIE_PLATFORM_BASE_URL}/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
-        headers: {
-            'X-API-Key': config.apiKey
-        }
-    });
-    const payload = (await response.json().catch(() => null)) as ManifestResponse<ManifestInventoryItemDefinition> | null;
+    const payload = await getDestinyEntityDefinition(createManifestHttp(), {
+        entityType: INVENTORY_ITEM_DEFINITION,
+        hashIdentifier: hash
+    }).catch(() => null);
 
-    if (!response.ok || !payload?.Response || (payload.ErrorCode && payload.ErrorCode !== 1)) {
+    if (!payload?.Response || payload.ErrorCode !== BUNGIE_SUCCESS_ERROR_CODE) {
         return null;
     }
 
-    return payload.Response;
+    return payload.Response as DestinyInventoryItemDefinition;
 }

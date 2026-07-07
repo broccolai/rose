@@ -1,10 +1,10 @@
-import { css } from '@panda/css';
+import { styled } from '@panda/jsx';
 import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic } from '@/features/armor/calculator-view-model';
 import { ControlSection } from '@/features/armor/components/control-section';
-import { field, input, label, MONO_FONT_FAMILY, muted } from '@/features/armor/components/ui-styles';
+import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/armor/result-display';
 
 type GearSettingsProps = {
@@ -17,203 +17,283 @@ type GearSettingsProps = {
     onSetRequirementChange: (setId: string, value: string) => void;
 };
 
-const gearGrid = css({
-    display: 'grid',
-    gap: '0.75rem',
-    alignItems: 'start',
-    minW: 0,
-    '--rose-op': '#d8b15f'
-});
-
-const exoticSelect = css({
-    colorScheme: 'dark',
-    minH: '38px',
-    fontSize: '0.86rem',
-    cursor: 'pointer'
-});
-
-const labelLine = css({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '0.5rem'
-});
-
-const exoticBadge = css({
-    display: 'inline-flex',
-    alignItems: 'center',
-    minH: '18px',
-    px: '0.4rem',
-    border: '1px solid color-mix(in srgb, var(--rose-exotic) 62%, var(--rose-border))',
-    borderRadius: '999px',
-    color: 'var(--rose-exotic)',
-    bg: 'color-mix(in srgb, var(--rose-exotic) 10%, var(--rose-surface))',
-    fontSize: '0.66rem',
-    fontWeight: 760
-});
-
-const setList = css({
-    display: 'grid',
-    gap: '0.72rem',
-    minW: 0,
-    maxH: '18rem',
-    overflowY: 'auto',
-    pr: '0.25rem',
-    '--rose-op': '#d8b15f'
-});
-
-const setSection = css({
-    display: 'grid',
-    gap: '0.45rem',
-    minW: 0
-});
-
-const setSectionTitle = css({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.45rem',
-    color: 'var(--rose-muted)',
-    fontSize: '0.68rem',
-    fontWeight: 760,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    _after: {
-        content: '""',
-        h: '1px',
-        flex: 1,
-        bg: 'var(--rose-border)'
-    },
-    '&[data-op="true"]': {
-        color: 'var(--rose-op)'
+const GearGrid = styled('div', {
+    base: {
+        display: 'grid',
+        gap: '0.75rem',
+        alignItems: 'start',
+        minW: 0,
+        '--rose-op': '#d8b15f'
     }
 });
 
-const setGrid = css({
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 11.75rem), 1fr))',
-    gap: '0.55rem',
-    minW: 0
+const Field = styled('label', {
+    base: {
+        display: 'grid',
+        gap: '0.42rem',
+        minW: 0
+    }
 });
 
-const setRow = css({
-    position: 'relative',
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr)',
-    gridTemplateRows: 'auto auto',
-    alignItems: 'start',
-    alignContent: 'space-between',
-    gap: '0.42rem',
-    minW: 0,
-    minH: '64px',
-    p: '0.42rem',
-    border: '1px solid transparent',
-    borderRadius: '0.5rem',
-    bg: 'color-mix(in srgb, var(--rose-surface-soft) 86%, #000 14%)',
-    '&[data-unavailable="true"]': {
-        bg: 'color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%)',
-        '& > span': {
-            color: 'color-mix(in srgb, var(--rose-muted) 74%, #000 26%)'
+const LabelLine = styled('span', {
+    base: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.5rem',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.76rem',
+        lineHeight: 1,
+        letterSpacing: 0,
+        fontWeight: 650,
+        color: 'var(--rose-muted)'
+    }
+});
+
+const ExoticBadge = styled('span', {
+    base: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        minH: '18px',
+        px: '0.4rem',
+        border: '1px solid color-mix(in srgb, var(--rose-exotic) 62%, var(--rose-border))',
+        borderRadius: '999px',
+        color: 'var(--rose-exotic)',
+        bg: 'color-mix(in srgb, var(--rose-exotic) 10%, var(--rose-surface))',
+        fontSize: '0.66rem',
+        fontWeight: 760
+    }
+});
+
+const ExoticSelect = styled('select', {
+    base: {
+        w: '100%',
+        minW: 0,
+        boxSizing: 'border-box',
+        minH: '38px',
+        border: '1px solid var(--rose-border)',
+        borderRadius: '0.5rem',
+        bg: 'var(--rose-surface-soft)',
+        px: '0.72rem',
+        color: 'var(--rose-text)',
+        colorScheme: 'dark',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.86rem',
+        lineHeight: 1.2,
+        outline: 'none',
+        cursor: 'pointer',
+        transition: 'background-color 120ms ease, border-color 120ms ease, opacity 120ms ease',
+        _focusVisible: {
+            borderColor: 'var(--rose-accent)',
+            bg: 'var(--rose-surface-raised)',
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        },
+        _disabled: {
+            opacity: 0.42
         }
     }
 });
 
-const setName = css({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.38rem',
-    minW: 0,
-    pr: '1.7rem',
-    overflow: 'hidden',
-    whiteSpace: 'nowrap',
-    color: 'var(--rose-text)',
-    fontWeight: 680,
-    fontSize: '0.82rem',
-    lineHeight: 1.15
+const SetList = styled('div', {
+    base: {
+        display: 'grid',
+        gap: '0.8rem',
+        minW: 0,
+        maxH: '21rem',
+        overflowY: 'auto',
+        pr: '0.25rem',
+        '--rose-op': '#d8b15f'
+    }
 });
 
-const setNameText = css({
-    minW: 0,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+const SetSection = styled('section', {
+    base: {
+        display: 'grid',
+        gap: '0.45rem',
+        minW: 0
+    }
 });
 
-const setCount = css({
-    position: 'absolute',
-    top: '0.46rem',
-    right: '0.5rem',
-    color: 'var(--rose-muted)',
-    fontFamily: MONO_FONT_FAMILY,
-    fontSize: '0.76rem',
-    fontWeight: 750,
-    lineHeight: 1
+const SetSectionTitle = styled('div', {
+    base: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.45rem',
+        color: 'var(--rose-muted)',
+        fontSize: '0.68rem',
+        fontWeight: 760,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        _after: {
+            content: '""',
+            h: '1px',
+            flex: 1,
+            bg: 'var(--rose-border)'
+        },
+        '&[data-op="true"]': {
+            color: 'var(--rose-op)'
+        }
+    }
 });
 
-const segmentedControl = css({
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    m: 0,
-    p: 0,
-    h: '26px',
-    minInlineSize: 0,
-    border: '1px solid var(--rose-border)',
-    borderRadius: '0.35rem',
-    overflow: 'hidden',
-    bg: 'var(--rose-surface)'
+const SetGrid = styled('div', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr))',
+        gap: '0.55rem',
+        minW: 0
+    }
 });
 
-const segmentButton = css({
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minH: 0,
-    h: '100%',
-    px: 0,
-    py: 0,
-    border: 0,
-    borderInlineEnd: '1px solid var(--rose-border)',
-    appearance: 'none',
-    overflow: 'hidden',
-    bg: 'transparent',
-    color: 'var(--rose-muted)',
-    fontFamily: MONO_FONT_FAMILY,
-    fontSize: '0.78rem',
-    fontWeight: 700,
-    lineHeight: 1,
-    letterSpacing: 0,
-    _last: {
-        borderInlineEnd: 0
-    },
-    '&[data-disabled="false"][data-selected="false"]:hover': {
-        bg: 'var(--rose-surface-raised)',
-        color: 'var(--rose-text)'
-    },
-    '&[data-op="true"]': {
-        color: 'color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%)',
-        bg: 'color-mix(in srgb, var(--rose-op) 8%, transparent)'
-    },
-    '&[data-disabled="true"]': {
-        opacity: 0.34,
-        cursor: 'not-allowed'
-    },
-    '&[data-disabled="true"][data-op="true"]': {
-        opacity: 0.46,
-        color: 'color-mix(in srgb, var(--rose-op) 46%, var(--rose-muted) 54%)',
-        bg: 'color-mix(in srgb, var(--rose-op) 7%, transparent)'
-    },
-    '&[data-disabled="false"]': {
-        cursor: 'pointer'
-    },
-    '&[data-selected="true"]': {
-        bg: 'var(--rose-button)',
-        color: 'var(--rose-button-text)',
-        boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
-    },
-    '&[data-selected="true"][data-op="true"]': {
-        bg: 'var(--rose-button)',
-        color: 'var(--rose-button-text)',
-        boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
+const SetRow = styled('div', {
+    base: {
+        position: 'relative',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
+        gridTemplateRows: 'auto auto',
+        alignItems: 'start',
+        alignContent: 'space-between',
+        gap: '0.42rem',
+        minW: 0,
+        minH: '58px',
+        p: '0.48rem',
+        border: '1px solid transparent',
+        borderRadius: '0.5rem',
+        bg: 'color-mix(in srgb, var(--rose-surface-soft) 82%, #000 18%)',
+        transition: 'background-color 130ms ease, opacity 130ms ease, outline-color 130ms ease',
+        '&[data-selected="true"]': {
+            outline: '1px solid color-mix(in srgb, var(--rose-accent) 54%, transparent)',
+            bg: 'color-mix(in srgb, var(--rose-accent) 10%, var(--rose-surface-soft))'
+        },
+        '&[data-unavailable="true"]': {
+            bg: 'color-mix(in srgb, var(--rose-surface-soft) 54%, #000 46%)',
+            opacity: 0.72,
+            '& > span': {
+                color: 'color-mix(in srgb, var(--rose-muted) 74%, #000 26%)'
+            }
+        }
+    }
+});
+
+const SetName = styled('span', {
+    base: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.38rem',
+        minW: 0,
+        pr: '1.7rem',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        color: 'var(--rose-text)',
+        fontWeight: 680,
+        fontSize: '0.82rem',
+        lineHeight: 1.15
+    }
+});
+
+const SetNameText = styled('span', {
+    base: {
+        minW: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+    }
+});
+
+const SetCount = styled('span', {
+    base: {
+        position: 'absolute',
+        top: '0.46rem',
+        right: '0.5rem',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.76rem',
+        fontWeight: 750,
+        lineHeight: 1
+    }
+});
+
+const SegmentedControl = styled('fieldset', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        m: 0,
+        p: 0,
+        h: '28px',
+        minInlineSize: 0,
+        border: '1px solid var(--rose-border)',
+        borderRadius: '0.42rem',
+        overflow: 'hidden',
+        bg: 'var(--rose-surface)'
+    }
+});
+
+const SegmentButton = styled('button', {
+    base: {
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minH: 0,
+        h: '100%',
+        px: 0,
+        py: 0,
+        border: 0,
+        borderInlineEnd: '1px solid var(--rose-border)',
+        appearance: 'none',
+        overflow: 'hidden',
+        bg: 'transparent',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.78rem',
+        fontWeight: 700,
+        lineHeight: 1,
+        letterSpacing: 0,
+        _last: {
+            borderInlineEnd: 0
+        },
+        '&[data-disabled="false"][data-selected="false"]:hover': {
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        },
+        '&[data-op="true"]': {
+            color: 'color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%)',
+            bg: 'color-mix(in srgb, var(--rose-op) 8%, transparent)'
+        },
+        '&[data-disabled="true"]': {
+            opacity: 0.28,
+            cursor: 'not-allowed'
+        },
+        '&[data-disabled="true"][data-op="true"]': {
+            opacity: 0.46,
+            color: 'color-mix(in srgb, var(--rose-op) 46%, var(--rose-muted) 54%)',
+            bg: 'color-mix(in srgb, var(--rose-op) 7%, transparent)'
+        },
+        '&[data-disabled="false"]': {
+            cursor: 'pointer'
+        },
+        '&[data-selected="true"]': {
+            bg: 'var(--rose-button)',
+            color: 'var(--rose-button-text)',
+            boxShadow: 'none'
+        },
+        '&[data-selected="true"][data-op="true"]': {
+            bg: 'var(--rose-button)',
+            color: 'var(--rose-button-text)',
+            boxShadow: 'inset 0 0 0 1px var(--rose-accent)'
+        }
+    }
+});
+
+const MutedText = styled('p', {
+    base: {
+        color: 'var(--rose-muted)',
+        lineHeight: 1.45,
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.74rem',
+        letterSpacing: 0,
+        textTransform: 'none'
     }
 });
 
@@ -221,24 +301,20 @@ export function ExoticPicker(
     props: Pick<GearSettingsProps, 'availableExotics' | 'onExoticChange' | 'selectedExoticItemHash'> & { labelText?: string | false }
 ) {
     return (
-        <label class={field}>
+        <Field>
             <Show when={props.labelText !== false}>
-                <span class={`${label} ${labelLine}`}>
+                <LabelLine>
                     {props.labelText ?? 'Choose one'}
                     <Show when={props.selectedExoticItemHash}>
-                        <span class={exoticBadge}>Exotic</span>
+                        <ExoticBadge>Exotic</ExoticBadge>
                     </Show>
-                </span>
+                </LabelLine>
             </Show>
-            <select
-                class={`${input} ${exoticSelect}`}
-                value={props.selectedExoticItemHash}
-                onChange={(event) => props.onExoticChange(event.currentTarget.value)}
-            >
+            <ExoticSelect value={props.selectedExoticItemHash} onChange={(event) => props.onExoticChange(event.currentTarget.value)}>
                 <option value="">None</option>
                 <For each={props.availableExotics}>{(exotic) => <option value={String(exotic.itemHash)}>{exotic.name}</option>}</For>
-            </select>
-        </label>
+            </ExoticSelect>
+        </Field>
     );
 }
 
@@ -279,6 +355,7 @@ export function ArmorSetFields(
         const selected = () => props.setSelections[set.id] ?? '0';
         const displayName = () => getArmorSetDisplayName(set, props.armorSetDisplayMode);
         const canRequire = (requiredPieces: 2 | 4) => set.count >= requiredPieces;
+        const cardSelected = () => selected() === '2' || selected() === '4';
         const hasOpBonus = (requiredPieces: 2 | 4) => set.opBonuses.some((bonus) => bonus.requiredPieces === requiredPieces);
         const updateRequirement = (requiredPieces: 2 | 4) => {
             if (!canRequire(requiredPieces)) {
@@ -289,18 +366,16 @@ export function ArmorSetFields(
         };
 
         return (
-            <div class={setRow} data-op={set.opBonuses.length > 0} data-unavailable={set.count < 2}>
-                <span class={setName} title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
-                    <span class={setNameText}>{displayName()}</span>
-                </span>
-                <span class={setCount} title={`${set.count} owned compatible pieces`}>
-                    {set.count}
-                </span>
-                <fieldset class={segmentedControl} aria-label={`${displayName()} requirement`}>
-                    <button
-                        class={segmentButton}
+            <SetRow data-op={set.opBonuses.length > 0} data-selected={cardSelected()} data-unavailable={set.count < 2}>
+                <SetName title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
+                    <SetNameText>{displayName()}</SetNameText>
+                </SetName>
+                <SetCount title={`${set.count} owned compatible pieces`}>{set.count}</SetCount>
+                <SegmentedControl aria-label={`${displayName()} requirement`}>
+                    <SegmentButton
                         type="button"
                         title={setBonusTooltip(set, 2)}
+                        disabled={!canRequire(2)}
                         aria-disabled={!canRequire(2)}
                         data-disabled={!canRequire(2)}
                         data-op={hasOpBonus(2)}
@@ -308,11 +383,11 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(2)}
                     >
                         2
-                    </button>
-                    <button
-                        class={segmentButton}
+                    </SegmentButton>
+                    <SegmentButton
                         type="button"
                         title={setBonusTooltip(set, 4)}
+                        disabled={!canRequire(4)}
                         aria-disabled={!canRequire(4)}
                         data-disabled={!canRequire(4)}
                         data-op={hasOpBonus(4)}
@@ -320,37 +395,35 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(4)}
                     >
                         4
-                    </button>
-                </fieldset>
-            </div>
+                    </SegmentButton>
+                </SegmentedControl>
+            </SetRow>
         );
     }
 
     return (
-        <Show when={props.selectableSets.length > 0} fallback={<p class={muted}>No armor set catalog loaded yet.</p>}>
-            <div class={setList}>
+        <Show when={props.selectableSets.length > 0} fallback={<MutedText>No armor set catalog loaded yet.</MutedText>}>
+            <SetList>
                 <Show when={opSets().length > 0}>
-                    <section class={setSection}>
-                        <div class={setSectionTitle} data-op="true">
-                            OP bonuses
-                        </div>
-                        <div class={setGrid}>
+                    <SetSection>
+                        <SetSectionTitle data-op="true">OP bonuses</SetSectionTitle>
+                        <SetGrid>
                             <For each={opSets()}>{(set) => renderSetCard(set)}</For>
-                        </div>
-                    </section>
+                        </SetGrid>
+                    </SetSection>
                 </Show>
 
                 <Show when={regularSets().length > 0}>
-                    <section class={setSection}>
+                    <SetSection>
                         <Show when={opSets().length > 0}>
-                            <div class={setSectionTitle}>Other sets</div>
+                            <SetSectionTitle>Other sets</SetSectionTitle>
                         </Show>
-                        <div class={setGrid}>
+                        <SetGrid>
                             <For each={regularSets()}>{(set) => renderSetCard(set)}</For>
-                        </div>
-                    </section>
+                        </SetGrid>
+                    </SetSection>
                 </Show>
-            </div>
+            </SetList>
         </Show>
     );
 }
@@ -372,7 +445,7 @@ export function ArmorSetControls(
 
 export function GearSettings(props: GearSettingsProps) {
     return (
-        <div class={gearGrid}>
+        <GearGrid>
             <ExoticControls
                 availableExotics={props.availableExotics}
                 onExoticChange={props.onExoticChange}
@@ -385,6 +458,6 @@ export function GearSettings(props: GearSettingsProps) {
                 selectableSets={props.selectableSets}
                 setSelections={props.setSelections}
             />
-        </div>
+        </GearGrid>
     );
 }

@@ -1,5 +1,5 @@
 import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } from '@armor-calc';
-import { css } from '@panda/css';
+import { styled } from '@panda/jsx';
 import { For, type JSX, Show } from 'solid-js';
 
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
@@ -28,155 +28,177 @@ type ResultsTableProps = {
 
 const RESULT_COLUMN_COUNT = 8;
 
-const tableWrap = css({
-    w: '100%',
-    maxW: '100%',
-    minW: 0,
-    overflowX: 'hidden',
-    overflowY: 'auto',
-    maxH: { base: '28rem', lg: 'calc(100vh - 16rem)' },
-    scrollbarGutter: 'stable',
-    border: '1px solid var(--rose-border)',
-    borderRadius: '0.85rem',
-    bg: 'var(--rose-surface)'
-});
-
-const tinyMuted = css({
-    color: 'var(--rose-muted)',
-    fontFamily: MONO_FONT_FAMILY,
-    fontSize: '0.68rem',
-    lineHeight: 1.35,
-    letterSpacing: 0
-});
-
-const sortButton = css({
-    border: 0,
-    bg: 'transparent',
-    color: 'inherit',
-    font: 'inherit',
-    fontWeight: 700,
-    p: 0,
-    cursor: 'pointer',
-    whiteSpace: 'normal',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: '2px',
-    w: '100%'
-});
-
-const table = css({
-    w: '100%',
-    minW: 0,
-    tableLayout: 'fixed',
-    borderCollapse: 'collapse',
-    fontFamily: MONO_FONT_FAMILY,
-    fontSize: '0.74rem',
-    '& th': {
-        textAlign: 'left',
-        borderBottom: '1px solid var(--rose-border)',
-        bg: '#0a0a0c',
-        p: '8px 6px',
-        color: 'var(--rose-muted)',
-        whiteSpace: 'normal',
-        lineHeight: 1.05,
-        letterSpacing: 0,
-        fontWeight: 680
-    },
-    '& thead th': {
-        position: 'sticky',
-        top: 0,
-        zIndex: 2
-    },
-    '& td': {
-        borderBottom: '1px solid var(--rose-border)',
-        p: '8px 6px',
-        verticalAlign: 'middle',
-        lineHeight: 1.2,
-        h: '42px'
-    },
-    '& th[data-numeric], & td[data-numeric]': {
-        textAlign: 'right',
-        fontVariantNumeric: 'tabular-nums'
-    },
-    '& td[data-text-cell]': {
+const TableWrap = styled('div', {
+    base: {
+        w: '100%',
+        maxW: '100%',
         minW: 0,
-        overflowWrap: 'anywhere',
-        wordBreak: 'normal'
-    },
-    '& tr[data-clickable="true"]': {
-        cursor: 'pointer'
-    },
-    '& tr[data-expanded="true"]': {
-        bg: 'var(--rose-surface-raised)'
-    },
-    '& tr[data-expanded="true"] td:first-child': {
-        boxShadow: 'inset 3px 0 0 var(--rose-accent)'
-    },
-    '& tbody tr:hover': {
-        bg: 'var(--rose-surface-soft)'
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        maxH: { base: '28rem', lg: 'calc(100vh - 16rem)' },
+        scrollbarGutter: 'stable',
+        border: '1px solid var(--rose-border)',
+        borderRadius: '0.85rem',
+        bg: 'var(--rose-surface)'
     }
 });
 
-const expandedDetailRow = css({
-    '&:hover': {
-        bg: 'transparent'
+const SortButton = styled('button', {
+    base: {
+        border: 0,
+        bg: 'transparent',
+        color: 'inherit',
+        font: 'inherit',
+        fontWeight: 700,
+        p: 0,
+        cursor: 'pointer',
+        whiteSpace: 'normal',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: '2px',
+        w: '100%'
     }
 });
 
-const expandedDetailCell = css({
-    h: 'auto!',
-    p: '0!',
-    bg: 'var(--rose-surface)',
-    borderBottom: '1px solid var(--rose-border)'
-});
-
-const expandedDetailInner = css({
-    p: 0,
-    bg: 'var(--rose-surface)'
-});
-
-const bonusText = css({
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '0.25rem',
-    minW: 0
-});
-
-const bonusChip = css({
-    display: 'inline-flex',
-    alignItems: 'center',
-    maxW: '100%',
-    minH: '20px',
-    px: '0.42rem',
-    border: '1px solid color-mix(in srgb, var(--rose-success) 52%, var(--rose-border))',
-    borderRadius: '999px',
-    color: 'var(--rose-success)',
-    bg: 'color-mix(in srgb, var(--rose-success) 10%, var(--rose-surface))',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontSize: '0.68rem',
-    fontWeight: 720,
-    '&[data-op="true"]': {
-        borderColor: 'color-mix(in srgb, #d9b45f 62%, var(--rose-border))',
-        color: '#e5c36d',
-        bg: 'color-mix(in srgb, #d9b45f 12%, var(--rose-surface))',
-        boxShadow: 'inset 0 0 12px color-mix(in srgb, #d9b45f 12%, transparent)'
+const Table = styled('table', {
+    base: {
+        w: '100%',
+        minW: 0,
+        tableLayout: 'fixed',
+        borderCollapse: 'collapse',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.74rem',
+        '& th': {
+            textAlign: 'left',
+            borderBottom: '1px solid var(--rose-border)',
+            bg: '#0a0a0c',
+            p: '8px 6px',
+            color: 'var(--rose-muted)',
+            whiteSpace: 'normal',
+            lineHeight: 1.05,
+            letterSpacing: 0,
+            fontWeight: 680
+        },
+        '& thead th': {
+            position: 'sticky',
+            top: 0,
+            zIndex: 2
+        },
+        '& td': {
+            borderBottom: '1px solid var(--rose-border)',
+            p: '8px 6px',
+            verticalAlign: 'middle',
+            lineHeight: 1.2,
+            h: '42px'
+        },
+        '& th[data-numeric], & td[data-numeric]': {
+            textAlign: 'right',
+            fontVariantNumeric: 'tabular-nums'
+        },
+        '& td[data-text-cell]': {
+            minW: 0,
+            overflowWrap: 'anywhere',
+            wordBreak: 'normal'
+        },
+        '& tr[data-clickable="true"]': {
+            cursor: 'pointer'
+        },
+        '& tr[data-expanded="true"]': {
+            bg: 'var(--rose-surface-raised)'
+        },
+        '& tr[data-expanded="true"] td:first-child': {
+            boxShadow: 'inset 3px 0 0 var(--rose-accent)'
+        },
+        '& tbody tr:hover': {
+            bg: 'var(--rose-surface-soft)'
+        }
     }
 });
 
-const mutedDash = css({
-    color: 'var(--rose-muted)'
+const ExpandedDetailRow = styled('tr', {
+    base: {
+        '&:hover': {
+            bg: 'transparent'
+        }
+    }
+});
+
+const ExpandedDetailCell = styled('td', {
+    base: {
+        h: 'auto!',
+        p: '0!',
+        bg: 'var(--rose-surface)',
+        borderBottom: '1px solid var(--rose-border)'
+    }
+});
+
+const ExpandedDetailInner = styled('div', {
+    base: {
+        p: 0,
+        bg: 'var(--rose-surface)'
+    }
+});
+
+const BonusText = styled('div', {
+    base: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.25rem',
+        minW: 0
+    }
+});
+
+const BonusChip = styled('span', {
+    base: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        maxW: '100%',
+        minH: '20px',
+        px: '0.42rem',
+        border: '1px solid color-mix(in srgb, var(--rose-success) 52%, var(--rose-border))',
+        borderRadius: '999px',
+        color: 'var(--rose-success)',
+        bg: 'color-mix(in srgb, var(--rose-success) 10%, var(--rose-surface))',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontSize: '0.68rem',
+        fontWeight: 720,
+        '&[data-op="true"]': {
+            borderColor: 'color-mix(in srgb, #d9b45f 62%, var(--rose-border))',
+            color: '#e5c36d',
+            bg: 'color-mix(in srgb, #d9b45f 12%, var(--rose-surface))',
+            boxShadow: 'inset 0 0 12px color-mix(in srgb, #d9b45f 12%, transparent)'
+        }
+    }
+});
+
+const MutedDash = styled('span', {
+    base: {
+        color: 'var(--rose-muted)'
+    }
+});
+
+const ResultStatCell = styled('td', {
+    base: {
+        '&[data-dump="true"]': {
+            color: 'var(--rose-muted)',
+            fontFamily: MONO_FONT_FAMILY,
+            fontSize: '0.68rem',
+            lineHeight: 1.35,
+            letterSpacing: 0
+        }
+    }
 });
 
 function SortableHeader(props: { label: string; mark: string; numeric?: boolean; title?: string; onClick: () => void }) {
     return (
         <th data-numeric={props.numeric} title={props.title}>
-            <button class={sortButton} type="button" aria-label={`Sort by ${props.title ?? props.label}`} onClick={props.onClick}>
+            <SortButton type="button" aria-label={`Sort by ${props.title ?? props.label}`} onClick={props.onClick}>
                 {props.label}
                 {props.mark}
-            </button>
+            </SortButton>
         </th>
     );
 }
@@ -185,17 +207,17 @@ function BonusSummary(props: { build: ArmorBuild; armorSets: ArmorBonusDefinitio
     const bonuses = () => getArmorBonusDisplays(props.build, props.armorSets, props.armorSetDisplayMode);
 
     return (
-        <div class={bonusText}>
-            <Show when={bonuses().length > 0} fallback={<span class={mutedDash}>-</span>}>
+        <BonusText>
+            <Show when={bonuses().length > 0} fallback={<MutedDash>-</MutedDash>}>
                 <For each={bonuses()}>
                     {(bonus) => (
-                        <span class={bonusChip} data-op={bonus.isOp} title={bonus.title}>
+                        <BonusChip data-op={bonus.isOp} title={bonus.title}>
                             {bonus.label}
-                        </span>
+                        </BonusChip>
                     )}
                 </For>
             </Show>
-        </div>
+        </BonusText>
     );
 }
 
@@ -222,9 +244,9 @@ function ResultRow(props: {
         >
             <For each={ARMOR_STATS}>
                 {(stat) => (
-                    <td data-numeric class={props.dumpStat === stat ? tinyMuted : undefined}>
+                    <ResultStatCell data-numeric data-dump={props.dumpStat === stat}>
                         {props.build.stats[stat]}
-                    </td>
+                    </ResultStatCell>
                 )}
             </For>
             <td data-numeric>{props.build.score.totalStats}</td>
@@ -245,8 +267,8 @@ export function ResultsTable(props: ResultsTableProps) {
     }
 
     return (
-        <div class={tableWrap}>
-            <table class={table}>
+        <TableWrap>
+            <Table>
                 <colgroup>
                     <For each={ARMOR_STATS}>{() => <col style={{ width: '9.6%' }} />}</For>
                     <col style={{ width: '9.2%' }} />
@@ -288,17 +310,17 @@ export function ResultsTable(props: ResultsTableProps) {
                                     onToggle={() => props.onToggleBuild(build)}
                                 />
                                 <Show when={props.expandedBuildKey === buildExpansionKey(build)}>
-                                    <tr class={expandedDetailRow}>
-                                        <td class={expandedDetailCell} colSpan={RESULT_COLUMN_COUNT}>
-                                            <div class={expandedDetailInner}>{props.renderExpandedBuild(build, index())}</div>
-                                        </td>
-                                    </tr>
+                                    <ExpandedDetailRow>
+                                        <ExpandedDetailCell colSpan={RESULT_COLUMN_COUNT}>
+                                            <ExpandedDetailInner>{props.renderExpandedBuild(build, index())}</ExpandedDetailInner>
+                                        </ExpandedDetailCell>
+                                    </ExpandedDetailRow>
                                 </Show>
                             </>
                         )}
                     </For>
                 </tbody>
-            </table>
-        </div>
+            </Table>
+        </TableWrap>
     );
 }
