@@ -91,7 +91,7 @@ import { type BungieToken, createAuthorizationUrl, getTokenDebugState, getValidT
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
-const SOLVER_RESULT_POOL_LIMIT = 30_000;
+const SOLVER_RESULT_POOL_LIMIT = 5_000;
 const VISIBLE_RESULT_LIMIT = 25;
 const BALANCED_TUNING_ENABLED = true;
 const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
@@ -1959,7 +1959,9 @@ export default function Home() {
             result.ok
                 ? [
                       `Found ${result.validBuildCount} builds. Retained ${result.returnedBuildCount}. Showing ${Math.min(VISIBLE_RESULT_LIMIT, result.returnedBuildCount)}.`,
-                      result.resultLimitReached ? 'Result pool hit the 30k cap; table sorting applies to retained builds.' : null,
+                      result.resultLimitReached
+                          ? 'Result pool hit the retained build cap; table sorting applies to retained builds.'
+                          : null,
                       `Searched ${result.searchedCombinations} armor combinations.`
                   ]
                       .filter(Boolean)

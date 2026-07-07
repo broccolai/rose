@@ -22,11 +22,13 @@ import {
 const DEFAULT_MAX_RESULTS = 50;
 const DEFAULT_RESULT_SORT: ArmorBuildSort = { key: 'wastedStats', direction: 'asc' };
 const MAX_DISPLAY_STAT = 200;
+const MAX_DP_TARGET_INDEXES = 3;
 const TUNING_MODES = ['off', 'pair', 'all'] as const;
 const itemMaximumStatsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
 const simpleAddonCapabilityCache = new WeakMap<ArmorItem, Map<string, boolean>>();
 const preparedArmorItemCache = new WeakMap<ArmorItem, Map<string, PreparedArmorItem>>();
 const itemOutcomeCache = new WeakMap<ArmorItem, Map<string, StatTuple[]>>();
+const adjustmentTupleCache = new WeakMap<StatAdjustment, StatTuple>();
 
 type StatTuple = [number, number, number, number, number, number];
 type TuningMode = (typeof TUNING_MODES)[number];
@@ -113,6 +115,24 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         };
     }
 
+    const targetIndexes = targetIndexesForTargets(toStatTuple(targets), dumpStatIndex);
+    if (
+        input.setRequirements.length === 0 &&
+        canUseDpForTargetIndexes(targetIndexes) &&
+        !canReachPreparedArmorStatTargetsByDp(plans, targets, statBonuses, dumpStatIndex, tuningMode, input.dumpStat)
+    ) {
+        return {
+            ok: false,
+            reason: 'No build matched the selected targets and constraints.',
+            validBuildCount: 0,
+            returnedBuildCount: 0,
+            resultLimitReached: false,
+            searchedCombinations: 0,
+            rejectedCombinations: 0,
+            warnings
+        };
+    }
+
     const builds: ArmorBuild[] = [];
     const counters = {
         searchedCombinations: 0,
@@ -142,7 +162,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
             continue;
         }
 
-        searchPlan(plan, context);
+        searchPlan(prioritizePlanForTargets(plan, context.targetValues, dumpStatIndex, input.setRequirements), context);
     }
 
     builds.sort((left, right) => compareBuilds(left, right, input.resultSort ?? DEFAULT_RESULT_SORT));
@@ -201,8 +221,9 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
         baseTargets[input.dumpStat] = 0;
     }
 
-    if (input.setRequirements.length === 0) {
-        return calculatePreparedArmorStatTargetCapByDp(
+    const capTargetIndexes = targetIndexesForTargets(toStatTuple(baseTargets), dumpStatIndex, ARMOR_STATS.indexOf(stat));
+    if (input.setRequirements.length === 0 && canUseDpForTargetIndexes(capTargetIndexes)) {
+        const optimisticCap = calculatePreparedArmorStatTargetCapByDp(
             plans,
             baseTargets,
             statBonuses,
@@ -211,6 +232,8 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
             tuningMode,
             input.dumpStat
         );
+
+        return verifyTargetCapWithSolver(input, baseTargets, stat, optimisticCap);
     }
 
     const maxTargetResult = solveArmor({
@@ -252,6 +275,46 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
     }
 
     return result.builds[0]?.stats[stat] ?? 0;
+}
+
+function verifyTargetCapWithSolver(input: ArmorStatTargetCapsInput, baseTargets: StatVector, stat: ArmorStat, optimisticCap: number) {
+    const step = input.allowBalancedTuning ? 1 : 5;
+    const firstCandidate = Math.floor(Math.min(MAX_DISPLAY_STAT, optimisticCap) / step) * step;
+
+    for (let target = firstCandidate; target >= 0; target -= step) {
+        const result = solveArmor({
+            ...input,
+            statTargets: {
+                ...baseTargets,
+                [stat]: target
+            },
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+
+        if (!result.ok) {
+            continue;
+        }
+
+        const displayedStat = Math.min(MAX_DISPLAY_STAT, result.builds[0]?.stats[stat] ?? target);
+        if (displayedStat <= target) {
+            return target;
+        }
+
+        const displayedStatResult = solveArmor({
+            ...input,
+            statTargets: {
+                ...baseTargets,
+                [stat]: displayedStat
+            },
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+
+        return displayedStatResult.ok ? displayedStat : target;
+    }
+
+    return 0;
 }
 
 function calculatePreparedArmorStatTargetCap(
@@ -310,7 +373,8 @@ function canReachPreparedArmorStatTargets(
     tuningMode: TuningMode,
     setRequirements: ArmorSetRequirement[]
 ) {
-    if (setRequirements.length === 0) {
+    const targetIndexes = targetIndexesForTargets(toStatTuple(targets), dumpStatIndex);
+    if (setRequirements.length === 0 && canUseDpForTargetIndexes(targetIndexes)) {
         return canReachPreparedArmorStatTargetsByDp(plans, targets, statBonuses, dumpStatIndex, tuningMode, dumpStat);
     }
 
@@ -360,10 +424,7 @@ function canReachPreparedArmorStatTargetsByDp(
     dumpStat: ArmorStat | undefined
 ) {
     const targetValues = toStatTuple(targets);
-    const targetIndexes = targetValues
-        .map((target, index) => ({ index, target }))
-        .filter(({ index, target }) => index !== dumpStatIndex && target > 0)
-        .map(({ index }) => index);
+    const targetIndexes = targetIndexesForTargets(targetValues, dumpStatIndex);
 
     if (targetIndexes.length === 0) {
         return true;
@@ -457,6 +518,17 @@ function calculatePreparedArmorStatTargetCapByDp(
     }
 
     return best;
+}
+
+function targetIndexesForTargets(targetValues: StatTuple, dumpStatIndex: number, excludedIndex = -1) {
+    return targetValues
+        .map((target, index) => ({ index, target }))
+        .filter(({ index, target }) => index !== dumpStatIndex && index !== excludedIndex && target > 0)
+        .map(({ index }) => index);
+}
+
+function canUseDpForTargetIndexes(targetIndexes: number[]) {
+    return targetIndexes.length <= MAX_DP_TARGET_INDEXES;
 }
 
 function createCandidatePlans(
@@ -692,6 +764,13 @@ function evaluateAddonState(
         };
     }
 
+    if (!retainState) {
+        return {
+            valid: canMeetTargetsWithAddonTuples(pieces, baseStats, targetValues, dumpStatIndex, tuningMode, dumpStat),
+            state: null
+        };
+    }
+
     const state = findBestAddonState(unpreparePieces(pieces), tupleToStats(baseStats), targets, dumpStat, tuningMode);
 
     return {
@@ -796,6 +875,166 @@ function getSimpleStatModOption(item: ArmorItem, request?: SimpleStatModRequest)
     }
 
     return item.statModOptions.find((option) => option.deltas[request.stat] === request.value && adjustmentTotal(option) === request.value);
+}
+
+function canMeetTargetsWithAddonTuples(
+    pieces: Record<ArmorSlot, PreparedArmorItem>,
+    baseStats: StatTuple,
+    targetValues: StatTuple,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    dumpStat: ArmorStat | undefined
+) {
+    const stats = [...baseStats] as StatTuple;
+
+    for (const slot of ARMOR_SLOTS) {
+        const piece = pieces[slot].item;
+        const statMod = chooseBestAdjustmentForTuple(piece.statModOptions, stats, targetValues, dumpStatIndex, {
+            preferPositiveGain: true
+        });
+
+        addAdjustmentTupleInPlace(stats, statMod);
+
+        const tuning =
+            tuningMode === 'off'
+                ? undefined
+                : chooseBestAdjustmentForTuple(tuningOptionsForMode(piece, tuningMode, dumpStat), stats, targetValues, dumpStatIndex);
+
+        addAdjustmentTupleInPlace(stats, tuning);
+    }
+
+    return tupleMeetsTargets(stats, targetValues, dumpStatIndex);
+}
+
+function chooseBestAdjustmentForTuple(
+    options: StatAdjustment[],
+    stats: StatTuple,
+    targets: StatTuple,
+    dumpStatIndex: number,
+    preference: AdjustmentPreference = {}
+) {
+    const noChange = options.find((option) => adjustmentTupleTotal(option) === 0);
+    let best = noChange;
+    let bestScore = 0;
+    let bestDumpRelief = best ? dumpStatReliefByIndex(best, dumpStatIndex) : 0;
+    let bestOverflow = best ? tupleOverflowAmount(addAdjustmentToTuple(stats, best)) : 0;
+    let bestGain = best ? positiveAdjustmentTotal(best) : 0;
+
+    for (const option of options) {
+        const nextStats = addAdjustmentToTuple(stats, option);
+        const score = tupleTotalDeficit(stats, targets, dumpStatIndex) - tupleTotalDeficit(nextStats, targets, dumpStatIndex);
+        const relief = dumpStatReliefByIndex(option, dumpStatIndex);
+        const overflow = tupleOverflowAmount(nextStats);
+        const gain = positiveAdjustmentTotal(option);
+        const hasUsefulEffect = score > 0 || relief > 0;
+
+        if (
+            overflow < bestOverflow ||
+            (overflow === bestOverflow && score > bestScore) ||
+            (overflow === bestOverflow && score === bestScore && relief > bestDumpRelief) ||
+            (preference.preferPositiveGain &&
+                overflow === bestOverflow &&
+                score === bestScore &&
+                relief === bestDumpRelief &&
+                gain > bestGain) ||
+            (hasUsefulEffect &&
+                overflow === bestOverflow &&
+                score === bestScore &&
+                relief === bestDumpRelief &&
+                gain === bestGain &&
+                best &&
+                option.id.localeCompare(best.id) < 0)
+        ) {
+            best = option;
+            bestScore = score;
+            bestDumpRelief = relief;
+            bestOverflow = overflow;
+            bestGain = gain;
+        }
+    }
+
+    return best;
+}
+
+function addAdjustmentToTuple(stats: StatTuple, adjustment: StatAdjustment): StatTuple {
+    const deltas = adjustmentTuple(adjustment);
+    return [
+        stats[0] + deltas[0],
+        stats[1] + deltas[1],
+        stats[2] + deltas[2],
+        stats[3] + deltas[3],
+        stats[4] + deltas[4],
+        stats[5] + deltas[5]
+    ];
+}
+
+function addAdjustmentTupleInPlace(stats: StatTuple, adjustment: StatAdjustment | undefined) {
+    if (!adjustment) {
+        return;
+    }
+
+    const deltas = adjustmentTuple(adjustment);
+    stats[0] += deltas[0];
+    stats[1] += deltas[1];
+    stats[2] += deltas[2];
+    stats[3] += deltas[3];
+    stats[4] += deltas[4];
+    stats[5] += deltas[5];
+}
+
+function adjustmentTuple(adjustment: StatAdjustment): StatTuple {
+    const cached = adjustmentTupleCache.get(adjustment);
+
+    if (cached) {
+        return cached;
+    }
+
+    const tuple: StatTuple = [
+        adjustment.deltas.health ?? 0,
+        adjustment.deltas.melee ?? 0,
+        adjustment.deltas.grenade ?? 0,
+        adjustment.deltas.super ?? 0,
+        adjustment.deltas.class ?? 0,
+        adjustment.deltas.weapons ?? 0
+    ];
+
+    adjustmentTupleCache.set(adjustment, tuple);
+    return tuple;
+}
+
+function adjustmentTupleTotal(adjustment: StatAdjustment) {
+    const tuple = adjustmentTuple(adjustment);
+    return tuple[0] + tuple[1] + tuple[2] + tuple[3] + tuple[4] + tuple[5];
+}
+
+function tupleOverflowAmount(stats: StatTuple) {
+    return (
+        Math.max(0, stats[0] - MAX_DISPLAY_STAT) +
+        Math.max(0, stats[1] - MAX_DISPLAY_STAT) +
+        Math.max(0, stats[2] - MAX_DISPLAY_STAT) +
+        Math.max(0, stats[3] - MAX_DISPLAY_STAT) +
+        Math.max(0, stats[4] - MAX_DISPLAY_STAT) +
+        Math.max(0, stats[5] - MAX_DISPLAY_STAT)
+    );
+}
+
+function tupleTotalDeficit(stats: StatTuple, targets: StatTuple, dumpStatIndex: number) {
+    return (
+        (dumpStatIndex === 0 ? 0 : Math.max(0, targets[0] - stats[0])) +
+        (dumpStatIndex === 1 ? 0 : Math.max(0, targets[1] - stats[1])) +
+        (dumpStatIndex === 2 ? 0 : Math.max(0, targets[2] - stats[2])) +
+        (dumpStatIndex === 3 ? 0 : Math.max(0, targets[3] - stats[3])) +
+        (dumpStatIndex === 4 ? 0 : Math.max(0, targets[4] - stats[4])) +
+        (dumpStatIndex === 5 ? 0 : Math.max(0, targets[5] - stats[5]))
+    );
+}
+
+function dumpStatReliefByIndex(adjustment: StatAdjustment, dumpStatIndex: number) {
+    if (dumpStatIndex < 0) {
+        return 0;
+    }
+
+    return Math.max(0, -adjustmentTuple(adjustment)[dumpStatIndex]);
 }
 
 function zeroTuple(): StatTuple {
