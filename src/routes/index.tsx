@@ -90,11 +90,9 @@ import { getMissingConfigKeys } from '@/features/bungie/config';
 import { type BungieToken, createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
-type BackgroundSolveStatus = 'idle' | 'queued' | 'running';
 
 const SOLVER_RESULT_POOL_LIMIT = 30_000;
 const VISIBLE_RESULT_LIMIT = 25;
-const BACKGROUND_SOLVE_DELAY_MS = 220;
 const BALANCED_TUNING_ENABLED = true;
 const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
 const DEV_TIMING = import.meta.env.DEV;
@@ -1040,8 +1038,6 @@ async function readEquippedSubclassImport(
 export default function Home() {
     let targetCapRequestId = 0;
     let solveRequestId = 0;
-    let backgroundSolveTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
-    let backgroundSolveRefreshRequested = false;
     let debugExportChordActive = false;
     let solveInvalidationSuspended = 0;
     const armorSolver = createArmorSolverClient();
@@ -1072,7 +1068,6 @@ export default function Home() {
     const [targetCapCalculationActive, setTargetCapCalculationActive] = createSignal(false);
     const [targetCapPriorityStat, setTargetCapPriorityStat] = createSignal<ArmorStat | null>(null);
     const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
-    const [backgroundSolveStatus, setBackgroundSolveStatus] = createSignal<BackgroundSolveStatus>('idle');
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
@@ -1095,7 +1090,6 @@ export default function Home() {
     });
     const resultFailure = createMemo(() => getResultFailure(solveResult()));
     const showTuningResults = createMemo(() => true);
-    const backgroundSolveActive = createMemo(() => backgroundSolveStatus() !== 'idle');
     const calculatorLocked = createMemo(() => !AUTH_LOCK_DISABLED && !isLocalDevHost() && !authenticated());
     const bungieUser = createMemo(() => readBungieUser(loadedSnapshot()));
     const avatarUrl = createMemo(() => absoluteBungieAssetUrl(bungieUser()?.profilePicturePath));
@@ -1148,45 +1142,6 @@ export default function Home() {
     function nextTargetCapRequestId() {
         targetCapRequestId += 1;
         return targetCapRequestId;
-    }
-
-    function clearBackgroundSolveTimer() {
-        if (backgroundSolveTimer === null) {
-            return;
-        }
-
-        globalThis.clearTimeout(backgroundSolveTimer);
-        backgroundSolveTimer = null;
-    }
-
-    function setBackgroundSolveProgress(status: BackgroundSolveStatus) {
-        setBackgroundSolveStatus(status);
-
-        if (status === 'idle') {
-            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
-            return;
-        }
-
-        setLoadProgress({
-            active: true,
-            label: status === 'queued' ? 'Queued solve' : 'Solving builds',
-            current: 0,
-            total: 0,
-            percent: status === 'queued' ? 16 : 45
-        });
-    }
-
-    function queueBackgroundSolve() {
-        if (!backgroundSolveRefreshRequested || equipOperationActive()) {
-            return;
-        }
-
-        clearBackgroundSolveTimer();
-        setBackgroundSolveProgress('queued');
-        backgroundSolveTimer = globalThis.setTimeout(() => {
-            backgroundSolveTimer = null;
-            void runBackgroundSolve();
-        }, BACKGROUND_SOLVE_DELAY_MS);
     }
 
     async function calculateTargetCapsIncrementally(
@@ -1311,13 +1266,13 @@ export default function Home() {
         }
 
         solveRequestId += 1;
-        clearBackgroundSolveTimer();
         setSolveResult(null);
         setExpandedBuildKey(null);
-        if (backgroundSolveRefreshRequested) {
-            queueBackgroundSolve();
-        } else {
-            setBackgroundSolveProgress('idle');
+        if (status() === 'solving') {
+            setStatus('idle');
+        }
+        if (status() !== 'loading' && status() !== 'exporting') {
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
         }
     }
 
@@ -1395,7 +1350,6 @@ export default function Home() {
 
         setSelectedCharacterId(characterId);
         resetBuildChoices();
-        backgroundSolveRefreshRequested = false;
         invalidateSolve();
     }
 
@@ -1499,7 +1453,6 @@ export default function Home() {
     });
 
     onCleanup(() => {
-        clearBackgroundSolveTimer();
         armorSolver.dispose();
     });
 
@@ -1599,20 +1552,6 @@ export default function Home() {
         setTargetCapCalculationActive(true);
 
         void calculateTargetCapsIncrementally(input, requestId, initialCaps, priorityStat);
-    });
-
-    createEffect(() => {
-        if (
-            !backgroundSolveRefreshRequested ||
-            backgroundSolveStatus() !== 'queued' ||
-            targetCapsPending() ||
-            targetCapCalculationActive() ||
-            backgroundSolveTimer !== null
-        ) {
-            return;
-        }
-
-        queueBackgroundSolve();
     });
 
     function signIn() {
@@ -1936,25 +1875,22 @@ export default function Home() {
     }
 
     function solveCurrentBuilds() {
-        backgroundSolveRefreshRequested = true;
-        queueBackgroundSolve();
+        void runSolve();
     }
 
-    async function runBackgroundSolve() {
+    async function runSolve() {
         const profile = calculatorProfile();
         const character = selectedCharacter();
 
         if (!profile || !character) {
             setStatus('error');
-            backgroundSolveRefreshRequested = false;
-            setBackgroundSolveProgress('idle');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage('Load calculator data before solving.');
             return;
         }
 
         if (targetCapsPending() || targetCapCalculationActive()) {
-            clearBackgroundSolveTimer();
-            setBackgroundSolveProgress('queued');
+            setMessage('Finish checking stat limits before solving.');
             return;
         }
 
@@ -1975,7 +1911,14 @@ export default function Home() {
             setRequirements: selectedSetRequirements().length,
             armorCounts: armorSlotCounts(solveInput)
         });
-        setBackgroundSolveProgress('running');
+        setStatus('solving');
+        setLoadProgress({
+            active: true,
+            label: 'Solving builds',
+            current: 0,
+            total: 0,
+            percent: 45
+        });
         let result: SolveArmorResult;
         try {
             result = await armorSolver.solve(solveInput);
@@ -1990,8 +1933,7 @@ export default function Home() {
             }
 
             setStatus('error');
-            backgroundSolveRefreshRequested = false;
-            setBackgroundSolveProgress('idle');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(error instanceof Error ? error.message : 'Unknown armor solver worker failure.');
             logDevTiming('solve failed', {
                 requestId,
@@ -2012,7 +1954,7 @@ export default function Home() {
 
         setSolveResult(result);
         setStatus(result.ok ? 'done' : 'error');
-        setBackgroundSolveProgress('idle');
+        setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
         setMessage(
             result.ok
                 ? [
@@ -2402,7 +2344,6 @@ export default function Home() {
     function clearSavedCalculatorChoices() {
         clearCalculatorPreferences();
         resetBuildChoices();
-        backgroundSolveRefreshRequested = false;
         invalidateSolve();
         setStatus('idle');
         setMessage('Calculator choices cleared.');
@@ -2439,8 +2380,15 @@ export default function Home() {
                         setSelections={setSelections()}
                         availableExotics={availableExotics()}
                         selectableSets={selectableSets()}
-                        canSolve={!calculatorLocked() && Boolean(normalizedProfile()) && status() !== 'loading' && !targetCapsPending()}
-                        solving={status() === 'loading' || backgroundSolveActive()}
+                        canSolve={
+                            !calculatorLocked() &&
+                            Boolean(normalizedProfile()) &&
+                            status() !== 'loading' &&
+                            status() !== 'solving' &&
+                            !targetCapsPending() &&
+                            !targetCapCalculationActive()
+                        }
+                        solving={status() === 'loading' || status() === 'solving'}
                         onCharacterSelect={selectCharacter}
                         onArmorSetDisplayModeChange={setArmorSetDisplayMode}
                         onSubclassChange={updateSubclass}
@@ -2474,7 +2422,7 @@ export default function Home() {
                         resultFailure={resultFailure()}
                         sort={resultSort()}
                         dumpStat={dumpStat()}
-                        loading={status() === 'loading' || backgroundSolveActive()}
+                        loading={status() === 'loading' || status() === 'solving'}
                         progress={loadProgress()}
                         showTuningResults={showTuningResults()}
                         visibleLimit={VISIBLE_RESULT_LIMIT}
