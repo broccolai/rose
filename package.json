@@ -23,6 +23,7 @@
     "dependencies": {
         "@solidjs/router": "^0.15.3",
         "@solidjs/start": "alpha",
+        "bungie-api-ts": "^5.10.0",
         "solid-js": "^1.9.11"
     },
     "devDependencies": {

@@ -558,10 +558,15 @@ function readItemSocketPlugHash(snapshot: VaultExportSnapshot, itemInstanceId: s
     return snapshot.profileResponse?.Response?.itemComponents?.sockets?.data?.[itemInstanceId]?.sockets?.[socketIndex]?.plugHash;
 }
 
-function readReusablePlugHashes(snapshot: VaultExportSnapshot, itemInstanceId: string, socketIndex: number) {
+function readReusablePlugHashes(
+    snapshot: VaultExportSnapshot,
+    itemInstanceId: string,
+    socketIndex: number,
+    options: { includeUnavailable?: boolean } = {}
+) {
     const plugs = snapshot.profileResponse?.Response?.itemComponents?.reusablePlugs?.data?.[itemInstanceId]?.plugs ?? {};
     return (plugs[String(socketIndex)] ?? [])
-        .filter((plug) => plug.canInsert !== false && plug.enabled !== false)
+        .filter((plug) => options.includeUnavailable || (plug.canInsert !== false && plug.enabled !== false))
         .map((plug) => plug.plugItemHash)
         .filter((hash): hash is number => typeof hash === 'number');
 }
@@ -606,7 +611,7 @@ function findEmptyPlugHashForSocket(
     definitionsByHash: Map<number, ManifestInventoryItemDefinition>
 ) {
     return (
-        readReusablePlugHashes(snapshot, itemInstanceId, socketIndex).find((plugHash) =>
+        readReusablePlugHashes(snapshot, itemInstanceId, socketIndex, { includeUnavailable: true }).find((plugHash) =>
             isEmptySocketPlug(definitionsByHash.get(plugHash))
         ) ?? null
     );
@@ -622,7 +627,7 @@ function readClearableArmorModSockets(
         .map((socket, socketIndex) => {
             const currentDefinition = socket.plugHash ? definitionsByHash.get(socket.plugHash) : undefined;
             const currentCategory = currentDefinition?.plug?.plugCategoryIdentifier;
-            const reusableCategories = readReusablePlugHashes(snapshot, itemInstanceId, socketIndex)
+            const reusableCategories = readReusablePlugHashes(snapshot, itemInstanceId, socketIndex, { includeUnavailable: true })
                 .map((plugHash) => definitionsByHash.get(plugHash)?.plug?.plugCategoryIdentifier)
                 .filter((category): category is string => Boolean(category));
             const clearable =
@@ -690,15 +695,12 @@ function findPlugHashForAdjustment(
     socketIndex: number,
     plugCategory: string,
     adjustment: StatAdjustment,
-    definitionsByHash: Map<number, ManifestInventoryItemDefinition>
+    definitionsByHash: Map<number, ManifestInventoryItemDefinition>,
+    categoryDefinitions: LoadedManifestDefinition[]
 ) {
     const directPlugHash = parsePlugHashFromAdjustment(adjustment);
-    const reusablePlugHashes = readReusablePlugHashes(snapshot, itemInstanceId, socketIndex);
-    if (
-        directPlugHash !== null &&
-        reusablePlugHashes.includes(directPlugHash) &&
-        definitionMatchesAdjustment(definitionsByHash.get(directPlugHash), plugCategory, adjustment)
-    ) {
+    const reusablePlugHashes = readReusablePlugHashes(snapshot, itemInstanceId, socketIndex, { includeUnavailable: true });
+    if (directPlugHash !== null && definitionMatchesAdjustment(definitionsByHash.get(directPlugHash), plugCategory, adjustment)) {
         return directPlugHash;
     }
 
@@ -706,6 +708,13 @@ function findPlugHashForAdjustment(
         if (definitionMatchesAdjustment(definitionsByHash.get(plugHash), plugCategory, adjustment)) {
             return plugHash;
         }
+    }
+
+    const manifestDefinition = categoryDefinitions.find(({ definition }) =>
+        definitionMatchesAdjustment(definition, plugCategory, adjustment)
+    );
+    if (manifestDefinition) {
+        return manifestDefinition.hash;
     }
 
     return null;
@@ -806,10 +815,11 @@ async function insertBuildSocketPlugs(
                 socketIndex,
                 plan.plugCategory,
                 adjustment,
-                definitionsByHash
+                definitionsByHash,
+                categoryDefinitions
             );
             if (plugItemHash === null) {
-                throw new Error(`Could not resolve an insertable ${adjustment.name} ${plan.kind} for ${piece.item.name}.`);
+                throw new Error(`Could not resolve ${adjustment.name} ${plan.kind} for ${piece.item.name}.`);
             }
 
             try {
