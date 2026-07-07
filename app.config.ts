@@ -7,11 +7,23 @@ import type { Plugin } from 'vite';
 const useDevHttps = process.env['ROSE_DEV_HTTPS'] !== '0';
 const localCertFile = fileURLToPath(new URL('./.cert/localhost.pem', import.meta.url));
 const localKeyFile = fileURLToPath(new URL('./.cert/localhost-key.pem', import.meta.url));
-const localHttps =
-    useDevHttps && existsSync(localCertFile) && existsSync(localKeyFile)
+const hasLocalHttpsFiles = useDevHttps && existsSync(localCertFile) && existsSync(localKeyFile);
+const vinxiLocalHttps = hasLocalHttpsFiles
+    ? {
+          cert: localCertFile,
+          key: localKeyFile
+      }
+    : undefined;
+const viteLocalHttps = hasLocalHttpsFiles
+    ? {
+          cert: readFileSync(localCertFile),
+          key: readFileSync(localKeyFile)
+      }
+    : undefined;
+const viteHttpsPlugin =
+    useDevHttps && !hasLocalHttpsFiles
         ? {
-              cert: readFileSync(localCertFile),
-              key: readFileSync(localKeyFile)
+              plugin: basicSsl()
           }
         : undefined;
 const privateDataDir = fileURLToPath(new URL('./data/private', import.meta.url));
@@ -54,6 +66,9 @@ export default defineConfig({
     serialization: {
         mode: 'json'
     },
+    server: {
+        https: vinxiLocalHttps
+    },
     vite: {
         resolve: {
             alias: {
@@ -63,8 +78,8 @@ export default defineConfig({
             }
         },
         server: {
-            https: localHttps
+            https: viteLocalHttps
         },
-        plugins: [roseDevTestDataPlugin(), ...(useDevHttps && !localHttps ? [basicSsl()] : [])]
+        plugins: [roseDevTestDataPlugin(), ...(viteHttpsPlugin ? [viteHttpsPlugin.plugin] : [])]
     }
 });

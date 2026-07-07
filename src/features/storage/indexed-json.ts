@@ -1,6 +1,6 @@
 import { createStore, del, get, set } from 'idb-keyval';
 
-const DATABASE_NAME = 'rose-cache';
+const DATABASE_NAME = 'rose-cache-v2';
 const STORE_NAME = 'json';
 
 type StoredJson<T> = {
