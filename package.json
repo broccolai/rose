@@ -7,7 +7,7 @@
         "prebuild": "bun run panda",
         "dev": "bun x --bun vinxi dev --host 0.0.0.0 --port 5173",
         "dev:http": "ROSE_DEV_HTTPS=0 bun x --bun vinxi dev --host 127.0.0.1 --port 5173",
-        "build": "bun x --bun vinxi build && bun scripts/emit-static-shell.mjs",
+        "build": "bun x --bun vinxi build",
         "preview": "bun x --bun vinxi start --host 0.0.0.0",
         "postinstall": "bun run panda",
         "check": "bun x --bun tsc --noEmit",

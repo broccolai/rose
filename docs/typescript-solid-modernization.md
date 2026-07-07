@@ -66,7 +66,7 @@ The project now builds through Vinxi/SolidStart:
 - `bun run build` -> `vinxi build`
 - `bun run preview` -> `vinxi start`
 
-The post-build shell script now patches `.output/public`, then mirrors it to `dist/client` so existing Cloudflare Pages output settings keep working.
+Static deploys should publish `.output/public`. Cloudflare's SPA fallback lives in `public/_redirects`, which lets `/auth/bungie/callback` serve the app shell without a post-build copy step.
 
 ## Follow-Up Strictness Order
 
