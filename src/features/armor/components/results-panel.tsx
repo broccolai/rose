@@ -5,7 +5,7 @@ import { Show } from 'solid-js';
 import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
 import { ResultsBuildDetail } from '@/features/armor/components/results-build-detail';
 import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
-import { PANE_SCROLL_STYLES } from '@/features/armor/components/scroll-styles';
+import { PaneScroll } from '@/features/armor/components/scroll-primitives';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, buildExpansionKey } from '@/features/armor/result-display';
 
@@ -55,9 +55,8 @@ const ResultsHeader = styled('div', {
     }
 });
 
-const ResultsBody = styled('div', {
+const ResultsBody = styled(PaneScroll, {
     base: {
-        ...PANE_SCROLL_STYLES,
         display: 'grid',
         alignContent: 'start',
         gap: 'var(--rose-space-md)',

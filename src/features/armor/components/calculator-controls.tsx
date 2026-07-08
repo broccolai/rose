@@ -10,7 +10,7 @@ import { CharacterPicker } from '@/features/armor/components/character-picker';
 import { DumpControls } from '@/features/armor/components/dump-controls';
 import { FragmentControls } from '@/features/armor/components/fragment-controls';
 import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-settings';
-import { PANE_SCROLL_STYLES } from '@/features/armor/components/scroll-styles';
+import { PaneScroll } from '@/features/armor/components/scroll-primitives';
 import { StatTargetFields } from '@/features/armor/components/stat-target-fields';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
@@ -76,9 +76,8 @@ const SettingsPanel = styled('div', {
     }
 });
 
-const SettingsScroll = styled('div', {
+const SettingsScroll = styled(PaneScroll, {
     base: {
-        ...PANE_SCROLL_STYLES,
         display: 'grid',
         gap: 'var(--rose-space-md)',
         alignContent: 'start'

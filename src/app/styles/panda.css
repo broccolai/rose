@@ -1393,6 +1393,14 @@
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--rose-border) 18%, transparent);
 }
 
+  .cluKUT {
+    scrollbar-width: thin;
+}
+
+  .ljXzyr {
+    scrollbar-color: color-mix(in srgb, var(--rose-accent) 38%, var(--rose-border)) transparent;
+}
+
   .hKujQS {
     display: contents;
 }
@@ -1601,6 +1609,22 @@
     height: 12px;
 }
 
+  .BENyO {
+    overflow-y: auto;
+}
+
+  .gAJQbz {
+    padding-right: var(--rose-space-sm);
+}
+
+  .bOydIh {
+    margin-right: calc(var(--rose-space-xs) * -1);
+}
+
+  .gAJPRX {
+    padding-bottom: var(--rose-space-sm);
+}
+
   .ifvMgT {
     max-width: min(25rem, 100%);
 }
@@ -1721,6 +1745,18 @@
     background: #ff5a72;
 }
 
+  .hVrpDN::-webkit-scrollbar-track {
+    background: var(--edNtiq);
+}
+
+  .ckXAFM::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--rose-muted) 26%, transparent);
+}
+
+  .nejfI::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+}
+
   .hZSIfu > [data-action-button] {
     flex: 1 1 auto;
 }
@@ -1783,6 +1819,10 @@
 
   .bzEOUq[data-status="failed"] {
     border-color: color-mix(in srgb, #ff5a72 60%, var(--rose-border));
+}
+
+  .klHkQS::-webkit-scrollbar-thumb {
+    border-radius: 999px;
 }
 
   .hRyklQ svg {
@@ -2109,6 +2149,11 @@
     box-shadow: 0 0 0 4px color-mix(in srgb, #ff5a72 24%, transparent);
 }
 
+  .DNHWR::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    -webkit-background-clip: content-box;
+}
+
   .eQbFYg svg {
     width: 1.1rem;
 }
@@ -2185,6 +2230,10 @@
     height: var(--stat-track-height);
 }
 
+  .dyRWRm::-webkit-scrollbar {
+    width: 0.45rem;
+}
+
   .zvhxz:is(:focus-visible, [data-focus-visible]) {
     background: var(--rose-surface-raised);
 }
@@ -2253,6 +2302,10 @@
     background: var(--edNtiq);
 }
 
+  .ffFVNk:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--rose-accent) 48%, var(--rose-muted) 22%);
+}
+
   .cAfSsG:is(:hover, [data-hover]) {
     border-color: color-mix(in srgb, var(--rose-accent) 54%, var(--rose-border-strong));
 }
@@ -2291,6 +2344,11 @@
 
   .jrEDXy:not([data-disabled="true"])[data-selected="false"]:hover {
     color: var(--rose-text);
+}
+
+  .fDRjJ:hover::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    -webkit-background-clip: content-box;
 }
 
   .jBQrbx:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]):is(:hover, [data-hover]) {
