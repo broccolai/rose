@@ -1,31 +1,13 @@
-import type { ArmorBuild, ArmorBuildSort, ArmorStat, SolveArmorResult } from '@armor-calc';
+import type { ArmorBuild } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { Show } from 'solid-js';
 
-import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
+import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
 import { ResultsBuildDetail } from '@/features/armor/components/results-build-detail';
-import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
+import { ResultsTable } from '@/features/armor/components/results-table';
 import { PaneScroll } from '@/features/armor/components/scroll-primitives';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
-import { type ArmorSetDisplayMode, buildExpansionKey } from '@/features/armor/result-display';
-
-type ResultsPanelProps = {
-    result: SolveArmorResult | null;
-    builds: ArmorBuild[];
-    armorSets: AvailableArmorSet[];
-    armorSetDisplayMode: ArmorSetDisplayMode;
-    resultFailure: string | null;
-    sort: ArmorBuildSort;
-    dumpStat: ArmorStat | '';
-    loading: boolean;
-    progress: { active: boolean; label: string; current: number; total: number; percent: number };
-    showTuningResults: boolean;
-    visibleLimit: number;
-    expandedBuildKey: string | null;
-    onExpandedBuildKeyChange: (key: string | null) => void;
-    onEquipBuild?: (build: ArmorBuild) => Promise<void>;
-    onSort: (key: VisibleResultSortKey) => void;
-};
+import { buildExpansionKey } from '@/features/armor/result-display';
 
 const ResultsShell = styled('div', {
     base: {
@@ -177,14 +159,18 @@ const MutedText = styled('p', {
     }
 });
 
-export function ResultsPanel(props: ResultsPanelProps) {
+export function ResultsPanel() {
+    const calculator = useArmorCalculator();
+    const results = calculator.results;
+    const actions = calculator.actions;
+
     function toggleExpandedBuild(build: ArmorBuild) {
         const key = buildExpansionKey(build);
-        props.onExpandedBuildKeyChange(props.expandedBuildKey === key ? null : key);
+        actions.setExpandedBuildKey(results.expandedBuildKey() === key ? null : key);
     }
 
     function resultCountLabel() {
-        const result = props.result;
+        const result = results.result();
         if (!result?.ok) {
             return '';
         }
@@ -197,26 +183,26 @@ export function ResultsPanel(props: ResultsPanelProps) {
             <ResultsHeader>
                 <ResultsTitle>Results</ResultsTitle>
                 <HeaderTools>
-                    <Show when={props.result?.ok}>
+                    <Show when={results.result()?.ok}>
                         <TinyMuted>{resultCountLabel()}</TinyMuted>
                     </Show>
                 </HeaderTools>
             </ResultsHeader>
             <ResultsBody>
-                <Show when={props.loading && !props.result}>
+                <Show when={results.loading() && !results.result()}>
                     <LoadingStateCard>
-                        <MutedText>{props.progress.label || 'Working'}</MutedText>
-                        <Show when={props.progress.active}>
+                        <MutedText>{results.progress().label || 'Working'}</MutedText>
+                        <Show when={results.progress().active}>
                             <ProgressTrack>
-                                <ProgressBar style={{ width: `${props.progress.percent}%` }} />
+                                <ProgressBar style={{ width: `${results.progress().percent}%` }} />
                             </ProgressTrack>
                         </Show>
                     </LoadingStateCard>
                 </Show>
                 <Show
-                    when={props.result}
+                    when={results.result()}
                     fallback={
-                        <Show when={!props.loading}>
+                        <Show when={!results.loading()}>
                             <EmptyState>
                                 <MutedText>Awaiting solve.</MutedText>
                             </EmptyState>
@@ -224,11 +210,11 @@ export function ResultsPanel(props: ResultsPanelProps) {
                     }
                 >
                     <Show
-                        when={!props.resultFailure}
+                        when={!results.resultFailure()}
                         fallback={
                             <StateCard>
                                 <h3>No builds matched these requirements.</h3>
-                                <MutedText>{props.resultFailure}</MutedText>
+                                <MutedText>{results.resultFailure()}</MutedText>
                                 <MutedText>
                                     Try changing the exotic, lowering target stats, or clearing the armor set requirement.
                                 </MutedText>
@@ -236,7 +222,7 @@ export function ResultsPanel(props: ResultsPanelProps) {
                         }
                     >
                         <Show
-                            when={props.builds.length > 0}
+                            when={results.builds().length > 0}
                             fallback={
                                 <StateCard>
                                     <h3>No matching armor for this character.</h3>
@@ -245,20 +231,20 @@ export function ResultsPanel(props: ResultsPanelProps) {
                             }
                         >
                             <ResultsTable
-                                builds={props.builds}
-                                armorSets={props.armorSets}
-                                armorSetDisplayMode={props.armorSetDisplayMode}
-                                dumpStat={props.dumpStat}
-                                expandedBuildKey={props.expandedBuildKey}
-                                sort={props.sort}
-                                visibleLimit={props.visibleLimit}
-                                onSort={props.onSort}
+                                builds={results.builds()}
+                                armorSets={results.armorSets()}
+                                armorSetDisplayMode={results.armorSetDisplayMode()}
+                                dumpStat={results.dumpStat()}
+                                expandedBuildKey={results.expandedBuildKey()}
+                                sort={results.sort()}
+                                visibleLimit={results.visibleLimit()}
+                                onSort={actions.sortResults}
                                 onToggleBuild={toggleExpandedBuild}
                                 renderExpandedBuild={(build) => (
                                     <ResultsBuildDetail
                                         build={build}
-                                        onEquipBuild={props.onEquipBuild}
-                                        showTuningResults={props.showTuningResults}
+                                        onEquipBuild={actions.equipBuild}
+                                        showTuningResults={results.showTuningResults()}
                                     />
                                 )}
                             />

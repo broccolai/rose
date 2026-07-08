@@ -18,6 +18,7 @@ import { applyArmorBuild } from '@/features/armor/api/equip-build';
 import { absoluteBungieAssetUrl, readBungieUser, readSnapshotMembershipType } from '@/features/armor/api/profile-items';
 import { readEquippedSubclassImport } from '@/features/armor/api/subclass-import';
 import { type AppTheme, DEFAULT_APP_THEME, sanitizeAppTheme } from '@/features/armor/app-theme';
+import { type ArmorCalculatorContextValue, ArmorCalculatorProvider } from '@/features/armor/armor-calculator-context';
 import {
     applySetSelectionLimit,
     type CalculatorPreferences,
@@ -1250,8 +1251,78 @@ export default function Home() {
         setMessage('Calculator choices cleared.');
     }
 
+    const calculatorContext = {
+        controls: {
+            characterOptions: characterButtons,
+            selectedCharacterId: () => selectedCharacter()?.characterId ?? '',
+            selectedExoticItemHash,
+            armorSetDisplayMode,
+            selectedSubclass,
+            selectedFragmentIds,
+            importingFragments,
+            dumpStat,
+            allowBalancedTuning: effectiveAllowBalancedTuning,
+            onlyFullyMasterworkedGear,
+            targets,
+            targetCaps,
+            targetCapsPending,
+            setSelections,
+            availableExotics,
+            selectableSets,
+            canSolve: () =>
+                !calculatorLocked() &&
+                Boolean(normalizedProfile()) &&
+                status() !== 'loading' &&
+                status() !== 'solving' &&
+                !targetCapsPending() &&
+                !targetCapCalculationActive(),
+            solving: () => status() === 'loading' || status() === 'solving'
+        },
+        results: {
+            result: solveResult,
+            builds: resultBuilds,
+            armorSets: selectableSets,
+            armorSetDisplayMode,
+            resultFailure,
+            sort: resultSort,
+            dumpStat,
+            loading: () => status() === 'loading' || status() === 'solving',
+            progress: loadProgress,
+            showTuningResults,
+            visibleLimit: () => VISIBLE_RESULT_LIMIT,
+            expandedBuildKey
+        },
+        actions: {
+            selectCharacter,
+            selectExotic: (itemHash) => {
+                setSelectedExoticItemHash(itemHash);
+                invalidateSolve();
+            },
+            setArmorSetDisplayMode,
+            setSubclass: updateSubclass,
+            toggleFragment,
+            importFragmentsFromGame,
+            setDumpStat: updateDumpStat,
+            setAllowBalancedTuning: (enabled) => {
+                setAllowBalancedTuning(BALANCED_TUNING_ENABLED && enabled);
+                invalidateSolve();
+            },
+            setOnlyFullyMasterworkedGear: (enabled) => {
+                setOnlyFullyMasterworkedGear(enabled);
+                invalidateSolve();
+            },
+            setTarget: updateTarget,
+            setRequirement: updateSetRequirement,
+            solve: solveCurrentBuilds,
+            clearChoices: clearSavedCalculatorChoices,
+            setExpandedBuildKey,
+            equipBuild: equipBuildItems,
+            sortResults: toggleResultSort
+        }
+    } satisfies ArmorCalculatorContextValue;
+
     return (
-        <>
+        <ArmorCalculatorProvider value={calculatorContext}>
             <ArmorAppShell
                 locked={calculatorLocked()}
                 toolbar={
@@ -1266,78 +1337,10 @@ export default function Home() {
                         onThemeChange={setAppTheme}
                     />
                 }
-                controls={
-                    <CalculatorControls
-                        characterOptions={characterButtons()}
-                        selectedCharacterId={selectedCharacter()?.characterId ?? ''}
-                        selectedExoticItemHash={selectedExoticItemHash()}
-                        armorSetDisplayMode={armorSetDisplayMode()}
-                        selectedSubclass={selectedSubclass()}
-                        selectedFragmentIds={selectedFragmentIds()}
-                        dumpStat={dumpStat()}
-                        allowBalancedTuning={effectiveAllowBalancedTuning()}
-                        onlyFullyMasterworkedGear={onlyFullyMasterworkedGear()}
-                        targets={targets()}
-                        targetCaps={targetCaps()}
-                        targetCapsPending={targetCapsPending()}
-                        setSelections={setSelections()}
-                        availableExotics={availableExotics()}
-                        selectableSets={selectableSets()}
-                        canSolve={
-                            !calculatorLocked() &&
-                            Boolean(normalizedProfile()) &&
-                            status() !== 'loading' &&
-                            status() !== 'solving' &&
-                            !targetCapsPending() &&
-                            !targetCapCalculationActive()
-                        }
-                        solving={status() === 'loading' || status() === 'solving'}
-                        onCharacterSelect={selectCharacter}
-                        onArmorSetDisplayModeChange={setArmorSetDisplayMode}
-                        onSubclassChange={updateSubclass}
-                        onFragmentToggle={toggleFragment}
-                        onImportFragmentsFromGame={importFragmentsFromGame}
-                        importingFragments={importingFragments()}
-                        onExoticChange={(itemHash) => {
-                            setSelectedExoticItemHash(itemHash);
-                            invalidateSolve();
-                        }}
-                        onDumpStatChange={updateDumpStat}
-                        onBalancedTuningChange={(enabled) => {
-                            setAllowBalancedTuning(BALANCED_TUNING_ENABLED && enabled);
-                            invalidateSolve();
-                        }}
-                        onOnlyFullyMasterworkedGearChange={(enabled) => {
-                            setOnlyFullyMasterworkedGear(enabled);
-                            invalidateSolve();
-                        }}
-                        onTargetChange={updateTarget}
-                        onSetRequirementChange={updateSetRequirement}
-                        onSolve={solveCurrentBuilds}
-                        onClearChoices={clearSavedCalculatorChoices}
-                    />
-                }
-                results={
-                    <ResultsPanel
-                        result={solveResult()}
-                        builds={resultBuilds()}
-                        armorSets={selectableSets()}
-                        armorSetDisplayMode={armorSetDisplayMode()}
-                        resultFailure={resultFailure()}
-                        sort={resultSort()}
-                        dumpStat={dumpStat()}
-                        loading={status() === 'loading' || status() === 'solving'}
-                        progress={loadProgress()}
-                        showTuningResults={showTuningResults()}
-                        visibleLimit={VISIBLE_RESULT_LIMIT}
-                        expandedBuildKey={expandedBuildKey()}
-                        onExpandedBuildKeyChange={setExpandedBuildKey}
-                        onEquipBuild={equipBuildItems}
-                        onSort={toggleResultSort}
-                    />
-                }
+                controls={<CalculatorControls />}
+                results={<ResultsPanel />}
             />
             <EquipProgressOverlay progress={equipProgress()} onDismiss={() => setEquipProgress(null)} />
-        </>
+        </ArmorCalculatorProvider>
     );
 }

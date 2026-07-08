@@ -1,8 +1,6 @@
-import type { ArmorStat, StatVector } from '@armor-calc';
 import { styled } from '@panda/jsx';
 
-import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
-import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption } from '@/features/armor/calculator-view-model';
+import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
 import { ActionControls } from '@/features/armor/components/action-controls';
 import { AdvancedControls } from '@/features/armor/components/advanced-controls';
 import { CollapsibleSection, FormRow, RowLabel } from '@/features/armor/components/calculator-control-primitives';
@@ -13,42 +11,6 @@ import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-s
 import { PaneScroll } from '@/features/armor/components/scroll-primitives';
 import { StatTargetFields } from '@/features/armor/components/stat-target-fields';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
-import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
-import type { SubclassType } from '@/features/armor/subclass-fragments';
-
-type CalculatorControlsProps = {
-    characterOptions: CharacterButtonOption[];
-    selectedCharacterId: string;
-    selectedExoticItemHash: string;
-    armorSetDisplayMode: ArmorSetDisplayMode;
-    selectedSubclass: SubclassType;
-    selectedFragmentIds: string[];
-    dumpStat: ArmorStat | '';
-    allowBalancedTuning: boolean;
-    onlyFullyMasterworkedGear: boolean;
-    targets: StatVector;
-    targetCaps: StatVector;
-    targetCapsPending: boolean;
-    setSelections: Record<string, SetSelectionValue>;
-    availableExotics: AvailableExotic[];
-    selectableSets: AvailableArmorSet[];
-    canSolve: boolean;
-    solving: boolean;
-    onCharacterSelect: (characterId: string) => void;
-    onExoticChange: (itemHash: string) => void;
-    onArmorSetDisplayModeChange: (mode: ArmorSetDisplayMode) => void;
-    onSubclassChange: (subclass: SubclassType) => void;
-    onFragmentToggle: (fragmentId: string) => void;
-    onImportFragmentsFromGame: () => void;
-    importingFragments: boolean;
-    onDumpStatChange: (stat: string) => void;
-    onBalancedTuningChange: (enabled: boolean) => void;
-    onOnlyFullyMasterworkedGearChange: (enabled: boolean) => void;
-    onTargetChange: (stat: ArmorStat, value: string) => void;
-    onSetRequirementChange: (setId: string, value: string) => void;
-    onSolve: () => void;
-    onClearChoices: () => void;
-};
 
 const ControlGrid = styled('div', {
     base: {
@@ -108,7 +70,11 @@ const PanelTitle = styled('h2', {
     }
 });
 
-export function CalculatorControls(props: CalculatorControlsProps) {
+export function CalculatorControls() {
+    const calculator = useArmorCalculator();
+    const controls = calculator.controls;
+    const actions = calculator.actions;
+
     return (
         <ControlGrid>
             <SettingsPanel>
@@ -120,24 +86,24 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                                 <RowLabel>Class</RowLabel>
                                 <CharacterPicker
                                     labelText={false}
-                                    options={props.characterOptions}
-                                    selectedCharacterId={props.selectedCharacterId}
-                                    onSelect={props.onCharacterSelect}
+                                    options={controls.characterOptions()}
+                                    selectedCharacterId={controls.selectedCharacterId()}
+                                    onSelect={actions.selectCharacter}
                                 />
                             </FormRow>
 
                             <FormRow as="div">
                                 <RowLabel>Dump</RowLabel>
-                                <DumpControls dumpStat={props.dumpStat} onDumpStatChange={props.onDumpStatChange} />
+                                <DumpControls dumpStat={controls.dumpStat()} onDumpStatChange={actions.setDumpStat} />
                             </FormRow>
 
                             <FormRow as="div">
                                 <RowLabel>Exotic</RowLabel>
                                 <ExoticPicker
                                     labelText={false}
-                                    availableExotics={props.availableExotics}
-                                    onExoticChange={props.onExoticChange}
-                                    selectedExoticItemHash={props.selectedExoticItemHash}
+                                    availableExotics={controls.availableExotics()}
+                                    onExoticChange={actions.selectExotic}
+                                    selectedExoticItemHash={controls.selectedExoticItemHash()}
                                 />
                             </FormRow>
                         </FormRows>
@@ -145,48 +111,48 @@ export function CalculatorControls(props: CalculatorControlsProps) {
 
                     <CollapsibleSection title="Targets">
                         <StatTargetFields
-                            allowBalancedTuning={props.allowBalancedTuning}
-                            dumpStat={props.dumpStat}
-                            onTargetChange={props.onTargetChange}
-                            targetCapsPending={props.targetCapsPending}
-                            targetCaps={props.targetCaps}
-                            targets={props.targets}
+                            allowBalancedTuning={controls.allowBalancedTuning()}
+                            dumpStat={controls.dumpStat()}
+                            onTargetChange={actions.setTarget}
+                            targetCapsPending={controls.targetCapsPending()}
+                            targetCaps={controls.targetCaps()}
+                            targets={controls.targets()}
                         />
                     </CollapsibleSection>
 
                     <FragmentControls
-                        selectedSubclass={props.selectedSubclass}
-                        selectedFragmentIds={props.selectedFragmentIds}
-                        onSubclassChange={props.onSubclassChange}
-                        onFragmentToggle={props.onFragmentToggle}
-                        onImportFragmentsFromGame={props.onImportFragmentsFromGame}
-                        importingFragments={props.importingFragments}
+                        selectedSubclass={controls.selectedSubclass()}
+                        selectedFragmentIds={controls.selectedFragmentIds()}
+                        onSubclassChange={actions.setSubclass}
+                        onFragmentToggle={actions.toggleFragment}
+                        onImportFragmentsFromGame={actions.importFragmentsFromGame}
+                        importingFragments={controls.importingFragments()}
                     />
 
                     <CollapsibleSection title="Sets">
                         <ArmorSetFields
-                            armorSetDisplayMode={props.armorSetDisplayMode}
-                            onSetRequirementChange={props.onSetRequirementChange}
-                            selectableSets={props.selectableSets}
-                            setSelections={props.setSelections}
+                            armorSetDisplayMode={controls.armorSetDisplayMode()}
+                            onSetRequirementChange={actions.setRequirement}
+                            selectableSets={controls.selectableSets()}
+                            setSelections={controls.setSelections()}
                         />
                     </CollapsibleSection>
 
                     <AdvancedControls
-                        allowBalancedTuning={props.allowBalancedTuning}
-                        armorSetDisplayMode={props.armorSetDisplayMode}
-                        onlyFullyMasterworkedGear={props.onlyFullyMasterworkedGear}
-                        onArmorSetDisplayModeChange={props.onArmorSetDisplayModeChange}
-                        onBalancedTuningChange={props.onBalancedTuningChange}
-                        onOnlyFullyMasterworkedGearChange={props.onOnlyFullyMasterworkedGearChange}
+                        allowBalancedTuning={controls.allowBalancedTuning()}
+                        armorSetDisplayMode={controls.armorSetDisplayMode()}
+                        onlyFullyMasterworkedGear={controls.onlyFullyMasterworkedGear()}
+                        onArmorSetDisplayModeChange={actions.setArmorSetDisplayMode}
+                        onBalancedTuningChange={actions.setAllowBalancedTuning}
+                        onOnlyFullyMasterworkedGearChange={actions.setOnlyFullyMasterworkedGear}
                     />
                 </SettingsScroll>
 
                 <ActionControls
-                    canSolve={props.canSolve}
-                    onClearChoices={props.onClearChoices}
-                    onSolve={props.onSolve}
-                    solving={props.solving}
+                    canSolve={controls.canSolve()}
+                    onClearChoices={actions.clearChoices}
+                    onSolve={actions.solve}
+                    solving={controls.solving()}
                 />
             </SettingsPanel>
         </ControlGrid>
