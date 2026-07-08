@@ -1687,6 +1687,10 @@
     height: 1.35rem;
 }
 
+  .bDaQIh {
+    min-height: calc(var(--rose-control-compact-height) + 0.15rem);
+}
+
   .hRKokJ {
     width: calc(100% + var(--rose-space-sm));
 }

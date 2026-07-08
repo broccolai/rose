@@ -26,7 +26,7 @@ const AdvancedRow = styled('div', {
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         alignItems: 'center',
         gap: 'var(--rose-space-sm)',
-        minH: 'var(--rose-control-compact-height)',
+        minH: 'calc(var(--rose-control-compact-height) + 0.15rem)',
         minW: 0
     }
 });
@@ -39,7 +39,7 @@ const AdvancedLabel = styled('span', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
         fontWeight: 680,
-        lineHeight: 1,
+        lineHeight: 1.35,
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'
     }
