@@ -1,5 +1,5 @@
 import { styled } from '@panda/jsx';
-import { For, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { type AvailableArmorSet, type AvailableExotic, getArmorSetRequirementAvailability } from '@/features/armor/calculator-view-model';
@@ -93,6 +93,55 @@ const MutedText = styled('p', {
     }
 });
 
+const SetSectionToggle = styled('button', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
+        w: '100%',
+        p: 0,
+        border: 0,
+        bg: 'transparent',
+        color: 'inherit',
+        font: 'inherit',
+        letterSpacing: 'inherit',
+        lineHeight: 1.25,
+        textAlign: 'left',
+        textTransform: 'inherit',
+        cursor: 'pointer',
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 34%, transparent)',
+            outlineOffset: '2px',
+            borderRadius: 'var(--rose-radius-xs)'
+        }
+    }
+});
+
+const SetSectionCount = styled('span', {
+    base: {
+        color: 'var(--rose-muted)',
+        fontVariantNumeric: 'tabular-nums',
+        letterSpacing: 0,
+        textTransform: 'none'
+    }
+});
+
+const SetSectionChevron = styled('span', {
+    base: {
+        display: 'block',
+        w: '0.48rem',
+        h: '0.48rem',
+        borderRight: '1.5px solid currentColor',
+        borderBottom: '1.5px solid currentColor',
+        transform: 'rotate(45deg) translateY(-1px)',
+        transition: 'transform 120ms ease',
+        '&[data-collapsed="true"]': {
+            transform: 'rotate(-45deg)'
+        }
+    }
+});
+
 export function ExoticPicker(
     props: Pick<GearSettingsProps, 'availableExotics' | 'onExoticChange' | 'selectedExoticItemHash'> & { labelText?: string | false }
 ) {
@@ -137,6 +186,8 @@ export function ArmorSetFields(
         | 'setSelections'
     >
 ) {
+    const [otherSetsCollapsed, setOtherSetsCollapsed] = createSignal(false);
+
     function nextRequirement(current: SetSelectionValue, value: SetSelectionValue) {
         return current === value ? '0' : value;
     }
@@ -230,12 +281,22 @@ export function ArmorSetFields(
                         </Show>
 
                         <Show when={regularSets().length > 0}>
-                            <Show when={opSets().length > 0}>
-                                <DataTableSectionRow>
-                                    <td colSpan={3}>Other sets</td>
-                                </DataTableSectionRow>
+                            <DataTableSectionRow>
+                                <td colSpan={3}>
+                                    <SetSectionToggle
+                                        type="button"
+                                        aria-expanded={!otherSetsCollapsed()}
+                                        onClick={() => setOtherSetsCollapsed((collapsed) => !collapsed)}
+                                    >
+                                        <span>Other sets</span>
+                                        <SetSectionCount>{regularSets().length}</SetSectionCount>
+                                        <SetSectionChevron data-collapsed={otherSetsCollapsed()} aria-hidden="true" />
+                                    </SetSectionToggle>
+                                </td>
+                            </DataTableSectionRow>
+                            <Show when={!otherSetsCollapsed()}>
+                                <For each={regularSets()}>{(set) => renderSetRow(set)}</For>
                             </Show>
-                            <For each={regularSets()}>{(set) => renderSetRow(set)}</For>
                         </Show>
                     </tbody>
                 </DataTable>
