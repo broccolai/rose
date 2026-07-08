@@ -113,10 +113,7 @@ export function FragmentControls(props: FragmentControlsProps) {
     const fragments = () => fragmentsForSubclass(props.selectedSubclass);
 
     return (
-        <CollapsibleSection
-            title={`Fragments${props.selectedFragmentIds.length > 0 ? ` (${props.selectedFragmentIds.length})` : ''}`}
-            ariaLabel="Fragments"
-        >
+        <CollapsibleSection title="Fragments" ariaLabel="Fragments">
             <SelectInput
                 size="compact"
                 value={props.selectedSubclass}
