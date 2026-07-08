@@ -29,6 +29,13 @@ type ResultsTableProps = {
 
 const RESULT_COLUMN_COUNT = 8;
 
+const ResultsTableFrame = styled(DataTableFrame, {
+    base: {
+        w: 'calc(100% + var(--rose-space-sm))',
+        maxW: 'none'
+    }
+});
+
 const SortButton = styled('button', {
     base: {
         border: 0,
@@ -198,7 +205,7 @@ export function ResultsTable(props: ResultsTableProps) {
     }
 
     return (
-        <DataTableFrame>
+        <ResultsTableFrame>
             <DataTable data-density="comfortable">
                 <colgroup>
                     <For each={ARMOR_STATS}>{() => <col data-stat-column />}</For>
@@ -252,6 +259,6 @@ export function ResultsTable(props: ResultsTableProps) {
                     </For>
                 </tbody>
             </DataTable>
-        </DataTableFrame>
+        </ResultsTableFrame>
     );
 }

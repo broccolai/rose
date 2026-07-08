@@ -2,7 +2,7 @@ import { styled } from '@panda/jsx';
 import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
-import type { AvailableArmorSet, AvailableExotic } from '@/features/armor/calculator-view-model';
+import { type AvailableArmorSet, type AvailableExotic, getArmorSetRequirementAvailability } from '@/features/armor/calculator-view-model';
 import { CompactChoiceButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame, DataTableSectionRow } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
@@ -114,23 +114,39 @@ export function ExoticPicker(
     );
 }
 
-function setBonusTooltip(set: AvailableArmorSet, requiredPieces: 2 | 4) {
+function setBonusTooltip(set: AvailableArmorSet, requiredPieces: 2 | 4, usableSlotCount: number, canSelect: boolean) {
     const bonus = set.bonuses.find((setBonus) => setBonus.requiredPieces === requiredPieces);
-    const ownership = `Own ${Math.min(set.count, requiredPieces)} / ${requiredPieces} compatible pieces.`;
+    const ownership = `Usable slots ${Math.min(usableSlotCount, requiredPieces)} / ${requiredPieces}.`;
+    const availability = canSelect ? 'Slot-compatible with current choices.' : 'Not slot-compatible with current choices.';
 
     if (!bonus) {
-        return `${requiredPieces}-piece bonus\nNo perk details in manifest.\n${ownership}`;
+        return `${requiredPieces}-piece bonus\nNo perk details in manifest.\n${ownership}\n${availability}`;
     }
 
-    return [bonus.name, bonus.description, ownership].filter(Boolean).join('\n');
+    return [bonus.name, bonus.description, ownership, availability].filter(Boolean).join('\n');
 }
 
 export function ArmorSetFields(
-    props: Pick<GearSettingsProps, 'armorSetDisplayMode' | 'onSetRequirementChange' | 'selectableSets' | 'setSelections'>
+    props: Pick<
+        GearSettingsProps,
+        | 'armorSetDisplayMode'
+        | 'availableExotics'
+        | 'onSetRequirementChange'
+        | 'selectableSets'
+        | 'selectedExoticItemHash'
+        | 'setSelections'
+    >
 ) {
     function nextRequirement(current: SetSelectionValue, value: SetSelectionValue) {
         return current === value ? '0' : value;
     }
+
+    const blockedSlots = () => {
+        const selectedHash = props.selectedExoticItemHash;
+        const selectedExotic = selectedHash ? props.availableExotics.find((exotic) => String(exotic.itemHash) === selectedHash) : undefined;
+
+        return selectedExotic ? [selectedExotic.slot] : [];
+    };
 
     const opSets = () => props.selectableSets.filter((set) => set.opBonuses.length > 0);
     const regularSets = () => props.selectableSets.filter((set) => set.opBonuses.length === 0);
@@ -138,8 +154,11 @@ export function ArmorSetFields(
     function renderSetRow(set: AvailableArmorSet) {
         const selected = () => props.setSelections[set.id] ?? '0';
         const displayName = () => getArmorSetDisplayName(set, props.armorSetDisplayMode);
-        const canRequire = (requiredPieces: 2 | 4) => set.count >= requiredPieces;
+        const availability = (requiredPieces: 2 | 4) =>
+            getArmorSetRequirementAvailability(props.selectableSets, props.setSelections, set.id, requiredPieces, blockedSlots());
+        const canRequire = (requiredPieces: 2 | 4) => availability(requiredPieces).canSelect;
         const rowSelected = () => selected() === '2' || selected() === '4';
+        const rowUnavailable = () => !canRequire(2) && !canRequire(4) && !rowSelected();
         const hasOpBonus = (requiredPieces: 2 | 4) => set.opBonuses.some((bonus) => bonus.requiredPieces === requiredPieces);
         const updateRequirement = (requiredPieces: 2 | 4) => {
             if (!canRequire(requiredPieces)) {
@@ -150,14 +169,14 @@ export function ArmorSetFields(
         };
 
         return (
-            <tr data-op={set.opBonuses.length > 0} data-selected={rowSelected()} data-unavailable={set.count < 2}>
+            <tr data-op={set.opBonuses.length > 0} data-selected={rowSelected()} data-unavailable={rowUnavailable()}>
                 <SetNameCell title={props.armorSetDisplayMode === 'sources' ? set.name : displayName()}>
                     <SetName>{displayName()}</SetName>
                 </SetNameCell>
                 <td data-action>
                     <CompactChoiceButton
                         type="button"
-                        title={setBonusTooltip(set, 2)}
+                        title={setBonusTooltip(set, 2, availability(2).usableSlotCount, canRequire(2))}
                         disabled={!canRequire(2)}
                         aria-disabled={!canRequire(2)}
                         data-disabled={!canRequire(2)}
@@ -171,7 +190,7 @@ export function ArmorSetFields(
                 <td data-action>
                     <CompactChoiceButton
                         type="button"
-                        title={setBonusTooltip(set, 4)}
+                        title={setBonusTooltip(set, 4, availability(4).usableSlotCount, canRequire(4))}
                         disabled={!canRequire(4)}
                         aria-disabled={!canRequire(4)}
                         data-disabled={!canRequire(4)}

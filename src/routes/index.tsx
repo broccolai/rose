@@ -144,7 +144,7 @@ export default function Home() {
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
     const [targetCaps, setTargetCaps] = createSignal<StatVector>({ ...MAX_STAT_TARGET_CAPS });
     const [targetCapsPending, setTargetCapsPending] = createSignal(false);
-    const [targetCapCalculationActive, setTargetCapCalculationActive] = createSignal(false);
+    const [, setTargetCapCalculationActive] = createSignal(false);
     const [targetCapPriorityStat, setTargetCapPriorityStat] = createSignal<ArmorStat | null>(null);
     const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
     const [importingFragments, setImportingFragments] = createSignal(false);
@@ -163,6 +163,12 @@ export default function Home() {
     const characterButtons = createMemo(() => getCharacterButtonOptions(normalizedProfile()));
     const availableExotics = createMemo(() => getAvailableExoticOptions(calculatorProfile(), selectedCharacter()));
     const selectableSets = createMemo(() => getSelectableArmorSets(calculatorProfile(), selectedCharacter()));
+    const selectedExoticBlockedSlots = createMemo(() => {
+        const selectedHash = selectedExoticItemHash();
+        const selectedExotic = selectedHash ? availableExotics().find((exotic) => String(exotic.itemHash) === selectedHash) : undefined;
+
+        return selectedExotic ? [selectedExotic.slot] : [];
+    });
     const resultBuilds = createMemo(() => {
         const result = solveResult();
         if (!result?.ok) {
@@ -180,7 +186,9 @@ export default function Home() {
         () => bungieUser()?.cachedBungieGlobalDisplayName ?? bungieUser()?.uniqueName ?? bungieUser()?.displayName ?? 'Signed in'
     );
 
-    const selectedSetRequirements = createMemo(() => getSelectedSetRequirements(selectableSets(), setSelections()));
+    const selectedSetRequirements = createMemo(() =>
+        getSelectedSetRequirements(selectableSets(), setSelections(), selectedExoticBlockedSlots())
+    );
     const effectiveAllowBalancedTuning = createMemo(() => BALANCED_TUNING_ENABLED && allowBalancedTuning());
     const selectedFragmentBonuses = createMemo(() => sumFragmentBonuses(selectedFragmentIds()));
     const selectedFragmentDetails = createMemo(() => {
@@ -227,6 +235,15 @@ export default function Home() {
         return targetCapRequestId;
     }
 
+    function cancelTargetCapRefresh() {
+        targetCapRequestId += 1;
+        armorSolver.cancelPending();
+        setTargetCapsPending(false);
+        setTargetCapCalculationActive(false);
+        setTargetCapPriorityStat(null);
+        setNextTargetCapRefreshBackground(false);
+    }
+
     async function calculateTargetCapsIncrementally(
         input: ArmorStatTargetCapsInput,
         requestId: number,
@@ -261,6 +278,7 @@ export default function Home() {
                 setTargetCaps(verifiedCaps);
                 setTargetCapPriorityStat(null);
                 setTargetCapsPending(false);
+                setTargetCapCalculationActive(false);
 
                 const requestedTarget = input.statTargets[priorityStat] ?? 0;
                 if (requestedTarget > verifiedCaps[priorityStat]) {
@@ -580,7 +598,7 @@ export default function Home() {
             invalidateSolve();
         }
 
-        const nextSelections = reconcileSetSelections(profile, character.classType, setSelections());
+        const nextSelections = reconcileSetSelections(profile, character.classType, setSelections(), selectedExoticBlockedSlots());
         if (!setSelectionRecordsEqual(setSelections(), nextSelections)) {
             setSetSelections(nextSelections);
             invalidateSolve();
@@ -610,8 +628,8 @@ export default function Home() {
 
         const initialCaps = createPendingTargetCaps(untrack(targets), currentDumpStat);
         setTargetCaps(initialCaps);
-        setTargetCapsPending(!backgroundOnly);
-        setTargetCapCalculationActive(true);
+        setTargetCapsPending(!backgroundOnly && priorityStat !== null);
+        setTargetCapCalculationActive(!backgroundOnly && priorityStat !== null);
 
         void calculateTargetCapsIncrementally(input, requestId, initialCaps, priorityStat);
     });
@@ -951,10 +969,12 @@ export default function Home() {
             return;
         }
 
-        if (targetCapsPending() || targetCapCalculationActive()) {
+        if (targetCapsPending()) {
             setMessage('Finish checking stat limits before solving.');
             return;
         }
+
+        cancelTargetCapRefresh();
 
         if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat(), effectiveAllowBalancedTuning())) {
             setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat(), effectiveAllowBalancedTuning()));
@@ -1077,6 +1097,7 @@ export default function Home() {
             }
 
             setLoadedSnapshot(freshSnapshot);
+            setNextTargetCapRefreshBackground(true);
             setSelectedSubclass(imported.subclass);
             setSelectedFragmentIds(sanitizeFragmentIds(imported.fragmentIds, imported.subclass));
             setTargetCapPriorityStat(null);
@@ -1177,6 +1198,7 @@ export default function Home() {
 
     function updateSubclass(value: SubclassType) {
         const nextSubclass = sanitizeSubclassType(value);
+        setNextTargetCapRefreshBackground(true);
         setSelectedSubclass(nextSubclass);
         setSelectedFragmentIds((current) => sanitizeFragmentIds(current, nextSubclass));
         setTargetCapPriorityStat(null);
@@ -1184,6 +1206,7 @@ export default function Home() {
     }
 
     function toggleFragment(fragmentId: string) {
+        setNextTargetCapRefreshBackground(true);
         setSelectedFragmentIds((current) => {
             const selected = new Set(current);
             if (selected.has(fragmentId)) {
@@ -1280,8 +1303,7 @@ export default function Home() {
                 Boolean(normalizedProfile()) &&
                 status() !== 'loading' &&
                 status() !== 'solving' &&
-                !targetCapsPending() &&
-                !targetCapCalculationActive(),
+                !targetCapsPending(),
             solving: () => status() === 'loading' || status() === 'solving'
         },
         results: {

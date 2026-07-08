@@ -15,7 +15,7 @@ import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 const ControlGrid = styled('div', {
     base: {
         display: 'grid',
-        gap: 'var(--rose-space-md)',
+        gap: 'var(--rose-space-sm)',
         maxW: 'none',
         mx: 'auto',
         w: '100%',
@@ -25,9 +25,12 @@ const ControlGrid = styled('div', {
 
 const SettingsPanel = styled('div', {
     base: {
+        '--rose-control-height': '2.5rem',
+        '--rose-control-compact-height': '2rem',
+        '--rose-control-padding-x': '0.85rem',
         display: 'grid',
         gridTemplateRows: { lg: 'auto minmax(0, 1fr) auto' },
-        gap: 'var(--rose-space-md)',
+        gap: 'var(--rose-space-sm)',
         minW: 0,
         minH: 0,
         h: { lg: '100%' },
@@ -42,7 +45,7 @@ const SettingsPanel = styled('div', {
 const SettingsScroll = styled(PaneScroll, {
     base: {
         display: 'grid',
-        gap: 'var(--rose-space-md)',
+        gap: 'var(--rose-space-sm)',
         alignContent: 'start'
     }
 });
@@ -51,7 +54,7 @@ const FormRows = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', md: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' },
-        gap: 'var(--rose-space-sm)',
+        gap: 'var(--rose-space-xs)',
         alignItems: 'start',
         '& > :last-child': {
             gridColumn: { md: '1 / -1' }
@@ -63,7 +66,7 @@ const PanelTitle = styled('h2', {
     base: {
         m: 0,
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '1.05rem',
+        fontSize: '1rem',
         lineHeight: 1,
         fontWeight: 780,
         color: 'var(--rose-text)'
@@ -132,8 +135,10 @@ export function CalculatorControls() {
                     <CollapsibleSection title="Sets">
                         <ArmorSetFields
                             armorSetDisplayMode={controls.armorSetDisplayMode()}
+                            availableExotics={controls.availableExotics()}
                             onSetRequirementChange={actions.setRequirement}
                             selectableSets={controls.selectableSets()}
+                            selectedExoticItemHash={controls.selectedExoticItemHash()}
                             setSelections={controls.setSelections()}
                         />
                     </CollapsibleSection>

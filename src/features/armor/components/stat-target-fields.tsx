@@ -21,7 +21,7 @@ interface StatTargetFieldsProps {
 const FieldLabel = styled('span', {
     base: {
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.76rem',
+        fontSize: '0.72rem',
         lineHeight: 1,
         letterSpacing: 0,
         fontWeight: 650,
@@ -32,7 +32,7 @@ const FieldLabel = styled('span', {
 const StatGrid = styled('div', {
     base: {
         display: 'grid',
-        gap: 'var(--rose-space-sm)'
+        gap: 'var(--rose-space-xs)'
     }
 });
 
@@ -41,7 +41,7 @@ const StatSliderRow = styled('div', {
         display: 'grid',
         gridTemplateAreas: '"name value" "slider slider"',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gap: 'var(--rose-space-xxs) var(--rose-space-sm)',
+        gap: '0.2rem var(--rose-space-xs)',
         alignItems: 'center',
         py: 0,
         minW: 0
@@ -60,7 +60,7 @@ const StatScaleRow = styled('div', {
 const StatScale = styled('div', {
     base: {
         position: 'relative',
-        h: '1rem',
+        h: '0.85rem',
         mx: '7px',
         minW: 0
     }
@@ -90,7 +90,7 @@ const StatSliderFrame = styled('div', {
         position: 'relative',
         display: 'grid',
         alignItems: 'center',
-        h: 'var(--rose-control-compact-height)',
+        h: '1.7rem',
         minW: 0,
         '--stat-tick-color': 'var(--rose-slider-tick)',
         '--stat-major-color': 'var(--rose-slider-major)'
@@ -110,7 +110,7 @@ const StatSliderTrack = styled('div', {
         zIndex: 1,
         w: '100%',
         minW: 0,
-        h: '24px',
+        h: '20px',
         appearance: 'none',
         bg: 'transparent',
         cursor: 'pointer',
@@ -178,11 +178,53 @@ const StatValue = styled('span', {
     base: {
         gridArea: 'value',
         justifySelf: 'end',
+        display: 'inline-flex',
+        alignItems: 'baseline',
+        gap: '0.12rem',
         fontFamily: MONO_FONT_FAMILY,
         fontVariantNumeric: 'tabular-nums',
         color: 'var(--rose-text)',
-        fontSize: '0.86rem',
+        fontSize: '0.82rem',
         fontWeight: 680
+    }
+});
+
+const StatValueInput = styled('input', {
+    base: {
+        w: '2.2rem',
+        minW: 0,
+        px: '0.16rem',
+        py: '0.08rem',
+        border: '1px solid transparent',
+        borderRadius: 'var(--rose-radius-xs)',
+        appearance: 'textfield',
+        bg: 'transparent',
+        color: 'inherit',
+        font: 'inherit',
+        fontVariantNumeric: 'tabular-nums',
+        fontWeight: 'inherit',
+        lineHeight: 1,
+        textAlign: 'right',
+        outline: 'none',
+        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
+        _hover: {
+            borderColor: 'color-mix(in srgb, var(--rose-border) 72%, transparent)'
+        },
+        _focus: {
+            borderColor: 'color-mix(in srgb, var(--rose-accent) 58%, var(--rose-border))',
+            bg: 'var(--rose-surface-soft)'
+        },
+        _disabled: {
+            color: 'var(--rose-muted)',
+            cursor: 'not-allowed',
+            _hover: {
+                borderColor: 'transparent'
+            }
+        },
+        '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+            m: 0,
+            appearance: 'none'
+        }
     }
 });
 
@@ -211,12 +253,26 @@ function StatTargetSlider(props: StatTargetSliderProps) {
     const committedValue = () => snapStatTarget(props.value, props.cap, props.allowBalancedTuning);
     const [draftValue, setDraftValue] = createSignal(committedValue());
     const [draggingPointerId, setDraggingPointerId] = createSignal<number | null>(null);
+    const [typing, setTyping] = createSignal(false);
+    const [typedValue, setTypedValue] = createSignal(String(committedValue()));
 
     createEffect(() => {
-        setDraftValue(committedValue());
+        const nextValue = committedValue();
+        setDraftValue(nextValue);
+        if (!typing()) {
+            setTypedValue(String(nextValue));
+        }
     });
 
     const clampDraft = (value: string | number) => snapStatTarget(Number(value) || 0, props.cap, props.allowBalancedTuning);
+    const inputDisabled = () => props.disabled || props.pending || maxValue() <= 0;
+
+    const previewDraftValue = (value: number) => {
+        setDraftValue(value);
+        if (!typing()) {
+            setTypedValue(String(value));
+        }
+    };
 
     const valueFromPointer = (event: PointerEvent & { currentTarget: HTMLElement }) => {
         const bounds = event.currentTarget.getBoundingClientRect();
@@ -229,7 +285,8 @@ function StatTargetSlider(props: StatTargetSliderProps) {
 
     const commit = (value: string | number = draftValue()) => {
         const nextValue = clampDraft(value);
-        setDraftValue(nextValue);
+        previewDraftValue(nextValue);
+        setTypedValue(String(nextValue));
 
         if (nextValue !== props.value) {
             props.onCommit(props.stat, String(nextValue));
@@ -244,7 +301,7 @@ function StatTargetSlider(props: StatTargetSliderProps) {
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
         setDraggingPointerId(event.pointerId);
-        setDraftValue(valueFromPointer(event));
+        previewDraftValue(valueFromPointer(event));
     };
 
     const drag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
@@ -253,7 +310,7 @@ function StatTargetSlider(props: StatTargetSliderProps) {
         }
 
         event.preventDefault();
-        setDraftValue(valueFromPointer(event));
+        previewDraftValue(valueFromPointer(event));
     };
 
     const finishDrag = (event: PointerEvent & { currentTarget: HTMLElement }) => {
@@ -279,7 +336,51 @@ function StatTargetSlider(props: StatTargetSliderProps) {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
         }
-        setDraftValue(committedValue());
+        previewDraftValue(committedValue());
+    };
+
+    const beginTyping = (event: FocusEvent & { currentTarget: HTMLInputElement }) => {
+        if (inputDisabled()) {
+            return;
+        }
+
+        setTyping(true);
+        setTypedValue(String(draftValue()));
+        requestAnimationFrame(() => event.currentTarget.select());
+    };
+
+    const updateTypedValue = (event: InputEvent & { currentTarget: HTMLInputElement }) => {
+        const nextValue = event.currentTarget.value.replace(/\D/g, '').slice(0, 3);
+        setTypedValue(nextValue);
+        if (nextValue) {
+            setDraftValue(clampDraft(nextValue));
+        }
+    };
+
+    const commitTypedValue = () => {
+        setTyping(false);
+        commit(typedValue() || 0);
+    };
+
+    const cancelTypedValue = (input: HTMLInputElement) => {
+        setTyping(false);
+        previewDraftValue(committedValue());
+        setTypedValue(String(committedValue()));
+        input.blur();
+    };
+
+    const handleTypedValueKeyDown = (event: KeyboardEvent & { currentTarget: HTMLInputElement }) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            commitTypedValue();
+            event.currentTarget.blur();
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelTypedValue(event.currentTarget);
+        }
     };
 
     const commitKeyboardChange = (event: KeyboardEvent) => {
@@ -344,7 +445,18 @@ function StatTargetSlider(props: StatTargetSliderProps) {
                 </StatSliderTrack>
             </StatSliderFrame>
             <StatValue>
-                {draftValue()} <StatCap>/ {props.pending ? 'checking' : maxValue()}</StatCap>
+                <StatValueInput
+                    aria-label={`Set ${props.label} target`}
+                    disabled={inputDisabled()}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={typing() ? typedValue() : String(draftValue())}
+                    onBlur={commitTypedValue}
+                    onFocus={beginTyping}
+                    onInput={updateTypedValue}
+                    onKeyDown={handleTypedValueKeyDown}
+                />
+                <StatCap>/ {props.pending ? 'checking' : maxValue()}</StatCap>
             </StatValue>
         </StatSliderRow>
     );

@@ -8,7 +8,7 @@ export const FormRow = styled('label', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr)',
-        gap: 'var(--rose-space-xs)',
+        gap: 'var(--rose-space-xxs)',
         alignItems: 'start',
         minW: 0
     }
@@ -17,7 +17,7 @@ export const FormRow = styled('label', {
 export const RowLabel = styled('span', {
     base: {
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.82rem',
+        fontSize: '0.78rem',
         lineHeight: 1,
         fontWeight: 680,
         color: 'var(--rose-muted)'
@@ -288,15 +288,15 @@ export const ToggleBox = styled('span', toggleBoxRecipe);
 const Section = styled('details', {
     base: {
         display: 'grid',
-        gap: 'var(--rose-space-sm)',
+        gap: 'var(--rose-space-xs)',
         minW: 0,
-        pt: 'var(--rose-space-md)',
+        pt: 'var(--rose-space-sm)',
         borderTop: '1px solid var(--rose-border)',
         '& summary::-webkit-details-marker': {
             display: 'none'
         },
         '&[open]': {
-            gap: 'var(--rose-space-sm)'
+            gap: 'var(--rose-space-xs)'
         },
         '&[open] [data-section-chevron]': {
             transform: 'rotate(45deg)'
@@ -324,9 +324,9 @@ const SectionSummary = styled('summary', {
 const SectionBody = styled('div', {
     base: {
         display: 'grid',
-        gap: 'var(--rose-space-sm)',
+        gap: 'var(--rose-space-xs)',
         minW: 0,
-        pt: 'var(--rose-space-sm)'
+        pt: 'var(--rose-space-xs)'
     }
 });
 
@@ -346,7 +346,7 @@ const SectionTitle = styled('h2', {
     base: {
         m: 0,
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.95rem',
+        fontSize: '0.9rem',
         lineHeight: 1,
         fontWeight: 760,
         color: 'var(--rose-text)'

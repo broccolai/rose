@@ -1,22 +1,30 @@
+import { styled } from '@panda/jsx';
+
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
-export const OVERLAY_BACKDROP_STYLES = {
-    bg: 'color-mix(in srgb, var(--rose-bg) 52%, transparent)',
-    backdropFilter: 'blur(20px) saturate(114%)',
-    color: 'var(--rose-muted)',
-    '&::before': {
-        content: '""',
-        position: 'absolute',
+export const OverlayBackdrop = styled('div', {
+    base: {
+        position: 'fixed',
         inset: 0,
-        zIndex: 0,
-        pointerEvents: 'none',
-        bg: 'radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--rose-accent) 12%, transparent), transparent 34%), linear-gradient(180deg, transparent, color-mix(in srgb, var(--rose-bg) 18%, transparent))'
-    },
-    '& > *': {
-        position: 'relative',
-        zIndex: 1
+        display: 'grid',
+        placeItems: 'center',
+        bg: 'rgba(5, 5, 8, 0.72)',
+        backdropFilter: 'blur(18px) saturate(76%)',
+        color: 'var(--rose-muted)',
+        '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            bg: 'linear-gradient(180deg, transparent, rgba(5, 5, 8, 0.28))'
+        },
+        '& > *': {
+            position: 'relative',
+            zIndex: 1
+        }
     }
-};
+});
 
 export const OVERLAY_PANEL_STYLES = {
     border: '1px solid color-mix(in srgb, var(--rose-text) 10%, var(--rose-border))',

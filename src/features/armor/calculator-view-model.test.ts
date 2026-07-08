@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { ARMOR_SLOTS, type ArmorBuild, type ArmorItem, type ArmorStat, type StatVector } from '@armor-calc';
 
 import {
+    getArmorSetRequirementAvailability,
     getAvailableExoticOptions,
     getCharacterButtonOptions,
     getSelectableArmorSets,
@@ -72,7 +73,7 @@ describe('calculator view model', () => {
     test('shows catalog armor sets with owned counts and converts possible choices to requirements', () => {
         const profile = profileWithArmor([
             armor({ itemInstanceId: 'set-a-1', setId: 'set:a' }),
-            armor({ itemInstanceId: 'set-a-2', setId: 'set:a' }),
+            armor({ itemInstanceId: 'set-a-2', setId: 'set:a', slot: 'arms' }),
             armor({ itemInstanceId: 'set-b-1', setId: 'set:b' })
         ]);
         profile.armorSetCatalog = [
@@ -93,7 +94,7 @@ describe('calculator view model', () => {
                 id: 'set:a',
                 name: 'set:a',
                 count: 2,
-                slotCounts: { helmet: 2, arms: 0, chest: 0, legs: 0, classItem: 0 },
+                slotCounts: { helmet: 1, arms: 1, chest: 0, legs: 0, classItem: 0 },
                 bonuses: [],
                 opBonuses: []
             },
@@ -118,6 +119,62 @@ describe('calculator view model', () => {
         expect(getSelectedSetRequirements(sets, { 'set:b': '2', 'set:c': '2' })).toEqual([]);
         expect(getSelectedSetRequirements(sets, { 'set:a': '0' })).toEqual([]);
         expect(getSelectedSetRequirements(sets, { 'set:a': '2', 'set:c': '4' })).toEqual([]);
+    });
+
+    test('checks armor set choices against usable slots instead of raw owned count', () => {
+        const profile = profileWithArmor([
+            armor({ itemInstanceId: 'a-legs-1', setId: 'set:a', slot: 'legs' }),
+            armor({ itemInstanceId: 'a-legs-2', setId: 'set:a', slot: 'legs' }),
+            armor({ itemInstanceId: 'a-chest-1', setId: 'set:a', slot: 'chest' }),
+            armor({ itemInstanceId: 'a-chest-2', setId: 'set:a', slot: 'chest' })
+        ]);
+        const sets = getSelectableArmorSets(profile, profile.characters[0]);
+
+        expect(getArmorSetRequirementAvailability(sets, {}, 'set:a', 2)).toEqual({
+            canSelect: true,
+            usableSlotCount: 2
+        });
+        expect(getArmorSetRequirementAvailability(sets, {}, 'set:a', 4)).toEqual({
+            canSelect: false,
+            usableSlotCount: 2
+        });
+        expect(getSelectedSetRequirements(sets, { 'set:a': '4' })).toEqual([]);
+    });
+
+    test('disables second 2pc set when selected sets cannot occupy disjoint slots', () => {
+        const profile = profileWithArmor([
+            armor({ itemInstanceId: 'a-legs', setId: 'set:a', slot: 'legs' }),
+            armor({ itemInstanceId: 'a-chest', setId: 'set:a', slot: 'chest' }),
+            armor({ itemInstanceId: 'b-legs', setId: 'set:b', slot: 'legs' }),
+            armor({ itemInstanceId: 'b-chest', setId: 'set:b', slot: 'chest' }),
+            armor({ itemInstanceId: 'c-helmet', setId: 'set:c', slot: 'helmet' }),
+            armor({ itemInstanceId: 'c-arms', setId: 'set:c', slot: 'arms' })
+        ]);
+        const sets = getSelectableArmorSets(profile, profile.characters[0]);
+
+        expect(getArmorSetRequirementAvailability(sets, { 'set:a': '2' }, 'set:b', 2).canSelect).toBe(false);
+        expect(getArmorSetRequirementAvailability(sets, { 'set:a': '2' }, 'set:c', 2).canSelect).toBe(true);
+        expect(getSelectedSetRequirements(sets, { 'set:a': '2', 'set:b': '2' })).toEqual([]);
+        expect(getSelectedSetRequirements(sets, { 'set:a': '2', 'set:c': '2' })).toEqual([
+            { setId: 'set:a', requiredPieces: 2 },
+            { setId: 'set:c', requiredPieces: 2 }
+        ]);
+    });
+
+    test('selected exotic slot blocks armor set requirements that need that slot', () => {
+        const profile = profileWithArmor([
+            armor({ itemInstanceId: 'a-helmet', setId: 'set:a', slot: 'helmet' }),
+            armor({ itemInstanceId: 'a-arms', setId: 'set:a', slot: 'arms' }),
+            armor({ itemInstanceId: 'a-chest', setId: 'set:a', slot: 'chest' }),
+            armor({ itemInstanceId: 'a-legs', setId: 'set:a', slot: 'legs' })
+        ]);
+        const sets = getSelectableArmorSets(profile, profile.characters[0]);
+
+        expect(getArmorSetRequirementAvailability(sets, {}, 'set:a', 4, ['helmet'])).toEqual({
+            canSelect: false,
+            usableSlotCount: 3
+        });
+        expect(getSelectedSetRequirements(sets, { 'set:a': '4' }, ['helmet'])).toEqual([]);
     });
 
     test('pins op armor sets before ordinary sets', () => {

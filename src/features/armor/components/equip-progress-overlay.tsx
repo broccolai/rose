@@ -4,10 +4,10 @@ import { For, Show } from 'solid-js';
 
 import {
     OVERLAY_ACTION_BUTTON_STYLES,
-    OVERLAY_BACKDROP_STYLES,
     OVERLAY_PANEL_STYLES,
     OVERLAY_STATUS_PILL_STYLES,
-    OVERLAY_TITLE_STYLES
+    OVERLAY_TITLE_STYLES,
+    OverlayBackdrop
 } from '@/features/armor/components/overlay-styles';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { SLOT_LABELS } from '@/features/armor/display-metadata';
@@ -34,15 +34,10 @@ type EquipProgressOverlayProps = {
     onDismiss: () => void;
 };
 
-const Overlay = styled('div', {
+const Overlay = styled(OverlayBackdrop, {
     base: {
-        position: 'fixed',
-        inset: 0,
         zIndex: 80,
-        display: 'grid',
-        placeItems: 'center',
-        p: { base: '1rem', md: '2rem' },
-        ...OVERLAY_BACKDROP_STYLES
+        p: { base: '1rem', md: '2rem' }
     }
 });
 

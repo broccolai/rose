@@ -8,7 +8,7 @@ import {
     type SolveArmorResult
 } from '@armor-calc';
 
-import { limitSetSelections, type SetSelectionValue } from '@/features/armor/calculator-preferences';
+import { applySetSelectionLimit, limitSetSelections, type SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { getArmorForClass, getAvailableArmorSets } from '@/features/armor/normalize';
 import { getOpArmorSetBonuses, type OpArmorSetBonus, opArmorSetSortRank } from '@/features/armor/op-set-bonuses';
 import type { ArmorSetBonusInfo, NormalizedArmorProfile, NormalizedCharacter } from '@/features/armor/types';
@@ -40,6 +40,12 @@ export type AvailableArmorSet = {
 
 export const CHARACTER_BUTTON_CLASSES: CharacterButtonClass[] = ['hunter', 'warlock', 'titan'];
 const ARMOR_SLOT_SORT_ORDER = new Map<ArmorSlot, number>(ARMOR_SLOTS.map((slot, index) => [slot, index]));
+const ARMOR_SLOT_BITS = new Map<ArmorSlot, number>(ARMOR_SLOTS.map((slot, index) => [slot, 1 << index]));
+
+export type ArmorSetRequirementAvailability = {
+    canSelect: boolean;
+    usableSlotCount: number;
+};
 
 export function getSelectedCharacter(profile: NormalizedArmorProfile | null, selectedCharacterId: string) {
     return profile?.characters.find((character) => character.characterId === selectedCharacterId) ?? profile?.characters[0] ?? null;
@@ -119,21 +125,51 @@ export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, c
 
 export function getSelectedSetRequirements(
     selectableSets: AvailableArmorSet[],
-    setSelections: Record<string, SetSelectionValue>
+    setSelections: Record<string, SetSelectionValue>,
+    blockedSlots: readonly ArmorSlot[] = []
 ): ArmorSetRequirement[] {
     const limitedSelections = limitSetSelections(setSelections);
+    const requirements = setRequirementsFromSelections(selectableSets, limitedSelections);
 
-    return selectableSets
-        .map((set) => ({
-            setId: set.id,
-            requiredPieces: Number(limitedSelections[set.id] ?? '0') as 0 | 2 | 4,
-            ownedPieces: set.count
-        }))
-        .filter(
-            (set): set is ArmorSetRequirement & { ownedPieces: number } =>
-                (set.requiredPieces === 2 || set.requiredPieces === 4) && set.ownedPieces >= set.requiredPieces
-        )
-        .map(({ setId, requiredPieces }) => ({ setId, requiredPieces }));
+    return areArmorSetRequirementsSlotCompatible(selectableSets, requirements, blockedSlots) ? requirements : [];
+}
+
+export function getArmorSetRequirementAvailability(
+    selectableSets: AvailableArmorSet[],
+    setSelections: Record<string, SetSelectionValue>,
+    setId: string,
+    requiredPieces: 2 | 4,
+    blockedSlots: readonly ArmorSlot[] = []
+): ArmorSetRequirementAvailability {
+    const set = selectableSets.find((candidate) => candidate.id === setId);
+    const usableSlotCount = set ? countUsableArmorSetSlots(set, blockedSlots) : 0;
+    const selectedValue = setSelections[setId] ?? '0';
+
+    if (!set) {
+        return { canSelect: false, usableSlotCount };
+    }
+
+    if (selectedValue === String(requiredPieces)) {
+        return { canSelect: true, usableSlotCount };
+    }
+
+    if (usableSlotCount < requiredPieces) {
+        return { canSelect: false, usableSlotCount };
+    }
+
+    const previewSelections = applySetSelectionLimit(setSelections, setId, String(requiredPieces) as SetSelectionValue);
+    if (previewSelections[setId] !== String(requiredPieces)) {
+        return { canSelect: false, usableSlotCount };
+    }
+
+    return {
+        canSelect: areArmorSetRequirementsSlotCompatible(
+            selectableSets,
+            setRequirementsFromSelections(selectableSets, previewSelections),
+            blockedSlots
+        ),
+        usableSlotCount
+    };
 }
 
 export function sortArmorBuildsForDisplay(builds: ArmorBuild[], sort: ArmorBuildSort) {
@@ -172,7 +208,8 @@ export function reconcileSelectedExotic(profile: NormalizedArmorProfile, classTy
 export function reconcileSetSelections(
     profile: NormalizedArmorProfile,
     classType: DestinyClass,
-    selections: Record<string, SetSelectionValue>
+    selections: Record<string, SetSelectionValue>,
+    blockedSlots: readonly ArmorSlot[] = []
 ) {
     const availableById = new Map(getAvailableArmorSets(profile.armor, classType).map((set) => [set.id, set]));
     const nextSelections: Record<string, SetSelectionValue> = {};
@@ -186,7 +223,16 @@ export function reconcileSetSelections(
         nextSelections[setId] = selection === '4' && set.count < 4 ? '2' : selection;
     }
 
-    return limitSetSelections(nextSelections);
+    const limitedSelections = limitSetSelections(nextSelections);
+    const selectableSets = getSelectableArmorSets(profile, { characterId: '', classType, label: '' });
+
+    return areArmorSetRequirementsSlotCompatible(
+        selectableSets,
+        setRequirementsFromSelections(selectableSets, limitedSelections),
+        blockedSlots
+    )
+        ? limitedSelections
+        : {};
 }
 
 function armorBuildSortValue(build: ArmorBuild, key: ResultSortKey) {
@@ -226,4 +272,108 @@ function emptySlotCounts(): Record<ArmorSlot, number> {
 
 function isCatalogSetCompatibleWithClass(classTypes: DestinyClass[], classType: DestinyClass) {
     return classTypes.length === 0 || classTypes.includes('any') || classTypes.includes(classType);
+}
+
+function setRequirementsFromSelections(
+    selectableSets: AvailableArmorSet[],
+    selections: Record<string, SetSelectionValue>
+): ArmorSetRequirement[] {
+    const setsById = new Map(selectableSets.map((set) => [set.id, set]));
+
+    return Object.entries(limitSetSelections(selections)).flatMap(([setId, value]) => {
+        const requiredPieces = Number(value) as 0 | 2 | 4;
+        const set = setsById.get(setId);
+
+        if (
+            !set ||
+            (requiredPieces !== 2 && requiredPieces !== 4) ||
+            set.count < requiredPieces ||
+            countUsableArmorSetSlots(set) < requiredPieces
+        ) {
+            return [];
+        }
+
+        return [{ setId, requiredPieces }];
+    });
+}
+
+function areArmorSetRequirementsSlotCompatible(
+    selectableSets: AvailableArmorSet[],
+    requirements: readonly ArmorSetRequirement[],
+    blockedSlots: readonly ArmorSlot[] = []
+) {
+    const setsById = new Map(selectableSets.map((set) => [set.id, set]));
+    const blockedMask = slotsToMask(blockedSlots);
+    const sortedRequirements = [...requirements].sort((left, right) => right.requiredPieces - left.requiredPieces);
+
+    const canAllocate = (requirementIndex: number, usedMask: number): boolean => {
+        const requirement = sortedRequirements[requirementIndex];
+        if (!requirement) {
+            return true;
+        }
+
+        const set = setsById.get(requirement.setId);
+        if (!set) {
+            return false;
+        }
+
+        const availableSlots = ARMOR_SLOTS.filter((slot) => {
+            const bit = ARMOR_SLOT_BITS.get(slot) ?? 0;
+            return set.slotCounts[slot] > 0 && (usedMask & bit) === 0;
+        });
+
+        if (availableSlots.length < requirement.requiredPieces) {
+            return false;
+        }
+
+        return chooseRequiredSlots(availableSlots, requirement.requiredPieces, 0, 0, (choiceMask) =>
+            canAllocate(requirementIndex + 1, usedMask | choiceMask)
+        );
+    };
+
+    return canAllocate(0, blockedMask);
+}
+
+function chooseRequiredSlots(
+    slots: readonly ArmorSlot[],
+    requiredPieces: 2 | 4,
+    startIndex: number,
+    selectedMask: number,
+    predicate: (selectedMask: number) => boolean
+): boolean {
+    const selectedCount = countBits(selectedMask);
+    if (selectedCount === requiredPieces) {
+        return predicate(selectedMask);
+    }
+
+    const remainingNeeded = requiredPieces - selectedCount;
+    for (let index = startIndex; index <= slots.length - remainingNeeded; index += 1) {
+        const bit = ARMOR_SLOT_BITS.get(slots[index] as ArmorSlot) ?? 0;
+        if (chooseRequiredSlots(slots, requiredPieces, index + 1, selectedMask | bit, predicate)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function countUsableArmorSetSlots(set: AvailableArmorSet, blockedSlots: readonly ArmorSlot[] = []) {
+    const blocked = new Set(blockedSlots);
+    return ARMOR_SLOTS.filter((slot) => set.slotCounts[slot] > 0 && !blocked.has(slot)).length;
+}
+
+function slotsToMask(slots: readonly ArmorSlot[]) {
+    return slots.reduce((mask, slot) => mask | (ARMOR_SLOT_BITS.get(slot) ?? 0), 0);
+}
+
+function countBits(value: number) {
+    let count = 0;
+    let remaining = value;
+
+    while (remaining > 0) {
+        count += remaining & 1;
+        remaining >>= 1;
+    }
+
+    return count;
 }
