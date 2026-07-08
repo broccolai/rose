@@ -17,6 +17,7 @@ import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } f
 import { applyArmorBuild } from '@/features/armor/api/equip-build';
 import { absoluteBungieAssetUrl, readBungieUser, readSnapshotMembershipType } from '@/features/armor/api/profile-items';
 import { readEquippedSubclassImport } from '@/features/armor/api/subclass-import';
+import { type AppTheme, DEFAULT_APP_THEME, sanitizeAppTheme } from '@/features/armor/app-theme';
 import {
     applySetSelectionLimit,
     type CalculatorPreferences,
@@ -130,6 +131,7 @@ export default function Home() {
     const [normalizedProfile, setNormalizedProfile] = createSignal<NormalizedArmorProfile | null>(null);
     const [loadedSnapshot, setLoadedSnapshot] = createSignal<VaultExportSnapshot | null>(null);
     const [loadedManifestDefinitions, setLoadedManifestDefinitions] = createSignal<LoadedManifestDefinition[]>([]);
+    const [appTheme, setAppTheme] = createSignal<AppTheme>(DEFAULT_APP_THEME);
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
     const [armorSetDisplayMode, setArmorSetDisplayMode] = createSignal<ArmorSetDisplayMode>('sets');
@@ -505,6 +507,7 @@ export default function Home() {
         }
 
         const currentPreferences = {
+            appTheme: appTheme(),
             selectedCharacterId: selectedCharacterId(),
             selectedExoticItemHash: selectedExoticItemHash(),
             armorSetDisplayMode: armorSetDisplayMode(),
@@ -521,6 +524,14 @@ export default function Home() {
         writeCalculatorPreferences(
             mergeCalculatorPreferencesForStorage(readCalculatorPreferences(), currentPreferences, Boolean(normalizedProfile()))
         );
+    });
+
+    createEffect(() => {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        document.documentElement.dataset['theme'] = appTheme();
     });
 
     createEffect(() => {
@@ -1224,6 +1235,7 @@ export default function Home() {
             nextTargets[nextDumpStat] = 0;
         }
 
+        setAppTheme(sanitizeAppTheme(preferences.appTheme));
         setSelectedCharacterId(preferences.selectedCharacterId ?? '');
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
         setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
@@ -1255,8 +1267,10 @@ export default function Home() {
                         avatarLabel={avatarLabel()}
                         avatarUrl={avatarUrl()}
                         loading={status() === 'loading'}
+                        theme={appTheme()}
                         onSignIn={signIn}
                         onRefresh={loadCalculatorData}
+                        onThemeChange={setAppTheme}
                     />
                 }
                 controls={

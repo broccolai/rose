@@ -40,7 +40,7 @@ const selectInputRecipe = cva({
         borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
         color: 'var(--rose-text)',
-        colorScheme: 'dark',
+        colorScheme: 'inherit',
         cursor: 'pointer',
         fontFamily: MONO_FONT_FAMILY,
         lineHeight: 1.2,

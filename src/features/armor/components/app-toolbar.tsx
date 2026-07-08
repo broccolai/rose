@@ -1,7 +1,9 @@
 import { styled } from '@panda/jsx';
-import { Show } from 'solid-js';
+import { Eclipse, Moon, Sun } from 'lucide-solid';
+import { Match, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
+import { APP_THEME_LABELS, APP_THEMES, type AppTheme } from '@/features/armor/app-theme';
 import { MONO_FONT_FAMILY, UI_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
 export type LoadProgress = {
@@ -17,8 +19,10 @@ type AppToolbarProps = {
     avatarLabel?: string | undefined;
     avatarUrl?: string | undefined;
     loading: boolean;
+    theme: AppTheme;
     onSignIn: () => void;
     onRefresh: () => void;
+    onThemeChange: (theme: AppTheme) => void;
 };
 
 const TopPanel = styled('div', {
@@ -98,9 +102,45 @@ const Actions = styled('div', {
         flexWrap: 'wrap',
         gap: 'var(--rose-space-xs)',
         justifySelf: { base: 'stretch', md: 'end' },
+        justifyContent: { base: 'space-between', md: 'flex-end' },
         alignItems: 'center',
-        '& button': {
+        '& > [data-action-button]': {
             flex: { base: '1 1 auto', md: '0 0 auto' }
+        }
+    }
+});
+
+const ThemeCycleButton = styled('button', {
+    base: {
+        display: 'grid',
+        placeItems: 'center',
+        flex: '0 0 auto',
+        w: 'var(--rose-control-height)',
+        h: 'var(--rose-control-height)',
+        p: 0,
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-muted-strong)',
+        cursor: 'pointer',
+        outline: 'none',
+        boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--rose-text) 8%, transparent)',
+        transition: 'background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 140ms ease',
+        _hover: {
+            bg: 'var(--rose-surface-raised)',
+            borderColor: 'color-mix(in srgb, var(--rose-accent) 54%, var(--rose-border-strong))',
+            color: 'var(--rose-text)',
+            boxShadow: '0 0 0 1px color-mix(in srgb, var(--rose-accent) 16%, transparent)',
+            transform: 'translateY(-1px)'
+        },
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        },
+        '& svg': {
+            w: '1.1rem',
+            h: '1.1rem',
+            strokeWidth: 2.1
         }
     }
 });
@@ -173,18 +213,42 @@ function avatarInitial(label?: string) {
     return label?.trim().charAt(0).toUpperCase() || 'B';
 }
 
-function ToolbarActions(props: Omit<AppToolbarProps, 'progress'>) {
+function nextTheme(theme: AppTheme) {
+    const currentIndex = APP_THEMES.indexOf(theme);
+    return APP_THEMES[(currentIndex + 1) % APP_THEMES.length];
+}
+
+function ThemeIcon(props: { theme: AppTheme }) {
+    return (
+        <Switch fallback={<Moon aria-hidden="true" />}>
+            <Match when={props.theme === 'dim'}>
+                <Eclipse aria-hidden="true" />
+            </Match>
+            <Match when={props.theme === 'light'}>
+                <Sun aria-hidden="true" />
+            </Match>
+        </Switch>
+    );
+}
+
+function ToolbarActions(props: AppToolbarProps) {
+    const next = () => nextTheme(props.theme);
+    const label = () => `Theme: ${APP_THEME_LABELS[props.theme]}. Switch to ${APP_THEME_LABELS[next()]}.`;
+
     return (
         <Actions>
+            <ThemeCycleButton type="button" aria-label={label()} title={label()} onClick={() => props.onThemeChange(next())}>
+                <ThemeIcon theme={props.theme} />
+            </ThemeCycleButton>
             <Show
                 when={props.authenticated}
                 fallback={
-                    <ToolbarButton type="button" onClick={props.onSignIn}>
+                    <ToolbarButton type="button" data-action-button onClick={props.onSignIn}>
                         Sign in
                     </ToolbarButton>
                 }
             >
-                <ToolbarButton type="button" onClick={props.onRefresh} disabled={props.loading}>
+                <ToolbarButton type="button" data-action-button onClick={props.onRefresh} disabled={props.loading}>
                     Refresh
                 </ToolbarButton>
                 <AvatarButton title={props.avatarLabel ?? 'Signed in'} role="img" aria-label={props.avatarLabel ?? 'Signed in'}>
@@ -208,8 +272,10 @@ export function AppToolbar(props: AppToolbarProps) {
                     avatarLabel={props.avatarLabel}
                     avatarUrl={props.avatarUrl}
                     loading={props.loading}
+                    theme={props.theme}
                     onSignIn={props.onSignIn}
                     onRefresh={props.onRefresh}
+                    onThemeChange={props.onThemeChange}
                 />
             </TopBar>
         </TopPanel>

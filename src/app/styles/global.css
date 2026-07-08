@@ -1,6 +1,7 @@
 @layer reset, base, tokens, recipes, utilities;
 
 :root {
+    color-scheme: dark;
     --rose-bg: #050506;
     --rose-surface: #0d0d10;
     --rose-surface-soft: #151519;
@@ -29,6 +30,46 @@
     --rose-control-height: 2.75rem;
     --rose-control-compact-height: 2.25rem;
     --rose-control-padding-x: 0.875rem;
+}
+
+:root[data-theme="dim"] {
+    color-scheme: dark;
+    --rose-bg: #111114;
+    --rose-surface: #19191d;
+    --rose-surface-soft: #202027;
+    --rose-surface-raised: #2a2a31;
+    --rose-text: #f1f1f4;
+    --rose-muted: #9a9aa4;
+    --rose-muted-strong: #d4d4db;
+    --rose-border: #393943;
+    --rose-border-strong: #585866;
+    --rose-accent: #a970ff;
+    --rose-info: #cdccd5;
+    --rose-exotic: #a970ff;
+    --rose-success: #a970ff;
+    --rose-danger: #e0c1ff;
+    --rose-button: #b482ff;
+    --rose-button-text: #0b0b0d;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --rose-bg: #e6e0d6;
+    --rose-surface: #f3eee6;
+    --rose-surface-soft: #e8e1d8;
+    --rose-surface-raised: #dcd3c8;
+    --rose-text: #18161c;
+    --rose-muted: #6f6874;
+    --rose-muted-strong: #39343e;
+    --rose-border: #c9beb1;
+    --rose-border-strong: #a99c90;
+    --rose-accent: #7b3ff2;
+    --rose-info: #514b58;
+    --rose-exotic: #7b3ff2;
+    --rose-success: #7b3ff2;
+    --rose-danger: #7b3ff2;
+    --rose-button: #7b3ff2;
+    --rose-button-text: #fffdf8;
 }
 
 * {

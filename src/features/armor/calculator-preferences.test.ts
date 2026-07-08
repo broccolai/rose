@@ -17,6 +17,7 @@ describe('calculator preferences', () => {
             sanitizeCalculatorPreferences({
                 selectedCharacterId: 'character-1',
                 selectedExoticItemHash: '123',
+                appTheme: 'dim',
                 armorSetDisplayMode: 'sources',
                 selectedSubclass: 'Solar',
                 selectedFragmentIds: ['solar:ember-of-beams', 'void:echo-of-dilation', 'solar:ember-of-beams'],
@@ -45,6 +46,7 @@ describe('calculator preferences', () => {
         ).toEqual({
             selectedCharacterId: 'character-1',
             selectedExoticItemHash: '123',
+            appTheme: 'dim',
             armorSetDisplayMode: 'sources',
             selectedSubclass: 'Solar',
             selectedFragmentIds: ['solar:ember-of-beams'],
@@ -122,6 +124,7 @@ describe('calculator preferences', () => {
                 }
             })
         ).toMatchObject({
+            appTheme: 'void',
             armorSetDisplayMode: 'sets',
             selectedSubclass: 'Prismatic',
             selectedFragmentIds: [],

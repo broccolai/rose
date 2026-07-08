@@ -12,6 +12,7 @@
         "@solidjs/start": "^1.3.2",
         "bungie-api-ts": "^5.10.0",
         "idb-keyval": "^6.2.6",
+        "lucide-solid": "^1.23.0",
         "solid-js": "^1.9.14",
       },
       "devDependencies": {
@@ -952,6 +953,8 @@
     "look-it-up": ["look-it-up@2.1.0", "", {}, "sha512-nMoGWW2HurtuJf6XAL56FWTDCWLOTSsanrgwOyaR5Y4e3zfG5N/0cU5xWZSEU3tBxhQugRbV1xL9jb+ug7yZww=="],
 
     "lru-cache": ["lru-cache@11.5.1", "", {}, "sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A=="],
+
+    "lucide-solid": ["lucide-solid@1.23.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-vzVY2fITccYlJTrv5fHro9OONinnotXtNmAb/Sh1UOpMB/PtvFuF3FVz2Orh7/R7l5YdF1j4TOPmfgImHpzv0g=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 

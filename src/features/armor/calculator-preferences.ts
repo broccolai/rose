@@ -1,5 +1,6 @@
 import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-calc';
 
+import { type AppTheme, sanitizeAppTheme } from '@/features/armor/app-theme';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { isSubclassType, type SubclassType, sanitizeFragmentIds } from '@/features/armor/subclass-fragments';
 
@@ -8,6 +9,7 @@ export type SetSelectionValue = '0' | '2' | '4';
 export const MAX_TWO_PIECE_SET_SELECTIONS = 2;
 
 export type CalculatorPreferences = {
+    appTheme?: AppTheme | undefined;
     selectedCharacterId?: string | undefined;
     selectedExoticItemHash?: string | undefined;
     armorSetDisplayMode?: ArmorSetDisplayMode | undefined;
@@ -90,6 +92,7 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
 
     const candidate = value as CalculatorPreferences;
     return {
+        appTheme: sanitizeAppTheme(candidate.appTheme),
         selectedCharacterId: typeof candidate.selectedCharacterId === 'string' ? candidate.selectedCharacterId : undefined,
         selectedExoticItemHash: typeof candidate.selectedExoticItemHash === 'string' ? candidate.selectedExoticItemHash : undefined,
         armorSetDisplayMode: sanitizeArmorSetDisplayMode(candidate.armorSetDisplayMode),
