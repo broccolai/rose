@@ -2,7 +2,7 @@ import { ARMOR_STATS, type ArmorStat } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { For } from 'solid-js';
 
-import { CollapsibleSection, SecondaryButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
+import { CollapsibleSection, CustomSelect, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
@@ -143,16 +143,17 @@ const formatSignedStat = (value: number, stat: ArmorStat): string => `${value > 
 export function FragmentControls(props: FragmentControlsProps) {
     const selectedIds = () => new Set(props.selectedFragmentIds);
     const fragments = () => fragmentsForSubclass(props.selectedSubclass);
+    const subclassOptions = () => SUBCLASS_TYPES.map((subclass) => ({ value: subclass, label: subclass }));
 
     return (
         <CollapsibleSection title="Fragments" ariaLabel="Fragments">
-            <SelectInput
+            <CustomSelect
+                ariaLabel="Subclass"
                 size="compact"
                 value={props.selectedSubclass}
-                onChange={(event) => props.onSubclassChange(event.currentTarget.value as SubclassType)}
-            >
-                <For each={SUBCLASS_TYPES}>{(subclass) => <option value={subclass}>{subclass}</option>}</For>
-            </SelectInput>
+                options={subclassOptions()}
+                onChange={(value) => props.onSubclassChange(value as SubclassType)}
+            />
             <DataTableFrame>
                 <DataTable>
                     <colgroup>

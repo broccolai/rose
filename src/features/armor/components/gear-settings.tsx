@@ -3,7 +3,7 @@ import { createSignal, For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { type AvailableArmorSet, type AvailableExotic, getArmorSetRequirementAvailability } from '@/features/armor/calculator-view-model';
-import { CompactChoiceButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
+import { CompactChoiceButton, CustomSelect } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame, DataTableSectionRow } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/armor/result-display';
@@ -145,6 +145,14 @@ const SetSectionChevron = styled('span', {
 export function ExoticPicker(
     props: Pick<GearSettingsProps, 'availableExotics' | 'onExoticChange' | 'selectedExoticItemHash'> & { labelText?: string | false }
 ) {
+    const options = () => [
+        { value: '', label: 'None' },
+        ...props.availableExotics.map((exotic) => ({
+            value: String(exotic.itemHash),
+            label: exotic.name
+        }))
+    ];
+
     return (
         <Field>
             <Show when={props.labelText !== false}>
@@ -155,10 +163,12 @@ export function ExoticPicker(
                     </Show>
                 </LabelLine>
             </Show>
-            <SelectInput value={props.selectedExoticItemHash} onChange={(event) => props.onExoticChange(event.currentTarget.value)}>
-                <option value="">None</option>
-                <For each={props.availableExotics}>{(exotic) => <option value={String(exotic.itemHash)}>{exotic.name}</option>}</For>
-            </SelectInput>
+            <CustomSelect
+                ariaLabel="Exotic armor"
+                value={props.selectedExoticItemHash}
+                options={options()}
+                onChange={props.onExoticChange}
+            />
         </Field>
     );
 }

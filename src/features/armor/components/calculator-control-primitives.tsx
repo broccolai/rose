@@ -1,6 +1,6 @@
 import { cva } from '@panda/css';
 import { styled } from '@panda/jsx';
-import type { JSX } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, For, type JSX, onCleanup, Show } from 'solid-js';
 
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
@@ -31,8 +31,12 @@ export const SelectWrap = styled('div', {
     }
 });
 
-const selectInputRecipe = cva({
+const customSelectTriggerRecipe = cva({
     base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: 'var(--rose-space-sm)',
         w: '100%',
         minW: 0,
         boxSizing: 'border-box',
@@ -40,12 +44,16 @@ const selectInputRecipe = cva({
         borderRadius: 'var(--rose-radius-sm)',
         bg: 'var(--rose-surface-soft)',
         color: 'var(--rose-text)',
-        colorScheme: 'inherit',
         cursor: 'pointer',
         fontFamily: MONO_FONT_FAMILY,
         lineHeight: 1.2,
+        textAlign: 'left',
         outline: 'none',
-        transition: 'background-color 120ms ease, border-color 120ms ease, opacity 120ms ease',
+        transition: 'background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, box-shadow 120ms ease',
+        _hover: {
+            bg: 'var(--rose-surface-raised)',
+            borderColor: 'var(--rose-border-strong)'
+        },
         _focusVisible: {
             borderColor: 'var(--rose-accent)',
             bg: 'var(--rose-surface-raised)',
@@ -53,7 +61,17 @@ const selectInputRecipe = cva({
             outlineOffset: '2px'
         },
         _disabled: {
-            opacity: 0.42
+            cursor: 'not-allowed',
+            opacity: 0.42,
+            _hover: {
+                bg: 'var(--rose-surface-soft)',
+                borderColor: 'var(--rose-border)'
+            }
+        },
+        '&[data-open="true"]': {
+            bg: 'var(--rose-surface-raised)',
+            borderColor: 'color-mix(in srgb, var(--rose-accent) 48%, var(--rose-border-strong))',
+            boxShadow: '0 0 0 1px color-mix(in srgb, var(--rose-accent) 16%, transparent)'
         }
     },
     variants: {
@@ -75,7 +93,253 @@ const selectInputRecipe = cva({
     }
 });
 
-export const SelectInput = styled('select', selectInputRecipe);
+const CustomSelectRoot = styled('div', {
+    base: {
+        position: 'relative',
+        w: '100%',
+        minW: 0
+    }
+});
+
+const CustomSelectTrigger = styled('button', customSelectTriggerRecipe);
+
+const CustomSelectValue = styled('span', {
+    base: {
+        minW: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+    }
+});
+
+const CustomSelectChevron = styled('span', {
+    base: {
+        display: 'block',
+        w: '0.48rem',
+        h: '0.48rem',
+        borderRight: '1.5px solid currentColor',
+        borderBottom: '1.5px solid currentColor',
+        color: 'var(--rose-muted-strong)',
+        transform: 'rotate(45deg) translateY(-2px)',
+        transition: 'transform 120ms ease',
+        '[data-open="true"] &': {
+            transform: 'rotate(225deg) translate(-2px, -1px)'
+        }
+    }
+});
+
+const CustomSelectList = styled('div', {
+    base: {
+        position: 'absolute',
+        top: 'calc(100% + 0.35rem)',
+        left: 0,
+        right: 0,
+        zIndex: 35,
+        maxH: 'min(18rem, 46vh)',
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        border: '1px solid var(--rose-border-strong)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface)',
+        boxShadow: '0 18px 45px color-mix(in srgb, #000 34%, transparent)',
+        p: '0.25rem',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'color-mix(in srgb, var(--rose-muted) 42%, transparent) transparent'
+    }
+});
+
+const CustomSelectOptionButton = styled('button', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
+        w: '100%',
+        minH: '2rem',
+        px: 'var(--rose-space-sm)',
+        py: '0.42rem',
+        border: 0,
+        borderRadius: 'var(--rose-radius-xs)',
+        bg: 'transparent',
+        color: 'var(--rose-muted-strong)',
+        cursor: 'pointer',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.78rem',
+        fontWeight: 680,
+        lineHeight: 1.25,
+        textAlign: 'left',
+        transition: 'background-color 100ms ease, color 100ms ease',
+        _hover: {
+            bg: 'var(--rose-surface-soft)',
+            color: 'var(--rose-text)'
+        },
+        _disabled: {
+            cursor: 'not-allowed',
+            opacity: 0.42,
+            _hover: {
+                bg: 'transparent',
+                color: 'var(--rose-muted-strong)'
+            }
+        },
+        '&[data-highlighted="true"]': {
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        },
+        '&[data-selected="true"]': {
+            bg: 'color-mix(in srgb, var(--rose-accent) 18%, var(--rose-surface-raised))',
+            color: 'var(--rose-text)'
+        }
+    }
+});
+
+export interface CustomSelectOption {
+    value: string;
+    label: string;
+    disabled?: boolean | undefined;
+}
+
+export interface CustomSelectProps {
+    value: string;
+    options: readonly CustomSelectOption[];
+    onChange: (value: string) => void;
+    ariaLabel: string;
+    disabled?: boolean | undefined;
+    placeholder?: string | undefined;
+    size?: 'default' | 'compact' | undefined;
+}
+
+function nextSelectableIndex(options: readonly CustomSelectOption[], startIndex: number, direction: 1 | -1): number {
+    if (options.length === 0) {
+        return -1;
+    }
+
+    for (let offset = 0; offset < options.length; offset += 1) {
+        const index = (startIndex + offset * direction + options.length) % options.length;
+        if (!options[index]?.disabled) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+export function CustomSelect(props: CustomSelectProps) {
+    let rootElement: HTMLDivElement | undefined;
+    const listId = createUniqueId();
+    const [open, setOpen] = createSignal(false);
+    const selectedIndex = createMemo(() => props.options.findIndex((option) => option.value === props.value));
+    const selectedOption = createMemo(() => props.options[selectedIndex()]);
+    const [highlightedIndex, setHighlightedIndex] = createSignal(-1);
+    const visibleLabel = () => selectedOption()?.label ?? props.placeholder ?? 'Select';
+    const openMenu = () => {
+        if (props.disabled) {
+            return;
+        }
+
+        setHighlightedIndex(nextSelectableIndex(props.options, Math.max(selectedIndex(), 0), 1));
+        setOpen(true);
+    };
+    const closeMenu = () => setOpen(false);
+    const moveHighlight = (direction: 1 | -1) => {
+        const current = highlightedIndex() >= 0 ? highlightedIndex() + direction : Math.max(selectedIndex(), 0);
+        const nextIndex = nextSelectableIndex(props.options, current, direction);
+
+        if (nextIndex >= 0) {
+            setHighlightedIndex(nextIndex);
+        }
+    };
+    const chooseOption = (option: CustomSelectOption) => {
+        if (option.disabled) {
+            return;
+        }
+
+        props.onChange(option.value);
+        closeMenu();
+    };
+    const handleTriggerKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!open()) {
+                openMenu();
+                return;
+            }
+
+            moveHighlight(event.key === 'ArrowDown' ? 1 : -1);
+            return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (!open()) {
+                openMenu();
+                return;
+            }
+
+            const highlighted = props.options[highlightedIndex()];
+            if (highlighted) {
+                chooseOption(highlighted);
+            }
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            closeMenu();
+        }
+    };
+
+    createEffect(() => {
+        if (!open()) {
+            return;
+        }
+
+        const closeOnPointerDown = (event: PointerEvent) => {
+            if (!rootElement?.contains(event.target as Node)) {
+                closeMenu();
+            }
+        };
+
+        document.addEventListener('pointerdown', closeOnPointerDown);
+        onCleanup(() => document.removeEventListener('pointerdown', closeOnPointerDown));
+    });
+
+    return (
+        <CustomSelectRoot ref={rootElement}>
+            <CustomSelectTrigger
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={open()}
+                aria-controls={listId}
+                aria-label={props.ariaLabel}
+                disabled={props.disabled}
+                data-open={open()}
+                size={props.size}
+                onClick={() => (open() ? closeMenu() : openMenu())}
+                onKeyDown={handleTriggerKeyDown}
+            >
+                <CustomSelectValue>{visibleLabel()}</CustomSelectValue>
+                <CustomSelectChevron aria-hidden="true" />
+            </CustomSelectTrigger>
+            <Show when={open()}>
+                <CustomSelectList id={listId} role="listbox" aria-label={props.ariaLabel}>
+                    <For each={props.options}>
+                        {(option, index) => (
+                            <CustomSelectOptionButton
+                                type="button"
+                                role="option"
+                                aria-selected={option.value === props.value}
+                                disabled={option.disabled}
+                                data-highlighted={highlightedIndex() === index()}
+                                data-selected={option.value === props.value}
+                                onPointerEnter={() => setHighlightedIndex(index())}
+                                onClick={() => chooseOption(option)}
+                            >
+                                {option.label}
+                            </CustomSelectOptionButton>
+                        )}
+                    </For>
+                </CustomSelectList>
+            </Show>
+        </CustomSelectRoot>
+    );
+}
 
 const controlButtonRecipe = cva({
     base: {

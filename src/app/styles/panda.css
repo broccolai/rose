@@ -675,6 +675,10 @@
     background: currentColor;
 }
 
+  .jzlaND {
+    padding: 0.25rem;
+}
+
   .cQQMWl {
     border: 1px solid color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border));
 }
@@ -895,6 +899,26 @@
     gap: var(--rose-space-xxs);
 }
 
+  .ldeytt {
+    overscroll-behavior: contain;
+}
+
+  .gAJQah {
+    padding-inline: var(--rose-space-sm);
+}
+
+  .bYZfBL {
+    padding-block: 0.42rem;
+}
+
+  .eoJAec {
+    border-radius: var(--rose-radius-xs);
+}
+
+  .kkztJt {
+    transition: background-color 100ms ease, color 100ms ease;
+}
+
   .hSCHbR {
     border-top: 1px solid var(--rose-border);
 }
@@ -915,12 +939,8 @@
     transition: transform 120ms ease, border-color 120ms ease;
 }
 
-  .gTunpV {
-    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
-}
-
-  .gAJQah {
-    padding-inline: var(--rose-space-sm);
+  .ciShsH {
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
 }
 
   .fzpodh {
@@ -973,10 +993,6 @@
 
   .eGemjR {
     padding-block: 0.08rem;
-}
-
-  .eoJAec {
-    border-radius: var(--rose-radius-xs);
 }
 
   .fyUCwZ {
@@ -1380,6 +1396,22 @@
     font-size: 0.78rem;
 }
 
+  .jiiXlh {
+    transform: rotate(45deg) translateY(-2px);
+}
+
+  .fznMyM {
+    z-index: 35;
+}
+
+  .cluKUT {
+    scrollbar-width: thin;
+}
+
+  .eQJEix {
+    scrollbar-color: color-mix(in srgb, var(--rose-muted) 42%, transparent) transparent;
+}
+
   .iSzLyb {
     grid-template-columns: minmax(0, 1fr) auto;
 }
@@ -1390,10 +1422,6 @@
 
   .jbWSYQ {
     font-size: 0.9rem;
-}
-
-  .jitPII {
-    color-scheme: inherit;
 }
 
   .kGyxrb {
@@ -1525,10 +1553,6 @@
 
   .koqhlK {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--rose-border) 18%, transparent);
-}
-
-  .cluKUT {
-    scrollbar-width: thin;
 }
 
   .ljXzyr {
@@ -1687,6 +1711,26 @@
     height: 22px;
 }
 
+  .dilIjS {
+    top: calc(100% + 0.35rem);
+}
+
+  .kiKDyH {
+    left: var(--fcTUxn);
+}
+
+  .jODBUu {
+    max-height: min(18rem, 46vh);
+}
+
+  .BENyO {
+    overflow-y: auto;
+}
+
+  .cAdYfz {
+    min-height: 2rem;
+}
+
   .gAJQcJ {
     padding-top: var(--rose-space-sm);
 }
@@ -1791,10 +1835,6 @@
     height: 12px;
 }
 
-  .BENyO {
-    overflow-y: auto;
-}
-
   .gAJQbz {
     padding-right: var(--rose-space-sm);
 }
@@ -1881,6 +1921,18 @@
 
   .CXKji[data-selected="true"] {
     background: color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised));
+}
+
+  .dTfKOw[data-highlighted="true"] {
+    background: var(--rose-surface-raised);
+}
+
+  .fteluq[data-selected="true"] {
+    background: color-mix(in srgb, var(--rose-accent) 18%, var(--rose-surface-raised));
+}
+
+  .dpfYgB[data-open="true"] {
+    background: var(--rose-surface-raised);
 }
 
   .iEsEyc[data-op="true"] {
@@ -2009,6 +2061,10 @@
 
   .gXUhMC[open] {
     gap: var(--rose-space-xs);
+}
+
+  .bVxwgV[data-open="true"] {
+    border-color: color-mix(in srgb, var(--rose-accent) 48%, var(--rose-border-strong));
 }
 
   .cLplYz[data-disabled="true"] {
@@ -2255,6 +2311,18 @@
     -webkit-mask-image: url("/assets/classes/titan.svg");
 }
 
+  [data-open="true"] .cTcHvK {
+    transform: rotate(225deg) translate(-2px, -1px);
+}
+
+  .fOTDex:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]) {
+    opacity: 0.42;
+}
+
+  .dcEzqT[data-highlighted="true"],.gLuVWv[data-selected="true"] {
+    color: var(--rose-text);
+}
+
   .kxbQLU button {
     white-space: nowrap;
 }
@@ -2267,8 +2335,8 @@
     transform: rotate(45deg);
 }
 
-  .fOTDex:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]) {
-    opacity: 0.42;
+  .cJrJlR[data-open="true"] {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--rose-accent) 16%, transparent);
 }
 
   .kfDJvW:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]) {
@@ -2649,6 +2717,10 @@
     background: color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft));
 }
 
+  .dvNunt:is(:hover, [data-hover]) {
+    background: var(--rose-surface-soft);
+}
+
   .gYoXMB:is(:hover, [data-hover]) {
     background: color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised));
 }
@@ -2728,6 +2800,10 @@
 
   .gutSNr:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]):is(:hover, [data-hover]) {
     background: var(--rose-surface-soft);
+}
+
+  .iawSsN:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]):is(:hover, [data-hover]) {
+    background: var(--edNtiq);
 }
 
   .jBQrbx:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]):is(:hover, [data-hover]) {

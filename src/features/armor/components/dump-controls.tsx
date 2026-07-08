@@ -1,8 +1,7 @@
 import { ARMOR_STATS, type ArmorStat } from '@armor-calc';
 import { styled } from '@panda/jsx';
-import { For } from 'solid-js';
 
-import { SelectInput, SelectWrap } from '@/features/armor/components/calculator-control-primitives';
+import { CustomSelect, SelectWrap } from '@/features/armor/components/calculator-control-primitives';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 
 interface DumpControlsProps {
@@ -21,13 +20,18 @@ const InlineControls = styled('div', {
 });
 
 export function DumpControls(props: DumpControlsProps) {
+    const options = () => [
+        { value: '', label: 'None' },
+        ...ARMOR_STATS.map((stat) => ({
+            value: stat,
+            label: STAT_LABELS[stat]
+        }))
+    ];
+
     return (
         <InlineControls>
             <SelectWrap>
-                <SelectInput value={props.dumpStat} onChange={(event) => props.onDumpStatChange(event.currentTarget.value)}>
-                    <option value="">None</option>
-                    <For each={ARMOR_STATS}>{(stat) => <option value={stat}>{STAT_LABELS[stat]}</option>}</For>
-                </SelectInput>
+                <CustomSelect ariaLabel="Dump stat" value={props.dumpStat} options={options()} onChange={props.onDumpStatChange} />
             </SelectWrap>
         </InlineControls>
     );
