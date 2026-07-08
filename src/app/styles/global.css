@@ -102,6 +102,36 @@
     --rose-control-disabled-text: #8a8077;
 }
 
+:root[data-theme="burger"] {
+    color-scheme: light;
+    --rose-bg: #fddcd7;
+    --rose-surface: #fff3f0;
+    --rose-surface-soft: #f6ccc6;
+    --rose-surface-raised: #efbdb5;
+    --rose-text: #241315;
+    --rose-muted: #80605f;
+    --rose-muted-strong: #4f3031;
+    --rose-border: #dcaea7;
+    --rose-border-strong: #ba8179;
+    --rose-accent: #9c467e;
+    --rose-info: #6a4547;
+    --rose-exotic: #9c467e;
+    --rose-success: #9c467e;
+    --rose-danger: #9c467e;
+    --rose-button: #9c467e;
+    --rose-button-text: #fff9f7;
+    --rose-table-header: #efc7c0;
+    --rose-table-row: color-mix(in srgb, var(--rose-surface-soft) 78%, transparent);
+    --rose-slider-tick: rgba(104, 69, 72, 0.32);
+    --rose-slider-major: rgba(36, 19, 21, 0.72);
+    --rose-slider-cap: #be918d;
+    --rose-slider-empty-a: #e9bcb5;
+    --rose-slider-empty-b: #dfaaa2;
+    --rose-control-disabled-bg: #ecc3bd;
+    --rose-control-disabled-border: #c9958d;
+    --rose-control-disabled-text: #916d68;
+}
+
 * {
     box-sizing: border-box;
 }

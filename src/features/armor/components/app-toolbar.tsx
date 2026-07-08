@@ -1,9 +1,9 @@
 import { styled } from '@panda/jsx';
-import { Eclipse, Moon, Sun } from 'lucide-solid';
+import { Eclipse, Hamburger, Moon, Sun } from 'lucide-solid';
 import { Match, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
-import { APP_THEME_LABELS, APP_THEMES, type AppTheme } from '@/features/armor/app-theme';
+import { APP_THEME_LABELS, type AppTheme, VISIBLE_APP_THEMES } from '@/features/armor/app-theme';
 import { MONO_FONT_FAMILY, UI_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
 export type LoadProgress = {
@@ -197,12 +197,14 @@ const AvatarImage = styled('img', {
     }
 });
 
-function BrandMark() {
+function BrandMark(props: { theme: AppTheme }) {
+    const isBurger = () => props.theme === 'burger';
+
     return (
         <HeadingGroup>
             <Title>
-                <CanvasMark src="/canvas.png" alt="rose" />
-                <TitleProduct>ARMOR</TitleProduct>
+                <CanvasMark src={isBurger() ? '/burger-removebg.png' : '/canvas.png'} alt={isBurger() ? 'burger' : 'rose'} />
+                <TitleProduct>{isBurger() ? 'BURGER' : 'ARMOR'}</TitleProduct>
                 <VersionBadge>{APP_VERSION}</VersionBadge>
             </Title>
         </HeadingGroup>
@@ -214,13 +216,16 @@ function avatarInitial(label?: string) {
 }
 
 function nextTheme(theme: AppTheme) {
-    const currentIndex = APP_THEMES.indexOf(theme);
-    return APP_THEMES[(currentIndex + 1) % APP_THEMES.length];
+    const currentIndex = VISIBLE_APP_THEMES.indexOf(theme as (typeof VISIBLE_APP_THEMES)[number]);
+    return VISIBLE_APP_THEMES[(currentIndex + 1) % VISIBLE_APP_THEMES.length];
 }
 
 function ThemeIcon(props: { theme: AppTheme }) {
     return (
         <Switch fallback={<Moon aria-hidden="true" />}>
+            <Match when={props.theme === 'burger'}>
+                <Hamburger aria-hidden="true" />
+            </Match>
             <Match when={props.theme === 'dim'}>
                 <Eclipse aria-hidden="true" />
             </Match>
@@ -234,10 +239,13 @@ function ThemeIcon(props: { theme: AppTheme }) {
 function ToolbarActions(props: AppToolbarProps) {
     const next = () => nextTheme(props.theme);
     const label = () => `Theme: ${APP_THEME_LABELS[props.theme]}. Switch to ${APP_THEME_LABELS[next()]}.`;
+    const changeTheme = (event: MouseEvent) => {
+        props.onThemeChange(event.shiftKey ? 'burger' : next());
+    };
 
     return (
         <Actions>
-            <ThemeCycleButton type="button" aria-label={label()} title={label()} onClick={() => props.onThemeChange(next())}>
+            <ThemeCycleButton type="button" aria-label={label()} title={label()} onClick={changeTheme}>
                 <ThemeIcon theme={props.theme} />
             </ThemeCycleButton>
             <Show
@@ -265,7 +273,7 @@ export function AppToolbar(props: AppToolbarProps) {
     return (
         <TopPanel>
             <TopBar>
-                <BrandMark />
+                <BrandMark theme={props.theme} />
 
                 <ToolbarActions
                     authenticated={props.authenticated}
