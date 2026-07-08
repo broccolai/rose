@@ -82,7 +82,7 @@ const PanelTitle = styled('h2', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '1rem',
         lineHeight: 1,
-        fontWeight: 780,
+        fontWeight: 700,
         color: 'var(--rose-text)'
     }
 });

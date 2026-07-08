@@ -102,7 +102,7 @@ const BonusChip = styled('span', {
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         fontSize: '0.68rem',
-        fontWeight: 720,
+        fontWeight: 700,
         '&[data-op="true"]': {
             borderColor: 'color-mix(in srgb, #d9b45f 62%, var(--rose-border))',
             color: '#e5c36d',

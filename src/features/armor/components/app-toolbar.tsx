@@ -64,7 +64,7 @@ const Title = styled('h1', {
         fontFamily: UI_FONT_FAMILY,
         fontSize: { base: '20px', md: '23px' },
         lineHeight: 1.08,
-        fontWeight: 720
+        fontWeight: 700
     }
 });
 
@@ -206,7 +206,7 @@ const ToolbarButton = styled('button', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.82rem',
         letterSpacing: 0,
-        fontWeight: 760,
+        fontWeight: 700,
         transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease, transform 120ms ease',
         _hover: {
             bg: '#c292ff',
@@ -234,7 +234,7 @@ const AvatarButton = styled('div', {
         color: 'var(--rose-text)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.74rem',
-        fontWeight: 800,
+        fontWeight: 700,
         lineHeight: 1
     }
 });

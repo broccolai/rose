@@ -101,7 +101,7 @@ const CreditTextButton = styled('button', {
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.66rem',
-        fontWeight: 720,
+        fontWeight: 700,
         lineHeight: 1,
         letterSpacing: 0,
         cursor: 'pointer',
@@ -157,14 +157,14 @@ const CreditsList = styled('dl', {
             color: 'var(--rose-muted)',
             fontFamily: MONO_FONT_FAMILY,
             fontSize: '0.68rem',
-            fontWeight: 760,
+            fontWeight: 700,
             textAlign: 'left',
             textTransform: 'uppercase'
         },
         '& dd': {
             m: 0,
             minW: 0,
-            fontWeight: 760,
+            fontWeight: 700,
             color: 'var(--rose-text)',
             textAlign: 'right'
         }

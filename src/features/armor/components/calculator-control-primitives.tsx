@@ -19,7 +19,7 @@ export const RowLabel = styled('span', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
         lineHeight: 1,
-        fontWeight: 680,
+        fontWeight: 600,
         color: 'var(--rose-muted)'
     }
 });
@@ -163,7 +163,7 @@ const CustomSelectOptionButton = styled('button', {
         cursor: 'pointer',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
-        fontWeight: 680,
+        fontWeight: 600,
         lineHeight: 1.25,
         textAlign: 'left',
         transition: 'background-color 100ms ease, color 100ms ease',
@@ -349,7 +349,7 @@ const controlButtonRecipe = cva({
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.82rem',
         letterSpacing: 0,
-        fontWeight: 720,
+        fontWeight: 700,
         transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease, transform 120ms ease',
         _hover: {
             transform: 'translateY(-1px)'
@@ -365,7 +365,7 @@ const controlButtonRecipe = cva({
                 border: '1px solid var(--rose-button)',
                 bg: 'var(--rose-button)',
                 color: 'var(--rose-button-text)',
-                fontWeight: 760,
+                fontWeight: 700,
                 _hover: {
                     bg: '#c292ff',
                     borderColor: '#c292ff'
@@ -454,7 +454,7 @@ const compactChoiceRecipe = cva({
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
-        fontWeight: 760,
+        fontWeight: 700,
         lineHeight: 1,
         letterSpacing: 0,
         cursor: 'pointer',
@@ -621,7 +621,7 @@ const SectionTitle = styled('h2', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.9rem',
         lineHeight: 1,
-        fontWeight: 760,
+        fontWeight: 700,
         color: 'var(--rose-text)'
     }
 });

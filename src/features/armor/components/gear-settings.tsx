@@ -36,7 +36,7 @@ const LabelLine = styled('span', {
         fontSize: '0.76rem',
         lineHeight: 1,
         letterSpacing: 0,
-        fontWeight: 650,
+        fontWeight: 600,
         color: 'var(--rose-muted)'
     }
 });
@@ -52,7 +52,7 @@ const ExoticBadge = styled('span', {
         color: 'var(--rose-exotic)',
         bg: 'color-mix(in srgb, var(--rose-exotic) 10%, var(--rose-surface))',
         fontSize: '0.66rem',
-        fontWeight: 760
+        fontWeight: 700
     }
 });
 
@@ -76,7 +76,7 @@ const SetName = styled('span', {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         color: 'var(--rose-text)',
-        fontWeight: 680,
+        fontWeight: 600,
         lineHeight: 1.2,
         whiteSpace: 'nowrap'
     }

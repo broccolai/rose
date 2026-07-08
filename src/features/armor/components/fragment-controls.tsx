@@ -5,7 +5,7 @@ import { For } from 'solid-js';
 import { CollapsibleSection, CustomSelect, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
-import { STAT_LABELS } from '@/features/armor/display-metadata';
+import { COMPACT_STAT_LABELS } from '@/features/armor/display-metadata';
 import { fragmentsForSubclass, SUBCLASS_TYPES, type SubclassType } from '@/features/armor/subclass-fragments';
 
 interface FragmentControlsProps {
@@ -33,7 +33,7 @@ const FragmentNameCell = styled('td', {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        fontWeight: 680
+        fontWeight: 600
     }
 });
 
@@ -42,7 +42,7 @@ const FragmentNameHeader = styled('th', {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        fontWeight: 720
+        fontWeight: 600
     }
 });
 
@@ -81,6 +81,9 @@ const FragmentCheckHeader = styled('th', {
 
 const FragmentBonusList = styled('div', {
     base: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.35rem',
         minW: 0,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -90,10 +93,12 @@ const FragmentBonusList = styled('div', {
 
 const FragmentBonusText = styled('span', {
     base: {
+        display: 'inline-flex',
+        alignItems: 'center',
         color: 'var(--rose-muted-strong)',
         fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.72rem',
-        fontWeight: 700,
+        fontSize: '0.7rem',
+        fontWeight: 600,
         lineHeight: 1,
         '&[data-direction="positive"]': {
             color: 'color-mix(in srgb, var(--rose-accent) 74%, #fff 26%)'
@@ -138,7 +143,7 @@ const FragmentSelectionBox = styled('label', {
     }
 });
 
-const formatSignedStat = (value: number, stat: ArmorStat): string => `${value > 0 ? '+' : ''}${value} ${STAT_LABELS[stat]}`;
+const formatSignedStat = (value: number, stat: ArmorStat): string => `${value > 0 ? '+' : ''}${value} ${COMPACT_STAT_LABELS[stat]}`;
 
 export function FragmentControls(props: FragmentControlsProps) {
     const selectedIds = () => new Set(props.selectedFragmentIds);

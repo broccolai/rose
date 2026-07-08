@@ -24,7 +24,7 @@ const FieldLabel = styled('span', {
         fontSize: '0.72rem',
         lineHeight: 1,
         letterSpacing: 0,
-        fontWeight: 650,
+        fontWeight: 600,
         color: 'var(--rose-muted)'
     }
 });
@@ -79,7 +79,7 @@ const StatScaleNumber = styled('span', {
         '&[data-major="true"]': {
             color: 'var(--rose-text)',
             fontSize: '0.76rem',
-            fontWeight: 750
+            fontWeight: 700
         }
     }
 });
@@ -185,7 +185,7 @@ const StatValue = styled('span', {
         fontVariantNumeric: 'tabular-nums',
         color: 'var(--rose-text)',
         fontSize: '0.82rem',
-        fontWeight: 680
+        fontWeight: 600
     }
 });
 

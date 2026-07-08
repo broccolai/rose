@@ -29,7 +29,7 @@ export const DataTable = styled('table', {
             bg: 'var(--rose-table-header)',
             color: 'var(--rose-muted)',
             fontSize: '0.68rem',
-            fontWeight: 720,
+            fontWeight: 600,
             letterSpacing: 0,
             lineHeight: 1,
             textAlign: 'left',
@@ -133,7 +133,7 @@ export const DataTableSectionRow = styled('tr', {
             bg: 'var(--rose-surface)',
             color: 'var(--rose-muted)',
             fontSize: '0.66rem',
-            fontWeight: 760,
+            fontWeight: 700,
             letterSpacing: '0.08em',
             lineHeight: 1,
             textTransform: 'uppercase'

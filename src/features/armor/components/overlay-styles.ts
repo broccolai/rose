@@ -37,7 +37,7 @@ export const OVERLAY_PANEL_STYLES = {
 export const OVERLAY_TITLE_STYLES = {
     color: 'var(--rose-text)',
     fontFamily: MONO_FONT_FAMILY,
-    fontWeight: 820,
+    fontWeight: 700,
     lineHeight: 1.08,
     textAlign: 'center'
 };
@@ -52,7 +52,7 @@ export const OVERLAY_STATUS_PILL_STYLES = {
     color: 'var(--rose-muted-strong)',
     fontFamily: MONO_FONT_FAMILY,
     fontSize: '0.78rem',
-    fontWeight: 720,
+    fontWeight: 700,
     lineHeight: 1.35,
     textAlign: 'center'
 };
@@ -66,7 +66,7 @@ export const OVERLAY_ACTION_BUTTON_STYLES = {
     color: 'var(--rose-text)',
     fontFamily: MONO_FONT_FAMILY,
     fontSize: '0.76rem',
-    fontWeight: 760,
+    fontWeight: 700,
     cursor: 'pointer',
     transition: 'background-color 140ms ease, border-color 140ms ease, transform 140ms ease',
     _hover: {

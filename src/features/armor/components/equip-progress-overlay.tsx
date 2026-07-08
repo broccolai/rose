@@ -116,7 +116,7 @@ const SlotLabel = styled('div', {
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.74rem',
-        fontWeight: 760,
+        fontWeight: 700,
         '@media (max-width: 620px)': {
             display: 'none'
         }
@@ -135,7 +135,7 @@ const PieceName = styled('div', {
     base: {
         color: 'var(--rose-text)',
         fontSize: '0.9rem',
-        fontWeight: 760,
+        fontWeight: 700,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'

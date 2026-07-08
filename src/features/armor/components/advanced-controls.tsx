@@ -38,7 +38,7 @@ const AdvancedLabel = styled('span', {
         color: 'var(--rose-muted)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
-        fontWeight: 680,
+        fontWeight: 600,
         lineHeight: 1.35,
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'

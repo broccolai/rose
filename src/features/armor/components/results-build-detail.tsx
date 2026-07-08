@@ -44,7 +44,7 @@ const PieceName = styled('span', {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        fontWeight: 720
+        fontWeight: 700
     }
 });
 

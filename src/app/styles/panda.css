@@ -963,6 +963,10 @@
     padding-inline: var(--rose-space-xs);
 }
 
+  .QGDPk {
+    gap: 0.35rem;
+}
+
   .kzgZRa {
     transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
@@ -1079,8 +1083,8 @@
     line-height: 1.08;
 }
 
-  .jSnkVs {
-    font-weight: 720;
+  .jRXsVq {
+    font-weight: 700;
 }
 
   .cGFOJB {
@@ -1109,10 +1113,6 @@
 
   .ebUtPH {
     font-size: 0.68rem;
-}
-
-  .jRXsVq {
-    font-weight: 700;
 }
 
   .fzpoeL {
@@ -1175,20 +1175,12 @@
     font-size: 0.82rem;
 }
 
-  .jRHxOQ {
-    font-weight: 760;
-}
-
   .euAISw {
     color: var(--rose-text);
 }
 
   .gOlAUq {
     font-size: 0.74rem;
-}
-
-  .jSaZPp {
-    font-weight: 800;
 }
 
   .fXCUBF {
@@ -1263,10 +1255,6 @@
     font-size: 1.05rem;
 }
 
-  .jTmLfG {
-    font-weight: 780;
-}
-
   .gEYBVn {
     justify-content: flex-start;
 }
@@ -1295,8 +1283,8 @@
     font-size: 0.76rem;
 }
 
-  .jRzOlC {
-    font-weight: 650;
+  .jRXFuD {
+    font-weight: 600;
 }
 
   .ezWZrZ {
@@ -1309,10 +1297,6 @@
 
   .hWhrno {
     text-overflow: ellipsis;
-}
-
-  .jTmXET {
-    font-weight: 680;
 }
 
   .kfwppx {
@@ -1479,6 +1463,10 @@
 
   .bYPzoC\! {
     text-align: center !important;
+}
+
+  .jmaQla {
+    font-size: 0.7rem;
 }
 
   .ddgODW {
@@ -2147,8 +2135,8 @@
     font-size: 0.68rem;
 }
 
-  .fPNApB th {
-    font-weight: 720;
+  .Uzqwm th {
+    font-weight: 600;
 }
 
   .fPaGSC th {
@@ -2243,8 +2231,8 @@
     font-size: 0.66rem;
 }
 
-  .btmDHl td {
-    font-weight: 760;
+  .iHrBob td {
+    font-weight: 700;
 }
 
   .dluKxc td {
@@ -2271,8 +2259,8 @@
     font-size: 0.98rem;
 }
 
-  .bCkejW h3 {
-    font-weight: 760;
+  .itEsRM h3 {
+    font-weight: 700;
 }
 
   .jxtlUf[data-collapsed="true"] {
@@ -2447,8 +2435,8 @@
     font-size: 0.76rem;
 }
 
-  .hIxdZC[data-major="true"] {
-    font-weight: 750;
+  .hpUXVX[data-major="true"] {
+    font-weight: 700;
 }
 
   .eIhWto::before {
@@ -2521,8 +2509,8 @@
     font-size: 0.68rem;
 }
 
-  .bqLKZZ dt {
-    font-weight: 760;
+  .iEQIGP dt {
+    font-weight: 700;
 }
 
   .gdZHqr dt {
@@ -2533,8 +2521,8 @@
     text-transform: uppercase;
 }
 
-  .btqvvl dd {
-    font-weight: 760;
+  .iHvtcb dd {
+    font-weight: 700;
 }
 
   .iNdbIl dd {

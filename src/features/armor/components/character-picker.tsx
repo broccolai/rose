@@ -18,7 +18,7 @@ const FieldLabel = styled('span', {
         fontSize: '0.76rem',
         lineHeight: 1,
         letterSpacing: 0,
-        fontWeight: 650,
+        fontWeight: 600,
         color: 'var(--rose-muted)'
     }
 });

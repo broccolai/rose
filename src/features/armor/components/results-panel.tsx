@@ -52,7 +52,7 @@ const ResultsTitle = styled('h2', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '1.05rem',
         lineHeight: 1,
-        fontWeight: 780,
+        fontWeight: 700,
         color: 'var(--rose-text)'
     }
 });
@@ -107,7 +107,7 @@ const StateCard = styled('div', {
             m: 0,
             color: 'var(--rose-text)',
             fontSize: '0.98rem',
-            fontWeight: 760
+            fontWeight: 700
         },
         '& p': {
             m: 0
