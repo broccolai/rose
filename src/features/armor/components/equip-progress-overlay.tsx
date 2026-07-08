@@ -2,6 +2,13 @@ import { ARMOR_SLOTS, type ArmorSlot } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { For, Show } from 'solid-js';
 
+import {
+    OVERLAY_ACTION_BUTTON_STYLES,
+    OVERLAY_BACKDROP_STYLES,
+    OVERLAY_PANEL_STYLES,
+    OVERLAY_STATUS_PILL_STYLES,
+    OVERLAY_TITLE_STYLES
+} from '@/features/armor/components/overlay-styles';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { SLOT_LABELS } from '@/features/armor/display-metadata';
 
@@ -35,27 +42,24 @@ const Overlay = styled('div', {
         display: 'grid',
         placeItems: 'center',
         p: { base: '1rem', md: '2rem' },
-        bg: 'color-mix(in srgb, #030305 86%, transparent)',
-        backdropFilter: 'blur(18px)'
+        ...OVERLAY_BACKDROP_STYLES
     }
 });
 
 const Panel = styled('div', {
     base: {
         w: 'min(920px, 100%)',
-        border: '1px solid color-mix(in srgb, var(--rose-accent) 22%, var(--rose-border))',
-        borderRadius: '1.1rem',
-        bg: 'linear-gradient(180deg, color-mix(in srgb, var(--rose-surface-raised) 88%, #000 12%), var(--rose-surface))',
-        boxShadow: '0 30px 110px color-mix(in srgb, #000 72%, transparent)',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        ...OVERLAY_PANEL_STYLES
     }
 });
 
 const Header = styled('div', {
     base: {
         display: 'grid',
-        gap: '0.45rem',
-        p: { base: '1.1rem', md: '1.35rem 1.45rem' },
+        justifyItems: 'center',
+        gap: '0.65rem',
+        p: { base: '1.25rem 1.1rem', md: '1.6rem 1.45rem 1.35rem' },
         borderBottom: '1px solid var(--rose-border)'
     }
 });
@@ -63,20 +67,14 @@ const Header = styled('div', {
 const Title = styled('h2', {
     base: {
         m: 0,
-        color: 'var(--rose-text)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: { base: '1.05rem', md: '1.2rem' },
-        fontWeight: 820,
-        lineHeight: 1.05
+        fontSize: { base: '1.05rem', md: '1.16rem' },
+        ...OVERLAY_TITLE_STYLES
     }
 });
 
 const Detail = styled('div', {
     base: {
-        color: 'var(--rose-muted-strong)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.8rem',
-        lineHeight: 1.35
+        ...OVERLAY_STATUS_PILL_STYLES
     }
 });
 
@@ -91,14 +89,14 @@ const Body = styled('div', {
 const PieceCard = styled('div', {
     base: {
         display: 'grid',
-        gridTemplateColumns: '92px minmax(0, 1fr) auto',
+        gridTemplateColumns: 'minmax(4.75rem, max-content) minmax(0, 1fr) auto',
         gap: '0.8rem',
         alignItems: 'center',
         minH: '58px',
         p: '0.8rem 0.9rem',
         border: '1px solid var(--rose-border)',
-        borderRadius: '0.85rem',
-        bg: 'color-mix(in srgb, var(--rose-surface-soft) 70%, transparent)',
+        borderRadius: 'var(--rose-radius-md)',
+        bg: 'color-mix(in srgb, var(--rose-surface-soft) 72%, transparent)',
         transition: 'background-color 140ms ease, border-color 140ms ease',
         '&[data-status="active"]': {
             borderColor: 'color-mix(in srgb, var(--rose-accent) 64%, var(--rose-border))',
@@ -193,19 +191,7 @@ const Footer = styled('div', {
 
 const DismissButton = styled('button', {
     base: {
-        minH: '38px',
-        px: '1rem',
-        border: '1px solid var(--rose-border)',
-        borderRadius: '0.7rem',
-        bg: 'var(--rose-surface-soft)',
-        color: 'var(--rose-text)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.76rem',
-        fontWeight: 760,
-        cursor: 'pointer',
-        _hover: {
-            bg: 'color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft))'
-        }
+        ...OVERLAY_ACTION_BUTTON_STYLES
     }
 });
 

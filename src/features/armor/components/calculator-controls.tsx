@@ -10,6 +10,7 @@ import { CharacterPicker } from '@/features/armor/components/character-picker';
 import { DumpControls } from '@/features/armor/components/dump-controls';
 import { FragmentControls } from '@/features/armor/components/fragment-controls';
 import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-settings';
+import { PANE_SCROLL_STYLES } from '@/features/armor/components/scroll-styles';
 import { StatTargetFields } from '@/features/armor/components/stat-target-fields';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
@@ -77,33 +78,10 @@ const SettingsPanel = styled('div', {
 
 const SettingsScroll = styled('div', {
     base: {
+        ...PANE_SCROLL_STYLES,
         display: 'grid',
         gap: 'var(--rose-space-md)',
-        minW: 0,
-        minH: 0,
-        overflow: { lg: 'auto' },
-        pr: { lg: 'var(--rose-space-sm)' },
-        mr: { lg: 'calc(var(--rose-space-xs) * -1)' },
-        pb: { lg: 'var(--rose-space-sm)' },
-        scrollbarGutter: { lg: 'stable' },
-        scrollbarWidth: 'thin',
-        scrollbarColor: 'color-mix(in srgb, var(--rose-accent) 38%, var(--rose-border)) transparent',
-        '&::-webkit-scrollbar': {
-            w: '0.45rem'
-        },
-        '&::-webkit-scrollbar-track': {
-            bg: 'transparent'
-        },
-        '&::-webkit-scrollbar-thumb': {
-            borderRadius: '999px',
-            bg: 'color-mix(in srgb, var(--rose-muted) 26%, transparent)',
-            border: '2px solid transparent',
-            backgroundClip: 'content-box'
-        },
-        '&:hover::-webkit-scrollbar-thumb': {
-            bg: 'color-mix(in srgb, var(--rose-accent) 48%, var(--rose-muted) 22%)',
-            backgroundClip: 'content-box'
-        }
+        alignContent: 'start'
     }
 });
 

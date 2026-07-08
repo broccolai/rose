@@ -2,6 +2,7 @@ import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } fro
 import { styled } from '@panda/jsx';
 import { For, type JSX, Show } from 'solid-js';
 
+import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 import {
@@ -28,21 +29,6 @@ type ResultsTableProps = {
 
 const RESULT_COLUMN_COUNT = 8;
 
-const TableWrap = styled('div', {
-    base: {
-        w: '100%',
-        maxW: '100%',
-        minW: 0,
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        maxH: { base: '28rem', lg: 'calc(100vh - 16rem)' },
-        scrollbarGutter: 'stable',
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-md)',
-        bg: 'var(--rose-surface)'
-    }
-});
-
 const SortButton = styled('button', {
     base: {
         border: 0,
@@ -58,61 +44,6 @@ const SortButton = styled('button', {
         justifyContent: 'flex-end',
         gap: 'var(--rose-space-xxs)',
         w: '100%'
-    }
-});
-
-const Table = styled('table', {
-    base: {
-        w: '100%',
-        minW: 0,
-        tableLayout: 'fixed',
-        borderCollapse: 'collapse',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.74rem',
-        '& th': {
-            textAlign: 'left',
-            borderBottom: '1px solid var(--rose-border)',
-            bg: '#0a0a0c',
-            p: 'var(--rose-space-sm) var(--rose-space-xs)',
-            color: 'var(--rose-muted)',
-            whiteSpace: 'normal',
-            lineHeight: 1,
-            letterSpacing: 0,
-            fontWeight: 720
-        },
-        '& thead th': {
-            position: 'sticky',
-            top: 0,
-            zIndex: 2
-        },
-        '& td': {
-            borderBottom: '1px solid var(--rose-border)',
-            p: 'var(--rose-space-sm) var(--rose-space-xs)',
-            verticalAlign: 'middle',
-            lineHeight: 1.2,
-            h: '42px'
-        },
-        '& th[data-numeric], & td[data-numeric]': {
-            textAlign: 'right',
-            fontVariantNumeric: 'tabular-nums'
-        },
-        '& td[data-text-cell]': {
-            minW: 0,
-            overflowWrap: 'anywhere',
-            wordBreak: 'normal'
-        },
-        '& tr[data-clickable="true"]': {
-            cursor: 'pointer'
-        },
-        '& tr[data-expanded="true"]': {
-            bg: 'var(--rose-surface-raised)'
-        },
-        '& tr[data-expanded="true"] td:first-child': {
-            boxShadow: 'inset 3px 0 0 var(--rose-accent)'
-        },
-        '& tbody tr:hover': {
-            bg: 'var(--rose-surface-soft)'
-        }
     }
 });
 
@@ -157,7 +88,7 @@ const BonusChip = styled('span', {
         minH: '20px',
         px: 'var(--rose-space-xs)',
         border: '1px solid color-mix(in srgb, var(--rose-success) 52%, var(--rose-border))',
-        borderRadius: '999px',
+        borderRadius: 'var(--rose-radius-sm)',
         color: 'var(--rose-success)',
         bg: 'color-mix(in srgb, var(--rose-success) 10%, var(--rose-surface))',
         overflow: 'hidden',
@@ -267,12 +198,12 @@ export function ResultsTable(props: ResultsTableProps) {
     }
 
     return (
-        <TableWrap>
-            <Table>
+        <DataTableFrame>
+            <DataTable data-density="comfortable">
                 <colgroup>
-                    <For each={ARMOR_STATS}>{() => <col style={{ width: '9.6%' }} />}</For>
-                    <col style={{ width: '9.2%' }} />
-                    <col style={{ width: '33.2%' }} />
+                    <For each={ARMOR_STATS}>{() => <col data-stat-column />}</For>
+                    <col data-total-column />
+                    <col data-bonus-column />
                 </colgroup>
                 <thead>
                     <tr>
@@ -320,7 +251,7 @@ export function ResultsTable(props: ResultsTableProps) {
                         )}
                     </For>
                 </tbody>
-            </Table>
-        </TableWrap>
+            </DataTable>
+        </DataTableFrame>
     );
 }

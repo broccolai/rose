@@ -116,6 +116,25 @@ const controlButtonRecipe = cva({
                     color: 'var(--rose-text)',
                     borderColor: 'var(--rose-border-strong)'
                 }
+            },
+            tonal: {
+                border: '1px solid color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border))',
+                bg: 'color-mix(in srgb, var(--rose-accent) 7%, var(--rose-surface-raised))',
+                color: 'var(--rose-text)',
+                boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--rose-text) 5%, transparent)',
+                _hover: {
+                    bg: 'color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised))',
+                    borderColor: 'color-mix(in srgb, var(--rose-accent) 52%, var(--rose-border))'
+                },
+                _disabled: {
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
+                    _hover: {
+                        bg: 'color-mix(in srgb, var(--rose-accent) 7%, var(--rose-surface-raised))',
+                        borderColor: 'color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border))',
+                        transform: 'none'
+                    }
+                }
             }
         }
     },
@@ -135,6 +154,92 @@ export const SecondaryButton = styled('button', controlButtonRecipe, {
         intent: 'secondary'
     }
 });
+
+export const TonalButton = styled('button', controlButtonRecipe, {
+    defaultProps: {
+        intent: 'tonal'
+    }
+});
+
+export const ButtonGroup = styled('div', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: { base: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
+        gap: 'var(--rose-space-sm)',
+        '& button': {
+            minW: 0,
+            whiteSpace: 'nowrap'
+        }
+    }
+});
+
+const compactChoiceRecipe = cva({
+    base: {
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minW: '2.75rem',
+        h: 'var(--rose-control-compact-height)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        px: 'var(--rose-space-sm)',
+        py: 0,
+        appearance: 'none',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.78rem',
+        fontWeight: 760,
+        lineHeight: 1,
+        letterSpacing: 0,
+        cursor: 'pointer',
+        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
+        '&:not([data-disabled="true"])[data-selected="false"]:hover': {
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        },
+        '&[data-op="true"]': {
+            color: 'color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%)',
+            bg: 'color-mix(in srgb, var(--rose-op) 8%, transparent)'
+        },
+        '&[data-disabled="true"]': {
+            borderColor: 'var(--rose-control-disabled-border)',
+            bg: 'var(--rose-control-disabled-bg)',
+            color: 'var(--rose-control-disabled-text)',
+            cursor: 'not-allowed'
+        },
+        '&[data-disabled="true"][data-op="true"]': {
+            borderColor: 'color-mix(in srgb, var(--rose-op) 24%, var(--rose-control-disabled-border))',
+            color: 'color-mix(in srgb, var(--rose-op) 42%, var(--rose-control-disabled-text) 58%)',
+            bg: 'color-mix(in srgb, var(--rose-op) 8%, var(--rose-control-disabled-bg))'
+        },
+        '&[data-selected="true"]': {
+            bg: 'var(--rose-button)',
+            borderColor: 'var(--rose-button)',
+            color: 'var(--rose-button-text)',
+            boxShadow: 'none'
+        },
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 40%, transparent)',
+            outlineOffset: '2px'
+        },
+        '&:has(input:focus-visible)': {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 40%, transparent)',
+            outlineOffset: '2px'
+        },
+        '& input': {
+            position: 'absolute',
+            inset: 0,
+            opacity: 0,
+            cursor: 'pointer'
+        }
+    }
+});
+
+export const CompactChoiceButton = styled('button', compactChoiceRecipe);
+
+export const CompactChoiceLabel = styled('label', compactChoiceRecipe);
 
 const toggleBoxRecipe = cva({
     base: {

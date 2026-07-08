@@ -92,8 +92,8 @@ const StatSliderFrame = styled('div', {
         alignItems: 'center',
         h: 'var(--rose-control-compact-height)',
         minW: 0,
-        '--stat-tick-color': 'rgba(244, 244, 245, 0.34)',
-        '--stat-major-color': 'rgba(244, 244, 245, 0.92)'
+        '--stat-tick-color': 'var(--rose-slider-tick)',
+        '--stat-major-color': 'var(--rose-slider-major)'
     }
 });
 
@@ -119,7 +119,7 @@ const StatSliderTrack = styled('div', {
         '--stat-track-radius': '999px',
         '--stat-track-border': '1px solid var(--rose-border)',
         '--stat-track-bg':
-            'linear-gradient(var(--stat-major-color), var(--stat-major-color)) 50% center / 2px 12px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 12.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 25% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 37.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 62.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 75% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 87.5% center / 1px 7px no-repeat, linear-gradient(to right, var(--rose-accent) 0 var(--stat-value-percent), var(--rose-info) var(--stat-value-percent) var(--stat-cap-percent), transparent var(--stat-cap-percent) 100%) center / 100% 100% no-repeat, repeating-linear-gradient(135deg, #24242a 0 5px, #1b1b20 5px 10px) center / 100% 100% no-repeat',
+            'linear-gradient(var(--stat-major-color), var(--stat-major-color)) 50% center / 2px 12px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 12.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 25% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 37.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 62.5% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 75% center / 1px 7px no-repeat, linear-gradient(var(--stat-tick-color), var(--stat-tick-color)) 87.5% center / 1px 7px no-repeat, linear-gradient(to right, var(--rose-accent) 0 var(--stat-value-percent), var(--rose-slider-cap) var(--stat-value-percent) var(--stat-cap-percent), transparent var(--stat-cap-percent) 100%) center / 100% 100% no-repeat, repeating-linear-gradient(135deg, var(--rose-slider-empty-a) 0 5px, var(--rose-slider-empty-b) 5px 10px) center / 100% 100% no-repeat',
         '--stat-thumb-size': '14px',
         '--stat-thumb-half': 'calc(var(--stat-thumb-size) / 2)',
         '--stat-thumb-radius': '999px',

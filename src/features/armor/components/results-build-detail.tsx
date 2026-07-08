@@ -3,7 +3,8 @@ import { styled } from '@panda/jsx';
 import { debounce } from '@solid-primitives/scheduled';
 import { createSignal, For, Show } from 'solid-js';
 
-import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
+import { ButtonGroup, TonalButton } from '@/features/armor/components/calculator-control-primitives';
+import { DataTable } from '@/features/armor/components/data-table';
 import { SLOT_LABELS } from '@/features/armor/display-metadata';
 import { formatDimArmorQuery } from '@/features/armor/result-display';
 
@@ -29,92 +30,11 @@ const DetailTableWrap = styled('div', {
     }
 });
 
-const DetailActions = styled('div', {
+const DetailActions = styled(ButtonGroup, {
     base: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gap: 'var(--rose-space-sm)',
         p: 'var(--rose-space-sm)',
         borderTop: '1px solid var(--rose-border)',
-        bg: 'color-mix(in srgb, var(--rose-surface-soft) 36%, var(--rose-surface))',
-        '@media (max-width: 560px)': {
-            gridTemplateColumns: '1fr'
-        }
-    }
-});
-
-const DetailActionButton = styled('button', {
-    base: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        w: '100%',
-        minH: 'var(--rose-control-height)',
-        px: 'var(--rose-control-padding-x)',
-        border: '1px solid color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border))',
-        borderRadius: 'var(--rose-radius-md)',
-        bg: 'color-mix(in srgb, var(--rose-accent) 7%, var(--rose-surface-raised))',
-        color: 'var(--rose-text)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.82rem',
-        fontWeight: 760,
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursor: 'pointer',
-        boxShadow: 'inset 0 1px 0 color-mix(in srgb, white 5%, transparent)',
-        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease',
-        _hover: {
-            bg: 'color-mix(in srgb, var(--rose-accent) 14%, var(--rose-surface-raised))',
-            borderColor: 'color-mix(in srgb, var(--rose-accent) 52%, var(--rose-border))'
-        },
-        _focusVisible: {
-            outline: '2px solid color-mix(in srgb, var(--rose-accent) 34%, transparent)',
-            outlineOffset: '2px'
-        },
-        _disabled: {
-            opacity: 0.5,
-            cursor: 'not-allowed',
-            _hover: {
-                bg: 'color-mix(in srgb, var(--rose-accent) 7%, var(--rose-surface-raised))',
-                borderColor: 'color-mix(in srgb, var(--rose-accent) 28%, var(--rose-border))'
-            }
-        }
-    }
-});
-
-const DetailTable = styled('table', {
-    base: {
-        w: '100%',
-        minW: 0,
-        tableLayout: 'fixed',
-        borderCollapse: 'collapse',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.74rem',
-        '& th': {
-            p: 'var(--rose-space-xs) var(--rose-space-sm)',
-            color: 'var(--rose-muted)',
-            bg: '#0a0a0c',
-            borderBottom: '1px solid var(--rose-border)',
-            textAlign: 'left',
-            fontWeight: 720,
-            lineHeight: 1.15
-        },
-        '& td': {
-            p: 'var(--rose-space-xs) var(--rose-space-sm)',
-            borderBottom: '1px solid var(--rose-border)',
-            bg: 'color-mix(in srgb, var(--rose-surface-soft) 62%, transparent)',
-            lineHeight: 1.2,
-            verticalAlign: 'middle'
-        },
-        '& tbody tr:last-child td': {
-            borderBottom: 0
-        },
-        '& td[data-muted]': {
-            color: 'var(--rose-muted)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-        }
+        bg: 'color-mix(in srgb, var(--rose-surface-soft) 36%, var(--rose-surface))'
     }
 });
 
@@ -228,13 +148,13 @@ export function ResultsBuildDetail(props: ResultsBuildDetailProps) {
     return (
         <DetailPanel>
             <DetailTableWrap>
-                <DetailTable>
+                <DataTable data-density="compact" data-row-surface="soft">
                     <colgroup>
-                        <col style={{ width: '92px' }} />
-                        <col style={{ width: 'auto' }} />
-                        <col style={{ width: '126px' }} />
+                        <col data-slot-column />
+                        <col />
+                        <col data-mod-column />
                         <Show when={props.showTuningResults}>
-                            <col style={{ width: '142px' }} />
+                            <col data-tuning-column />
                         </Show>
                     </colgroup>
                     <thead>
@@ -266,14 +186,14 @@ export function ResultsBuildDetail(props: ResultsBuildDetailProps) {
                             }}
                         </For>
                     </tbody>
-                </DetailTable>
+                </DataTable>
                 <DetailActions>
-                    <DetailActionButton type="button" onClick={copyDimQuery}>
+                    <TonalButton type="button" onClick={copyDimQuery}>
                         {copyLabel()}
-                    </DetailActionButton>
-                    <DetailActionButton type="button" disabled={!props.onEquipBuild || equipState() === 'equipping'} onClick={equipBuild}>
+                    </TonalButton>
+                    <TonalButton type="button" disabled={!props.onEquipBuild || equipState() === 'equipping'} onClick={equipBuild}>
                         {equipLabel()}
-                    </DetailActionButton>
+                    </TonalButton>
                 </DetailActions>
             </DetailTableWrap>
         </DetailPanel>

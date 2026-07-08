@@ -5,6 +5,7 @@ import { Show } from 'solid-js';
 import type { AvailableArmorSet } from '@/features/armor/calculator-view-model';
 import { ResultsBuildDetail } from '@/features/armor/components/results-build-detail';
 import { ResultsTable, type VisibleResultSortKey } from '@/features/armor/components/results-table';
+import { PANE_SCROLL_STYLES } from '@/features/armor/components/scroll-styles';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, buildExpansionKey } from '@/features/armor/result-display';
 
@@ -31,17 +32,36 @@ const ResultsShell = styled('div', {
         maxW: 'none',
         mx: 'auto',
         w: '100%',
+        minH: 0,
+        h: { lg: '100%' },
         display: 'grid',
+        gridTemplateRows: { lg: 'auto minmax(0, 1fr)' },
         gap: 'var(--rose-space-md)'
     }
 });
 
 const ResultsHeader = styled('div', {
     base: {
+        position: { lg: 'sticky' },
+        top: { lg: 0 },
+        zIndex: 3,
         display: 'grid',
         gridTemplateColumns: { base: 'minmax(0, 1fr)', lg: 'auto minmax(0, 1fr)' },
         alignItems: 'center',
-        gap: 'var(--rose-space-sm) var(--rose-space-md)'
+        gap: 'var(--rose-space-sm) var(--rose-space-md)',
+        pb: 'var(--rose-space-md)',
+        borderBottom: '1px solid var(--rose-border)',
+        bg: 'var(--rose-bg)'
+    }
+});
+
+const ResultsBody = styled('div', {
+    base: {
+        ...PANE_SCROLL_STYLES,
+        display: 'grid',
+        alignContent: 'start',
+        gap: 'var(--rose-space-md)',
+        pt: 0
     }
 });
 
@@ -183,66 +203,70 @@ export function ResultsPanel(props: ResultsPanelProps) {
                     </Show>
                 </HeaderTools>
             </ResultsHeader>
-            <Show when={props.loading && !props.result}>
-                <LoadingStateCard>
-                    <MutedText>{props.progress.label || 'Working'}</MutedText>
-                    <Show when={props.progress.active}>
-                        <ProgressTrack>
-                            <ProgressBar style={{ width: `${props.progress.percent}%` }} />
-                        </ProgressTrack>
-                    </Show>
-                </LoadingStateCard>
-            </Show>
-            <Show
-                when={props.result}
-                fallback={
-                    <Show when={!props.loading}>
-                        <EmptyState>
-                            <MutedText>Awaiting solve.</MutedText>
-                        </EmptyState>
-                    </Show>
-                }
-            >
+            <ResultsBody>
+                <Show when={props.loading && !props.result}>
+                    <LoadingStateCard>
+                        <MutedText>{props.progress.label || 'Working'}</MutedText>
+                        <Show when={props.progress.active}>
+                            <ProgressTrack>
+                                <ProgressBar style={{ width: `${props.progress.percent}%` }} />
+                            </ProgressTrack>
+                        </Show>
+                    </LoadingStateCard>
+                </Show>
                 <Show
-                    when={!props.resultFailure}
+                    when={props.result}
                     fallback={
-                        <StateCard>
-                            <h3>No builds matched these requirements.</h3>
-                            <MutedText>{props.resultFailure}</MutedText>
-                            <MutedText>Try changing the exotic, lowering target stats, or clearing the armor set requirement.</MutedText>
-                        </StateCard>
+                        <Show when={!props.loading}>
+                            <EmptyState>
+                                <MutedText>Awaiting solve.</MutedText>
+                            </EmptyState>
+                        </Show>
                     }
                 >
                     <Show
-                        when={props.builds.length > 0}
+                        when={!props.resultFailure}
                         fallback={
                             <StateCard>
-                                <h3>No matching armor for this character.</h3>
-                                <MutedText>Try clearing the exotic or armor set requirements.</MutedText>
+                                <h3>No builds matched these requirements.</h3>
+                                <MutedText>{props.resultFailure}</MutedText>
+                                <MutedText>
+                                    Try changing the exotic, lowering target stats, or clearing the armor set requirement.
+                                </MutedText>
                             </StateCard>
                         }
                     >
-                        <ResultsTable
-                            builds={props.builds}
-                            armorSets={props.armorSets}
-                            armorSetDisplayMode={props.armorSetDisplayMode}
-                            dumpStat={props.dumpStat}
-                            expandedBuildKey={props.expandedBuildKey}
-                            sort={props.sort}
-                            visibleLimit={props.visibleLimit}
-                            onSort={props.onSort}
-                            onToggleBuild={toggleExpandedBuild}
-                            renderExpandedBuild={(build) => (
-                                <ResultsBuildDetail
-                                    build={build}
-                                    onEquipBuild={props.onEquipBuild}
-                                    showTuningResults={props.showTuningResults}
-                                />
-                            )}
-                        />
+                        <Show
+                            when={props.builds.length > 0}
+                            fallback={
+                                <StateCard>
+                                    <h3>No matching armor for this character.</h3>
+                                    <MutedText>Try clearing the exotic or armor set requirements.</MutedText>
+                                </StateCard>
+                            }
+                        >
+                            <ResultsTable
+                                builds={props.builds}
+                                armorSets={props.armorSets}
+                                armorSetDisplayMode={props.armorSetDisplayMode}
+                                dumpStat={props.dumpStat}
+                                expandedBuildKey={props.expandedBuildKey}
+                                sort={props.sort}
+                                visibleLimit={props.visibleLimit}
+                                onSort={props.onSort}
+                                onToggleBuild={toggleExpandedBuild}
+                                renderExpandedBuild={(build) => (
+                                    <ResultsBuildDetail
+                                        build={build}
+                                        onEquipBuild={props.onEquipBuild}
+                                        showTuningResults={props.showTuningResults}
+                                    />
+                                )}
+                            />
+                        </Show>
                     </Show>
                 </Show>
-            </Show>
+            </ResultsBody>
         </ResultsShell>
     );
 }

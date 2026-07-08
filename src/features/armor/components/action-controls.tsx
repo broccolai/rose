@@ -1,6 +1,6 @@
 import { styled } from '@panda/jsx';
 
-import { PrimaryButton, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';
+import { ButtonGroup, PrimaryButton, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';
 
 interface ActionControlsProps {
     canSolve: boolean;
@@ -9,18 +9,11 @@ interface ActionControlsProps {
     onClearChoices: () => void;
 }
 
-const ActionStack = styled('div', {
+const ActionStack = styled(ButtonGroup, {
     base: {
-        display: 'grid',
-        gridTemplateColumns: { base: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
-        gap: 'var(--rose-space-sm)',
         pt: { base: 'var(--rose-space-xxs)', lg: 'var(--rose-space-md)' },
         borderTop: { lg: '1px solid var(--rose-border)' },
-        bg: 'var(--rose-bg)',
-        '& button': {
-            minW: 0,
-            whiteSpace: 'nowrap'
-        }
+        bg: 'var(--rose-bg)'
     }
 });
 

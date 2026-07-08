@@ -3,7 +3,8 @@ import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic } from '@/features/armor/calculator-view-model';
-import { SelectInput } from '@/features/armor/components/calculator-control-primitives';
+import { CompactChoiceButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
+import { DataTable, DataTableFrame, DataTableSectionRow } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/armor/result-display';
 
@@ -47,7 +48,7 @@ const ExoticBadge = styled('span', {
         minH: '18px',
         px: '0.4rem',
         border: '1px solid color-mix(in srgb, var(--rose-exotic) 62%, var(--rose-border))',
-        borderRadius: '999px',
+        borderRadius: 'var(--rose-radius-sm)',
         color: 'var(--rose-exotic)',
         bg: 'color-mix(in srgb, var(--rose-exotic) 10%, var(--rose-surface))',
         fontSize: '0.66rem',
@@ -55,78 +56,9 @@ const ExoticBadge = styled('span', {
     }
 });
 
-const SetList = styled('div', {
+const SetList = styled(DataTableFrame, {
     base: {
-        minW: 0,
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-md)',
-        bg: 'var(--rose-surface)',
         '--rose-op': '#d8b15f'
-    }
-});
-
-const SetTable = styled('table', {
-    base: {
-        w: '100%',
-        minW: 0,
-        tableLayout: 'fixed',
-        borderCollapse: 'collapse',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.74rem',
-        '& th': {
-            position: 'sticky',
-            top: 0,
-            zIndex: 2,
-            p: 'var(--rose-space-sm) var(--rose-space-xs)',
-            borderBottom: '1px solid var(--rose-border)',
-            bg: '#0a0a0c',
-            color: 'var(--rose-muted)',
-            fontSize: '0.68rem',
-            lineHeight: 1,
-            fontWeight: 720,
-            letterSpacing: 0,
-            textAlign: 'left'
-        },
-        '& th[data-action], & td[data-action]': {
-            textAlign: 'center'
-        },
-        '& td': {
-            p: 'var(--rose-space-xs)',
-            borderBottom: '1px solid var(--rose-border)',
-            color: 'var(--rose-text)',
-            lineHeight: 1.2,
-            verticalAlign: 'middle'
-        },
-        '& tbody tr[data-selected="true"]': {
-            bg: 'color-mix(in srgb, var(--rose-accent) 9%, transparent)'
-        },
-        '& tbody tr[data-unavailable="true"]': {
-            opacity: 0.58
-        },
-        '& tbody tr:hover': {
-            bg: 'var(--rose-surface-soft)'
-        },
-        '& tbody tr[data-selected="true"]:hover': {
-            bg: 'color-mix(in srgb, var(--rose-accent) 12%, var(--rose-surface-soft))'
-        }
-    }
-});
-
-const SetSectionRow = styled('tr', {
-    base: {
-        '& td': {
-            p: 'var(--rose-space-sm) var(--rose-space-xs) var(--rose-space-xs)',
-            bg: 'var(--rose-surface)',
-            color: 'var(--rose-muted)',
-            fontSize: '0.66rem',
-            fontWeight: 760,
-            lineHeight: 1,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase'
-        },
-        '&[data-op="true"] td': {
-            color: 'var(--rose-op)'
-        }
     }
 });
 
@@ -147,60 +79,6 @@ const SetName = styled('span', {
         fontWeight: 680,
         lineHeight: 1.2,
         whiteSpace: 'nowrap'
-    }
-});
-
-const SetRequirementButton = styled('button', {
-    base: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minW: '2.75rem',
-        h: 'var(--rose-control-compact-height)',
-        border: '1px solid var(--rose-border)',
-        borderRadius: 'var(--rose-radius-sm)',
-        px: 'var(--rose-space-sm)',
-        py: 0,
-        appearance: 'none',
-        bg: 'var(--rose-surface-soft)',
-        color: 'var(--rose-muted)',
-        fontFamily: MONO_FONT_FAMILY,
-        fontSize: '0.78rem',
-        fontWeight: 700,
-        lineHeight: 1,
-        letterSpacing: 0,
-        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease',
-        '&[data-disabled="false"][data-selected="false"]:hover': {
-            bg: 'var(--rose-surface-raised)',
-            color: 'var(--rose-text)'
-        },
-        '&[data-op="true"]': {
-            color: 'color-mix(in srgb, var(--rose-op) 56%, var(--rose-muted) 44%)',
-            bg: 'color-mix(in srgb, var(--rose-op) 8%, transparent)'
-        },
-        '&[data-disabled="true"]': {
-            opacity: 0.28,
-            cursor: 'not-allowed'
-        },
-        '&[data-disabled="true"][data-op="true"]': {
-            opacity: 0.46,
-            color: 'color-mix(in srgb, var(--rose-op) 46%, var(--rose-muted) 54%)',
-            bg: 'color-mix(in srgb, var(--rose-op) 7%, transparent)'
-        },
-        '&[data-disabled="false"]': {
-            cursor: 'pointer'
-        },
-        '&[data-selected="true"]': {
-            bg: 'var(--rose-button)',
-            borderColor: 'var(--rose-button)',
-            color: 'var(--rose-button-text)',
-            boxShadow: 'none'
-        },
-        '&[data-selected="true"][data-op="true"]': {
-            bg: 'var(--rose-button)',
-            borderColor: 'var(--rose-button)',
-            color: 'var(--rose-button-text)'
-        }
     }
 });
 
@@ -277,7 +155,7 @@ export function ArmorSetFields(
                     <SetName>{displayName()}</SetName>
                 </SetNameCell>
                 <td data-action>
-                    <SetRequirementButton
+                    <CompactChoiceButton
                         type="button"
                         title={setBonusTooltip(set, 2)}
                         disabled={!canRequire(2)}
@@ -288,10 +166,10 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(2)}
                     >
                         2
-                    </SetRequirementButton>
+                    </CompactChoiceButton>
                 </td>
                 <td data-action>
-                    <SetRequirementButton
+                    <CompactChoiceButton
                         type="button"
                         title={setBonusTooltip(set, 4)}
                         disabled={!canRequire(4)}
@@ -302,7 +180,7 @@ export function ArmorSetFields(
                         onClick={() => updateRequirement(4)}
                     >
                         4
-                    </SetRequirementButton>
+                    </CompactChoiceButton>
                 </td>
             </tr>
         );
@@ -311,11 +189,11 @@ export function ArmorSetFields(
     return (
         <Show when={props.selectableSets.length > 0} fallback={<MutedText>No armor set catalog loaded yet.</MutedText>}>
             <SetList>
-                <SetTable>
+                <DataTable>
                     <colgroup>
                         <col />
-                        <col style={{ width: '3.75rem' }} />
-                        <col style={{ width: '3.75rem' }} />
+                        <col data-action-column />
+                        <col data-action-column />
                     </colgroup>
                     <thead>
                         <tr>
@@ -326,22 +204,22 @@ export function ArmorSetFields(
                     </thead>
                     <tbody>
                         <Show when={opSets().length > 0}>
-                            <SetSectionRow data-op="true">
+                            <DataTableSectionRow data-op="true">
                                 <td colSpan={3}>OP bonuses</td>
-                            </SetSectionRow>
+                            </DataTableSectionRow>
                             <For each={opSets()}>{(set) => renderSetRow(set)}</For>
                         </Show>
 
                         <Show when={regularSets().length > 0}>
                             <Show when={opSets().length > 0}>
-                                <SetSectionRow>
+                                <DataTableSectionRow>
                                     <td colSpan={3}>Other sets</td>
-                                </SetSectionRow>
+                                </DataTableSectionRow>
                             </Show>
                             <For each={regularSets()}>{(set) => renderSetRow(set)}</For>
                         </Show>
                     </tbody>
-                </SetTable>
+                </DataTable>
             </SetList>
         </Show>
     );

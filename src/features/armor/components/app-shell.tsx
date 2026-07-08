@@ -3,6 +3,12 @@ import type { JSX } from 'solid-js';
 import { Show } from 'solid-js';
 
 import { ManualPageFrame, ManualPane, ManualSurface } from '@/features/armor/components/manual-frame';
+import {
+    OVERLAY_BACKDROP_STYLES,
+    OVERLAY_PANEL_STYLES,
+    OVERLAY_STATUS_PILL_STYLES,
+    OVERLAY_TITLE_STYLES
+} from '@/features/armor/components/overlay-styles';
 
 type ArmorAppShellProps = {
     toolbar: JSX.Element;
@@ -16,8 +22,8 @@ const LockedPaneContent = styled('div', {
         display: 'contents',
         '&[data-locked="true"]': {
             '& section[data-lockable-pane="true"]': {
-                opacity: 0.32,
-                filter: 'grayscale(0.85)',
+                opacity: 0.48,
+                filter: 'blur(2px) saturate(0.82)',
                 pointerEvents: 'none',
                 userSelect: 'none'
             }
@@ -33,13 +39,36 @@ const LockOverlay = styled('div', {
         justifySelf: 'stretch',
         zIndex: 5,
         display: 'grid',
-        placeItems: 'start center',
-        pt: '4rem',
-        bg: 'color-mix(in srgb, var(--rose-bg) 34%, transparent)',
-        color: 'var(--rose-muted)',
-        fontSize: '0.82rem',
-        fontWeight: 720,
-        pointerEvents: 'auto'
+        placeItems: 'center',
+        p: { base: '1.25rem', md: '2rem' },
+        pointerEvents: 'auto',
+        ...OVERLAY_BACKDROP_STYLES
+    }
+});
+
+const LockMessage = styled('div', {
+    base: {
+        display: 'grid',
+        justifyItems: 'center',
+        gap: '0.45rem',
+        maxW: 'min(25rem, 100%)',
+        px: { base: '1rem', md: '1.25rem' },
+        py: { base: '0.9rem', md: '1rem' },
+        textAlign: 'center',
+        ...OVERLAY_PANEL_STYLES
+    }
+});
+
+const LockTitle = styled('div', {
+    base: {
+        fontSize: { base: '0.98rem', md: '1.05rem' },
+        ...OVERLAY_TITLE_STYLES
+    }
+});
+
+const LockHint = styled('div', {
+    base: {
+        ...OVERLAY_STATUS_PILL_STYLES
     }
 });
 
@@ -57,7 +86,12 @@ export function ArmorAppShell(props: ArmorAppShellProps) {
                     </ManualPane>
                 </LockedPaneContent>
                 <Show when={props.locked}>
-                    <LockOverlay>Sign in to use the calculator.</LockOverlay>
+                    <LockOverlay>
+                        <LockMessage>
+                            <LockTitle>Sign in to use the calculator.</LockTitle>
+                            <LockHint>Connect Bungie in the top bar to unlock your vault.</LockHint>
+                        </LockMessage>
+                    </LockOverlay>
                 </Show>
             </ManualSurface>
         </ManualPageFrame>
