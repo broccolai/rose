@@ -19,6 +19,7 @@ interface FragmentControlsProps {
     onSubclassChange: (subclass: SubclassType) => void;
     onFragmentToggle: (fragmentId: string) => void;
     onImportFragmentsFromGame: () => void;
+    importingFragments: boolean;
 }
 
 const FragmentFooter = styled('div', {
@@ -177,8 +178,8 @@ export function FragmentControls(props: FragmentControlsProps) {
                 </DataTable>
             </DataTableFrame>
             <FragmentFooter>
-                <SecondaryButton type="button" onClick={props.onImportFragmentsFromGame}>
-                    Import
+                <SecondaryButton type="button" disabled={props.importingFragments} onClick={props.onImportFragmentsFromGame}>
+                    {props.importingFragments ? 'Importing' : 'Import'}
                 </SecondaryButton>
             </FragmentFooter>
         </CollapsibleSection>

@@ -146,6 +146,7 @@ export default function Home() {
     const [targetCapCalculationActive, setTargetCapCalculationActive] = createSignal(false);
     const [targetCapPriorityStat, setTargetCapPriorityStat] = createSignal<ArmorStat | null>(null);
     const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
+    const [importingFragments, setImportingFragments] = createSignal(false);
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
@@ -1038,16 +1039,14 @@ export default function Home() {
             return;
         }
 
+        if (importingFragments()) {
+            return;
+        }
+
+        setImportingFragments(true);
+
         try {
-            setStatus('loading');
             setMessage('Importing equipped subclass fragments from Bungie...');
-            setLoadProgress({
-                active: true,
-                label: 'Importing equipped subclass',
-                current: 0,
-                total: 0,
-                percent: 35
-            });
 
             const token = await getValidToken();
             const freshSnapshot = token ? ((await exportVaultSnapshot(token)) as VaultExportSnapshot) : loadedSnapshot();
@@ -1056,8 +1055,6 @@ export default function Home() {
             }
 
             if (!freshSnapshot) {
-                setStatus(normalizedProfile() ? 'done' : 'idle');
-                setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
                 setMessage('No loaded profile is available to import fragments from.');
                 return;
             }
@@ -1068,8 +1065,6 @@ export default function Home() {
             );
 
             if (!imported) {
-                setStatus(normalizedProfile() ? 'done' : 'idle');
-                setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
                 setMessage('Could not read an equipped subclass for the selected character.');
                 return;
             }
@@ -1079,8 +1074,6 @@ export default function Home() {
             setSelectedFragmentIds(sanitizeFragmentIds(imported.fragmentIds, imported.subclass));
             setTargetCapPriorityStat(null);
             invalidateSolve();
-            setStatus('done');
-            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(
                 [
                     `Imported ${imported.subclassItemName}: ${imported.fragmentIds.length} known fragments selected.`,
@@ -1092,9 +1085,9 @@ export default function Home() {
                     .join(' ')
             );
         } catch (error) {
-            setStatus('error');
-            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(error instanceof Error ? error.message : 'Unknown equipped subclass import failure.');
+        } finally {
+            setImportingFragments(false);
         }
     }
 
@@ -1304,6 +1297,7 @@ export default function Home() {
                         onSubclassChange={updateSubclass}
                         onFragmentToggle={toggleFragment}
                         onImportFragmentsFromGame={importFragmentsFromGame}
+                        importingFragments={importingFragments()}
                         onExoticChange={(itemHash) => {
                             setSelectedExoticItemHash(itemHash);
                             invalidateSolve();

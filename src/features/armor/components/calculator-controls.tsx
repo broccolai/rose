@@ -40,6 +40,7 @@ type CalculatorControlsProps = {
     onSubclassChange: (subclass: SubclassType) => void;
     onFragmentToggle: (fragmentId: string) => void;
     onImportFragmentsFromGame: () => void;
+    importingFragments: boolean;
     onDumpStatChange: (stat: string) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
     onOnlyFullyMasterworkedGearChange: (enabled: boolean) => void;
@@ -159,6 +160,7 @@ export function CalculatorControls(props: CalculatorControlsProps) {
                         onSubclassChange={props.onSubclassChange}
                         onFragmentToggle={props.onFragmentToggle}
                         onImportFragmentsFromGame={props.onImportFragmentsFromGame}
+                        importingFragments={props.importingFragments}
                     />
 
                     <CollapsibleSection title="Sets">
