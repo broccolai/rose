@@ -409,7 +409,13 @@ export default function Home() {
         setAuthenticated(debugState.authenticated);
         setMessage(
             debugState.authenticated
-                ? `Signed in. Access expires at ${debugState.expiresAt}.${debugState.refreshExpiresAt ? ` Refresh expires at ${debugState.refreshExpiresAt}.` : ''}`
+                ? `Signed in. Access expires at ${debugState.expiresAt}.${
+                      debugState.refreshExpiresAt
+                          ? ` Refresh expires at ${debugState.refreshExpiresAt}.`
+                          : debugState.hasRefreshToken
+                            ? ' Refresh token present.'
+                            : ' Refresh unavailable for this token.'
+                  }`
                 : 'Signed out.'
         );
     }

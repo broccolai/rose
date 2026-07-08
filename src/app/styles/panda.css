@@ -1293,6 +1293,22 @@
     -webkit-appearance: none;
 }
 
+  .hbXOBg {
+    display: inline-grid;
+}
+
+  .liblMw {
+    grid-auto-flow: column;
+}
+
+  .AvpzM {
+    grid-auto-columns: minmax(2.75rem, auto);
+}
+
+  .cYgELy {
+    justify-content: end;
+}
+
   .jutHam {
     color: inherit;
 }
