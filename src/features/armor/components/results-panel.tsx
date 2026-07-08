@@ -175,7 +175,7 @@ export function ResultsPanel() {
             return '';
         }
 
-        return `${result.validBuildCount} builds found · ${result.returnedBuildCount} retained after pruning`;
+        return `${result.validBuildCount} builds found`;
     }
 
     return (

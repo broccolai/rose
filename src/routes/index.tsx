@@ -1039,15 +1039,7 @@ export default function Home() {
         setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
         setMessage(
             result.ok
-                ? [
-                      `Found ${result.validBuildCount} builds. Retained ${result.returnedBuildCount}. Showing ${Math.min(VISIBLE_RESULT_LIMIT, result.returnedBuildCount)}.`,
-                      result.resultLimitReached
-                          ? 'Result pool hit the retained build cap; table sorting applies to retained builds.'
-                          : null,
-                      `Searched ${result.searchedCombinations} armor combinations.`
-                  ]
-                      .filter(Boolean)
-                      .join(' ')
+                ? `Found ${result.validBuildCount} builds. Showing ${Math.min(VISIBLE_RESULT_LIMIT, result.returnedBuildCount)}. Searched ${result.searchedCombinations} armor combinations.`
                 : `${result.reason}\nSearched ${result.searchedCombinations} armor combinations.`
         );
         logDevTiming('solve completed', {
