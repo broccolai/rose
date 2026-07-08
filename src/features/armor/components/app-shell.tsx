@@ -227,6 +227,8 @@ export function ArmorAppShell(props: ArmorAppShellProps) {
                             <dt>Thanks</dt>
                             <dd>oyst</dd>
                             <dt>Thanks</dt>
+                            <dd>euphoria</dd>
+                            <dt>Thanks</dt>
                             <dd>d2-api-ts</dd>
                         </CreditsList>
                     </CreditsPanel>

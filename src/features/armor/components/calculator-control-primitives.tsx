@@ -207,12 +207,21 @@ const compactChoiceRecipe = cva({
             borderColor: 'var(--rose-control-disabled-border)',
             bg: 'var(--rose-control-disabled-bg)',
             color: 'var(--rose-control-disabled-text)',
-            cursor: 'not-allowed'
+            cursor: 'not-allowed',
+            opacity: 0.72
         },
         '&[data-disabled="true"][data-op="true"]': {
-            borderColor: 'color-mix(in srgb, var(--rose-op) 24%, var(--rose-control-disabled-border))',
-            color: 'color-mix(in srgb, var(--rose-op) 42%, var(--rose-control-disabled-text) 58%)',
-            bg: 'color-mix(in srgb, var(--rose-op) 8%, var(--rose-control-disabled-bg))'
+            borderColor: 'color-mix(in srgb, var(--rose-op) 28%, var(--rose-control-disabled-border) 72%)',
+            color: 'color-mix(in srgb, var(--rose-op) 24%, var(--rose-control-disabled-text) 76%)',
+            bg: 'color-mix(in srgb, var(--rose-op) 6%, var(--rose-control-disabled-bg) 94%)'
+        },
+        '&[data-disabled="true"]::after': {
+            content: '""',
+            position: 'absolute',
+            inset: '0.35rem',
+            pointerEvents: 'none',
+            bg: 'linear-gradient(to right bottom, transparent calc(50% - 0.5px), currentColor calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px))',
+            opacity: 0.34
         },
         '&[data-selected="true"]': {
             bg: 'var(--rose-button)',

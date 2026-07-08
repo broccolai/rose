@@ -56,79 +56,51 @@ const AdvancedChoices = styled('div', {
     }
 });
 
+interface AdvancedYesNoRowProps {
+    label: string;
+    name: string;
+    value: boolean;
+    onChange: (value: boolean) => void;
+}
+
+function AdvancedYesNoRow(props: AdvancedYesNoRowProps) {
+    return (
+        <AdvancedRow>
+            <AdvancedLabel>{props.label}</AdvancedLabel>
+            <AdvancedChoices role="radiogroup" aria-label={props.label}>
+                <CompactChoiceLabel data-selected={props.value}>
+                    <input type="radio" name={props.name} checked={props.value} onChange={() => props.onChange(true)} />Y
+                </CompactChoiceLabel>
+                <CompactChoiceLabel data-selected={!props.value}>
+                    <input type="radio" name={props.name} checked={!props.value} onChange={() => props.onChange(false)} />N
+                </CompactChoiceLabel>
+            </AdvancedChoices>
+        </AdvancedRow>
+    );
+}
+
 export function AdvancedControls(props: AdvancedControlsProps) {
     return (
         <CollapsibleSection title="Advanced" defaultOpen={false}>
             <AdvancedGrid>
-                <AdvancedRow>
-                    <AdvancedLabel>Set labels</AdvancedLabel>
-                    <AdvancedChoices role="radiogroup" aria-label="Armor set label display">
-                        <CompactChoiceLabel data-selected={props.armorSetDisplayMode === 'sets'}>
-                            <input
-                                type="radio"
-                                name="armor-set-display-mode"
-                                checked={props.armorSetDisplayMode === 'sets'}
-                                onChange={() => props.onArmorSetDisplayModeChange('sets')}
-                            />
-                            Sets
-                        </CompactChoiceLabel>
-                        <CompactChoiceLabel data-selected={props.armorSetDisplayMode === 'sources'}>
-                            <input
-                                type="radio"
-                                name="armor-set-display-mode"
-                                checked={props.armorSetDisplayMode === 'sources'}
-                                onChange={() => props.onArmorSetDisplayModeChange('sources')}
-                            />
-                            Sources
-                        </CompactChoiceLabel>
-                    </AdvancedChoices>
-                </AdvancedRow>
-                <AdvancedRow>
-                    <AdvancedLabel>Balanced tuning</AdvancedLabel>
-                    <AdvancedChoices role="radiogroup" aria-label="Balanced tuning">
-                        <CompactChoiceLabel data-selected={!props.allowBalancedTuning}>
-                            <input
-                                type="radio"
-                                name="balanced-tuning"
-                                checked={!props.allowBalancedTuning}
-                                onChange={() => props.onBalancedTuningChange(false)}
-                            />
-                            Off
-                        </CompactChoiceLabel>
-                        <CompactChoiceLabel data-selected={props.allowBalancedTuning}>
-                            <input
-                                type="radio"
-                                name="balanced-tuning"
-                                checked={props.allowBalancedTuning}
-                                onChange={() => props.onBalancedTuningChange(true)}
-                            />
-                            On
-                        </CompactChoiceLabel>
-                    </AdvancedChoices>
-                </AdvancedRow>
-                <AdvancedRow>
-                    <AdvancedLabel>Fully masterworked</AdvancedLabel>
-                    <AdvancedChoices role="radiogroup" aria-label="Only use fully masterworked gear">
-                        <CompactChoiceLabel data-selected={!props.onlyFullyMasterworkedGear}>
-                            <input
-                                type="radio"
-                                name="fully-masterworked"
-                                checked={!props.onlyFullyMasterworkedGear}
-                                onChange={() => props.onOnlyFullyMasterworkedGearChange(false)}
-                            />
-                            Any
-                        </CompactChoiceLabel>
-                        <CompactChoiceLabel data-selected={props.onlyFullyMasterworkedGear}>
-                            <input
-                                type="radio"
-                                name="fully-masterworked"
-                                checked={props.onlyFullyMasterworkedGear}
-                                onChange={() => props.onOnlyFullyMasterworkedGearChange(true)}
-                            />
-                            Full
-                        </CompactChoiceLabel>
-                    </AdvancedChoices>
-                </AdvancedRow>
+                <AdvancedYesNoRow
+                    label="Source as Set Name"
+                    name="armor-set-display-mode"
+                    value={props.armorSetDisplayMode === 'sources'}
+                    onChange={(value) => props.onArmorSetDisplayModeChange(value ? 'sources' : 'sets')}
+                />
+                <AdvancedYesNoRow
+                    label="Use Balanced Tuning"
+                    name="balanced-tuning"
+                    value={props.allowBalancedTuning}
+                    onChange={props.onBalancedTuningChange}
+                />
+                <AdvancedYesNoRow
+                    label="Only use Masterworked items"
+                    name="fully-masterworked"
+                    value={props.onlyFullyMasterworkedGear}
+                    onChange={props.onOnlyFullyMasterworkedGearChange}
+                />
             </AdvancedGrid>
         </CollapsibleSection>
     );

@@ -89,8 +89,9 @@ export const DataTable = styled('table', {
         '& tbody tr[data-selected="true"]': {
             bg: 'color-mix(in srgb, var(--rose-accent) 9%, transparent)'
         },
-        '& tbody tr[data-unavailable="true"]': {
-            opacity: 0.58
+        '& tbody tr[data-unavailable="true"] td:not([data-action])': {
+            color: 'var(--rose-control-disabled-text)',
+            opacity: 0.78
         },
         '& tbody tr:hover': {
             bg: 'var(--rose-surface-soft)'

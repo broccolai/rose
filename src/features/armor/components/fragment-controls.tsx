@@ -2,12 +2,7 @@ import { ARMOR_STATS, type ArmorStat } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { For } from 'solid-js';
 
-import {
-    CollapsibleSection,
-    CompactChoiceLabel,
-    SecondaryButton,
-    SelectInput
-} from '@/features/armor/components/calculator-control-primitives';
+import { CollapsibleSection, SecondaryButton, SelectInput } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
@@ -72,7 +67,9 @@ const FragmentBonusHeader = styled('th', {
 
 const FragmentCheckCell = styled('td', {
     base: {
-        textAlign: 'center'
+        p: '0.35rem var(--rose-space-xs)!',
+        textAlign: 'center',
+        lineHeight: 0
     }
 });
 
@@ -103,6 +100,40 @@ const FragmentBonusText = styled('span', {
         },
         '&[data-direction="negative"]': {
             color: 'color-mix(in srgb, #ff8d8d 82%, var(--rose-muted) 18%)'
+        }
+    }
+});
+
+const FragmentSelectionBox = styled('label', {
+    base: {
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        w: 'var(--rose-control-compact-height)',
+        h: 'var(--rose-control-compact-height)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)',
+        cursor: 'pointer',
+        transition: 'background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
+        '&[data-selected="true"]': {
+            borderColor: 'var(--rose-button)',
+            bg: 'var(--rose-button)'
+        },
+        '&[data-selected="false"]:hover': {
+            borderColor: 'var(--rose-border-strong)',
+            bg: 'var(--rose-surface-raised)'
+        },
+        '&:has(input:focus-visible)': {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 40%, transparent)',
+            outlineOffset: '2px'
+        },
+        '& input': {
+            position: 'absolute',
+            inset: 0,
+            opacity: 0,
+            cursor: 'pointer'
         }
     }
 });
@@ -160,15 +191,17 @@ export function FragmentControls(props: FragmentControlsProps) {
                                             </FragmentBonusList>
                                         </FragmentBonusCell>
                                         <FragmentCheckCell>
-                                            <CompactChoiceLabel data-selected={selected()}>
+                                            <FragmentSelectionBox
+                                                data-selected={selected()}
+                                                title={selected() ? 'Selected' : 'Not selected'}
+                                            >
                                                 <input
                                                     type="checkbox"
                                                     checked={selected()}
                                                     aria-label={`Toggle ${fragment.name}`}
                                                     onChange={() => props.onFragmentToggle(fragment.id)}
                                                 />
-                                                {selected() ? 'Y' : 'N'}
-                                            </CompactChoiceLabel>
+                                            </FragmentSelectionBox>
                                         </FragmentCheckCell>
                                     </tr>
                                 );

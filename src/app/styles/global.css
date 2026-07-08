@@ -25,9 +25,9 @@
     --rose-slider-cap: #b9b9c4;
     --rose-slider-empty-a: #24242a;
     --rose-slider-empty-b: #1b1b20;
-    --rose-control-disabled-bg: #111116;
-    --rose-control-disabled-border: #24242c;
-    --rose-control-disabled-text: #55555f;
+    --rose-control-disabled-bg: #09090c;
+    --rose-control-disabled-border: #1a1a20;
+    --rose-control-disabled-text: #45454f;
     --rose-space-xxs: 0.25rem;
     --rose-space-xs: 0.5rem;
     --rose-space-sm: 0.75rem;
@@ -67,9 +67,9 @@
     --rose-slider-cap: #cdccd5;
     --rose-slider-empty-a: #303038;
     --rose-slider-empty-b: #27272e;
-    --rose-control-disabled-bg: #17171c;
-    --rose-control-disabled-border: #30303a;
-    --rose-control-disabled-text: #686872;
+    --rose-control-disabled-bg: #101014;
+    --rose-control-disabled-border: #24242c;
+    --rose-control-disabled-text: #575761;
 }
 
 :root[data-theme="light"] {
@@ -97,9 +97,9 @@
     --rose-slider-cap: #aaa1af;
     --rose-slider-empty-a: #d6ccbf;
     --rose-slider-empty-b: #cec3b7;
-    --rose-control-disabled-bg: #e1d8cd;
-    --rose-control-disabled-border: #b8ab9e;
-    --rose-control-disabled-text: #8a8077;
+    --rose-control-disabled-bg: #d5c9bd;
+    --rose-control-disabled-border: #a99b8d;
+    --rose-control-disabled-text: #756c63;
 }
 
 :root[data-theme="burger"] {
@@ -127,9 +127,9 @@
     --rose-slider-cap: #be918d;
     --rose-slider-empty-a: #e9bcb5;
     --rose-slider-empty-b: #dfaaa2;
-    --rose-control-disabled-bg: #ecc3bd;
-    --rose-control-disabled-border: #c9958d;
-    --rose-control-disabled-text: #916d68;
+    --rose-control-disabled-bg: #dfaea7;
+    --rose-control-disabled-border: #b77d75;
+    --rose-control-disabled-text: #7d5d58;
 }
 
 * {
