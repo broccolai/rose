@@ -344,9 +344,10 @@ function StatTargetSlider(props: StatTargetSliderProps) {
             return;
         }
 
+        const input = event.currentTarget;
         setTyping(true);
         setTypedValue(String(draftValue()));
-        requestAnimationFrame(() => event.currentTarget.select());
+        requestAnimationFrame(() => input.select());
     };
 
     const updateTypedValue = (event: InputEvent & { currentTarget: HTMLInputElement }) => {
@@ -358,8 +359,9 @@ function StatTargetSlider(props: StatTargetSliderProps) {
     };
 
     const commitTypedValue = () => {
+        const value = typedValue();
         setTyping(false);
-        commit(typedValue() || 0);
+        commit(value || 0);
     };
 
     const cancelTypedValue = (input: HTMLInputElement) => {
