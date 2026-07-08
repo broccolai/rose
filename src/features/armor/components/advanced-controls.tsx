@@ -1,6 +1,6 @@
 import { styled } from '@panda/jsx';
 
-import { CollapsibleSection, CompactChoiceLabel } from '@/features/armor/components/calculator-control-primitives';
+import { CompactChoiceLabel } from '@/features/armor/components/calculator-control-primitives';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
 
@@ -79,29 +79,27 @@ function AdvancedYesNoRow(props: AdvancedYesNoRowProps) {
     );
 }
 
-export function AdvancedControls(props: AdvancedControlsProps) {
+export function AdvancedControlsBody(props: AdvancedControlsProps) {
     return (
-        <CollapsibleSection title="Advanced" defaultOpen={false}>
-            <AdvancedGrid>
-                <AdvancedYesNoRow
-                    label="Source as Set Name"
-                    name="armor-set-display-mode"
-                    value={props.armorSetDisplayMode === 'sources'}
-                    onChange={(value) => props.onArmorSetDisplayModeChange(value ? 'sources' : 'sets')}
-                />
-                <AdvancedYesNoRow
-                    label="Use Balanced Tuning"
-                    name="balanced-tuning"
-                    value={props.allowBalancedTuning}
-                    onChange={props.onBalancedTuningChange}
-                />
-                <AdvancedYesNoRow
-                    label="Only use Masterworked items"
-                    name="fully-masterworked"
-                    value={props.onlyFullyMasterworkedGear}
-                    onChange={props.onOnlyFullyMasterworkedGearChange}
-                />
-            </AdvancedGrid>
-        </CollapsibleSection>
+        <AdvancedGrid>
+            <AdvancedYesNoRow
+                label="Source as Set Name"
+                name="armor-set-display-mode"
+                value={props.armorSetDisplayMode === 'sources'}
+                onChange={(value) => props.onArmorSetDisplayModeChange(value ? 'sources' : 'sets')}
+            />
+            <AdvancedYesNoRow
+                label="Use Balanced Tuning"
+                name="balanced-tuning"
+                value={props.allowBalancedTuning}
+                onChange={props.onBalancedTuningChange}
+            />
+            <AdvancedYesNoRow
+                label="Only use Masterworked items"
+                name="fully-masterworked"
+                value={props.onlyFullyMasterworkedGear}
+                onChange={props.onOnlyFullyMasterworkedGearChange}
+            />
+        </AdvancedGrid>
     );
 }

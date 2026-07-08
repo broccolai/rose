@@ -36,7 +36,13 @@ const Surface = styled('div', {
             base: '"toolbar" "controls" "results"',
             lg: '"toolbar toolbar" "controls results"'
         },
-        gridTemplateColumns: { base: 'minmax(0, 1fr)', lg: 'minmax(24rem, 28rem) minmax(0, 1fr)' },
+        gridTemplateColumns: {
+            base: 'minmax(0, 1fr)',
+            lg: 'minmax(24rem, 28rem) minmax(0, 1fr)'
+        },
+        '@media (min-width: 112rem)': {
+            gridTemplateColumns: 'minmax(44rem, 50rem) minmax(0, 1fr)'
+        },
         gridTemplateRows: { base: 'max-content max-content max-content', lg: 'max-content minmax(0, 1fr)' },
         h: { lg: '100dvh' },
         minH: { base: '100dvh', lg: 0 },
@@ -67,9 +73,12 @@ const paneBase = {
 const ToolbarPane = styled('section', {
     base: {
         ...paneBase,
+        position: 'relative',
+        zIndex: 30,
         gridArea: 'toolbar',
         alignSelf: 'start',
-        borderBottom: '1px solid var(--rose-border)'
+        borderBottom: '1px solid var(--rose-border)',
+        overflow: 'visible'
     }
 });
 

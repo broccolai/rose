@@ -168,6 +168,12 @@ select {
     font: inherit;
 }
 
+@keyframes rose-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 button:not(:disabled) {
     cursor: pointer;
 }

@@ -1,9 +1,11 @@
 import { styled } from '@panda/jsx';
-import { Eclipse, Hamburger, Moon, Sun } from 'lucide-solid';
-import { Match, Show, Switch } from 'solid-js';
+import { Eclipse, Hamburger, Moon, RefreshCw, Settings, Sun } from 'lucide-solid';
+import { createEffect, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
 import { APP_THEME_LABELS, type AppTheme, VISIBLE_APP_THEMES } from '@/features/armor/app-theme';
+import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
+import { AdvancedControlsBody } from '@/features/armor/components/advanced-controls';
 import { MONO_FONT_FAMILY, UI_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 
 export type LoadProgress = {
@@ -137,10 +139,58 @@ const ThemeCycleButton = styled('button', {
             outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
             outlineOffset: '2px'
         },
+        _disabled: {
+            cursor: 'not-allowed',
+            opacity: 0.68,
+            _hover: {
+                bg: 'var(--rose-surface-soft)',
+                borderColor: 'var(--rose-border)',
+                color: 'var(--rose-muted-strong)',
+                boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--rose-text) 8%, transparent)',
+                transform: 'none'
+            }
+        },
         '& svg': {
             w: '1.1rem',
             h: '1.1rem',
             strokeWidth: 2.1
+        },
+        '&[data-loading="true"] svg': {
+            animation: 'rose-spin 900ms linear infinite'
+        }
+    }
+});
+
+const SettingsMenu = styled('div', {
+    base: {
+        position: 'relative',
+        display: 'grid'
+    }
+});
+
+const SettingsPopover = styled('div', {
+    base: {
+        position: 'absolute',
+        top: 'calc(100% + var(--rose-space-xs))',
+        right: 0,
+        zIndex: 20,
+        w: 'min(24rem, calc(100vw - 2rem))',
+        p: 'var(--rose-space-sm)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-md)',
+        bg: 'var(--rose-surface)',
+        boxShadow: '0 18px 45px color-mix(in srgb, #000 34%, transparent)',
+        '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '-0.35rem',
+            right: '1rem',
+            w: '0.65rem',
+            h: '0.65rem',
+            borderLeft: '1px solid var(--rose-border)',
+            borderTop: '1px solid var(--rose-border)',
+            bg: 'var(--rose-surface)',
+            transform: 'rotate(45deg)'
         }
     }
 });
@@ -237,17 +287,71 @@ function ThemeIcon(props: { theme: AppTheme }) {
 }
 
 function ToolbarActions(props: AppToolbarProps) {
+    let settingsMenuElement: HTMLDivElement | undefined;
+    const calculator = useArmorCalculator();
+    const controls = calculator.controls;
+    const actions = calculator.actions;
+    const [settingsOpen, setSettingsOpen] = createSignal(false);
     const next = () => nextTheme(props.theme);
     const label = () => `Theme: ${APP_THEME_LABELS[props.theme]}. Switch to ${APP_THEME_LABELS[next()]}.`;
     const changeTheme = (event: MouseEvent) => {
         props.onThemeChange(event.shiftKey ? 'burger' : next());
     };
 
+    createEffect(() => {
+        if (!settingsOpen()) {
+            return;
+        }
+
+        const closeOnPointerDown = (event: PointerEvent) => {
+            if (settingsMenuElement?.contains(event.target as Node)) {
+                return;
+            }
+
+            setSettingsOpen(false);
+        };
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setSettingsOpen(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', closeOnPointerDown);
+        document.addEventListener('keydown', closeOnEscape);
+        onCleanup(() => {
+            document.removeEventListener('pointerdown', closeOnPointerDown);
+            document.removeEventListener('keydown', closeOnEscape);
+        });
+    });
+
     return (
         <Actions>
             <ThemeCycleButton type="button" aria-label={label()} title={label()} onClick={changeTheme}>
                 <ThemeIcon theme={props.theme} />
             </ThemeCycleButton>
+            <SettingsMenu ref={settingsMenuElement}>
+                <ThemeCycleButton
+                    type="button"
+                    aria-label="Open advanced settings"
+                    aria-expanded={settingsOpen()}
+                    title="Advanced settings"
+                    onClick={() => setSettingsOpen((open) => !open)}
+                >
+                    <Settings aria-hidden="true" />
+                </ThemeCycleButton>
+                <Show when={settingsOpen()}>
+                    <SettingsPopover>
+                        <AdvancedControlsBody
+                            allowBalancedTuning={controls.allowBalancedTuning()}
+                            armorSetDisplayMode={controls.armorSetDisplayMode()}
+                            onlyFullyMasterworkedGear={controls.onlyFullyMasterworkedGear()}
+                            onArmorSetDisplayModeChange={actions.setArmorSetDisplayMode}
+                            onBalancedTuningChange={actions.setAllowBalancedTuning}
+                            onOnlyFullyMasterworkedGearChange={actions.setOnlyFullyMasterworkedGear}
+                        />
+                    </SettingsPopover>
+                </Show>
+            </SettingsMenu>
             <Show
                 when={props.authenticated}
                 fallback={
@@ -256,9 +360,16 @@ function ToolbarActions(props: AppToolbarProps) {
                     </ToolbarButton>
                 }
             >
-                <ToolbarButton type="button" data-action-button onClick={props.onRefresh} disabled={props.loading}>
-                    Refresh
-                </ToolbarButton>
+                <ThemeCycleButton
+                    type="button"
+                    aria-label={props.loading ? 'Refreshing profile' : 'Refresh profile'}
+                    title={props.loading ? 'Refreshing profile' : 'Refresh profile'}
+                    disabled={props.loading}
+                    data-loading={props.loading}
+                    onClick={props.onRefresh}
+                >
+                    <RefreshCw aria-hidden="true" />
+                </ThemeCycleButton>
                 <AvatarButton title={props.avatarLabel ?? 'Signed in'} role="img" aria-label={props.avatarLabel ?? 'Signed in'}>
                     <Show when={props.avatarUrl} fallback={avatarInitial(props.avatarLabel)}>
                         <AvatarImage src={props.avatarUrl} alt="" />

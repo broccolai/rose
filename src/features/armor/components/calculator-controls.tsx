@@ -2,7 +2,6 @@ import { styled } from '@panda/jsx';
 
 import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
 import { ActionControls } from '@/features/armor/components/action-controls';
-import { AdvancedControls } from '@/features/armor/components/advanced-controls';
 import { CollapsibleSection, FormRow, RowLabel } from '@/features/armor/components/calculator-control-primitives';
 import { CharacterPicker } from '@/features/armor/components/character-picker';
 import { DumpControls } from '@/features/armor/components/dump-controls';
@@ -45,8 +44,23 @@ const SettingsPanel = styled('div', {
 const SettingsScroll = styled(PaneScroll, {
     base: {
         display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
         gap: 'var(--rose-space-sm)',
-        alignContent: 'start'
+        alignContent: 'start',
+        alignItems: 'start',
+        '@media (min-width: 112rem)': {
+            gridTemplateColumns: 'minmax(0, 0.94fr) minmax(0, 1.06fr)',
+            gap: 'var(--rose-space-md)'
+        }
+    }
+});
+
+const SettingsColumn = styled('div', {
+    base: {
+        display: 'grid',
+        gap: 'var(--rose-space-sm)',
+        alignContent: 'start',
+        minW: 0
     }
 });
 
@@ -83,74 +97,69 @@ export function CalculatorControls() {
             <SettingsPanel>
                 <PanelTitle>Build Inputs</PanelTitle>
                 <SettingsScroll>
-                    <CollapsibleSection title="Gear">
-                        <FormRows>
-                            <FormRow as="div">
-                                <RowLabel>Class</RowLabel>
-                                <CharacterPicker
-                                    labelText={false}
-                                    options={controls.characterOptions()}
-                                    selectedCharacterId={controls.selectedCharacterId()}
-                                    onSelect={actions.selectCharacter}
-                                />
-                            </FormRow>
+                    <SettingsColumn>
+                        <CollapsibleSection title="Gear">
+                            <FormRows>
+                                <FormRow as="div">
+                                    <RowLabel>Class</RowLabel>
+                                    <CharacterPicker
+                                        labelText={false}
+                                        options={controls.characterOptions()}
+                                        selectedCharacterId={controls.selectedCharacterId()}
+                                        onSelect={actions.selectCharacter}
+                                    />
+                                </FormRow>
 
-                            <FormRow as="div">
-                                <RowLabel>Dump</RowLabel>
-                                <DumpControls dumpStat={controls.dumpStat()} onDumpStatChange={actions.setDumpStat} />
-                            </FormRow>
+                                <FormRow as="div">
+                                    <RowLabel>Dump</RowLabel>
+                                    <DumpControls dumpStat={controls.dumpStat()} onDumpStatChange={actions.setDumpStat} />
+                                </FormRow>
 
-                            <FormRow as="div">
-                                <RowLabel>Exotic</RowLabel>
-                                <ExoticPicker
-                                    labelText={false}
-                                    availableExotics={controls.availableExotics()}
-                                    onExoticChange={actions.selectExotic}
-                                    selectedExoticItemHash={controls.selectedExoticItemHash()}
-                                />
-                            </FormRow>
-                        </FormRows>
-                    </CollapsibleSection>
+                                <FormRow as="div">
+                                    <RowLabel>Exotic</RowLabel>
+                                    <ExoticPicker
+                                        labelText={false}
+                                        availableExotics={controls.availableExotics()}
+                                        onExoticChange={actions.selectExotic}
+                                        selectedExoticItemHash={controls.selectedExoticItemHash()}
+                                    />
+                                </FormRow>
+                            </FormRows>
+                        </CollapsibleSection>
 
-                    <CollapsibleSection title="Targets">
-                        <StatTargetFields
-                            allowBalancedTuning={controls.allowBalancedTuning()}
-                            dumpStat={controls.dumpStat()}
-                            onTargetChange={actions.setTarget}
-                            targetCapsPending={controls.targetCapsPending()}
-                            targetCaps={controls.targetCaps()}
-                            targets={controls.targets()}
+                        <CollapsibleSection title="Targets">
+                            <StatTargetFields
+                                allowBalancedTuning={controls.allowBalancedTuning()}
+                                dumpStat={controls.dumpStat()}
+                                onTargetChange={actions.setTarget}
+                                targetCapsPending={controls.targetCapsPending()}
+                                targetCaps={controls.targetCaps()}
+                                targets={controls.targets()}
+                            />
+                        </CollapsibleSection>
+
+                        <FragmentControls
+                            selectedSubclass={controls.selectedSubclass()}
+                            selectedFragmentIds={controls.selectedFragmentIds()}
+                            onSubclassChange={actions.setSubclass}
+                            onFragmentToggle={actions.toggleFragment}
+                            onImportFragmentsFromGame={actions.importFragmentsFromGame}
+                            importingFragments={controls.importingFragments()}
                         />
-                    </CollapsibleSection>
+                    </SettingsColumn>
 
-                    <FragmentControls
-                        selectedSubclass={controls.selectedSubclass()}
-                        selectedFragmentIds={controls.selectedFragmentIds()}
-                        onSubclassChange={actions.setSubclass}
-                        onFragmentToggle={actions.toggleFragment}
-                        onImportFragmentsFromGame={actions.importFragmentsFromGame}
-                        importingFragments={controls.importingFragments()}
-                    />
-
-                    <CollapsibleSection title="Sets">
-                        <ArmorSetFields
-                            armorSetDisplayMode={controls.armorSetDisplayMode()}
-                            availableExotics={controls.availableExotics()}
-                            onSetRequirementChange={actions.setRequirement}
-                            selectableSets={controls.selectableSets()}
-                            selectedExoticItemHash={controls.selectedExoticItemHash()}
-                            setSelections={controls.setSelections()}
-                        />
-                    </CollapsibleSection>
-
-                    <AdvancedControls
-                        allowBalancedTuning={controls.allowBalancedTuning()}
-                        armorSetDisplayMode={controls.armorSetDisplayMode()}
-                        onlyFullyMasterworkedGear={controls.onlyFullyMasterworkedGear()}
-                        onArmorSetDisplayModeChange={actions.setArmorSetDisplayMode}
-                        onBalancedTuningChange={actions.setAllowBalancedTuning}
-                        onOnlyFullyMasterworkedGearChange={actions.setOnlyFullyMasterworkedGear}
-                    />
+                    <SettingsColumn>
+                        <CollapsibleSection title="Sets">
+                            <ArmorSetFields
+                                armorSetDisplayMode={controls.armorSetDisplayMode()}
+                                availableExotics={controls.availableExotics()}
+                                onSetRequirementChange={actions.setRequirement}
+                                selectableSets={controls.selectableSets()}
+                                selectedExoticItemHash={controls.selectedExoticItemHash()}
+                                setSelections={controls.setSelections()}
+                            />
+                        </CollapsibleSection>
+                    </SettingsColumn>
                 </SettingsScroll>
 
                 <ActionControls

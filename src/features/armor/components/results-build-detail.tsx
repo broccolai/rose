@@ -5,7 +5,7 @@ import { createSignal, For, Show } from 'solid-js';
 
 import { ButtonGroup, TonalButton } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable } from '@/features/armor/components/data-table';
-import { SLOT_LABELS } from '@/features/armor/display-metadata';
+import { SLOT_LABELS, STAT_LABELS } from '@/features/armor/display-metadata';
 import { formatDimArmorQuery } from '@/features/armor/result-display';
 
 interface ResultsBuildDetailProps {
@@ -50,7 +50,26 @@ const PieceName = styled('span', {
 
 const addonName = (build: ArmorBuild, slot: ArmorSlot, addonKey: 'statMod' | 'tuning'): string => {
     const addon = build.pieces[slot][addonKey];
-    return addon && ARMOR_STATS.some((stat) => (addon.deltas[stat] ?? 0) !== 0) ? addon.name : '-';
+    if (!addon || !ARMOR_STATS.some((stat) => (addon.deltas[stat] ?? 0) !== 0)) {
+        return '-';
+    }
+
+    if (addonKey === 'statMod') {
+        return formatStatModName(addon.id, addon.name);
+    }
+
+    return addon.name;
+};
+
+const formatStatModName = (id: string, name: string): string => {
+    const idParts = id.split(':');
+    const stat = idParts[1];
+    const value = idParts[2];
+    if (stat && value && stat in STAT_LABELS) {
+        return `+${value} ${STAT_LABELS[stat as keyof typeof STAT_LABELS]}`;
+    }
+
+    return name.replace(/\b(health|melee|grenade|super|class|weapons)\b/g, (match) => STAT_LABELS[match as keyof typeof STAT_LABELS]);
 };
 
 const copyTextToClipboard = async (text: string): Promise<void> => {
