@@ -93,6 +93,7 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             }
 
             this.pending.delete(message.id);
+            this.recycleWorker(worker);
             logSolverTiming(request.label, request.startedAt, message.ok ? 'done' : 'error');
             if (message.ok) {
                 request.resolve(message.result);
@@ -108,9 +109,20 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             }
 
             this.pending.clear();
+            this.recycleWorker(worker);
         };
 
         return worker;
+    }
+
+    private recycleWorker(worker: Worker) {
+        const index = this.workers.indexOf(worker);
+        if (index < 0) {
+            return;
+        }
+
+        worker.terminate();
+        this.workers[index] = this.createWorker();
     }
 
     private resetWorkers(reason: string) {
@@ -177,7 +189,7 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ) {
         const startedAt = performance.now();
-        const caps = calculateArmorStatTargetCaps(input);
+        const caps = calculateArmorStatTargetCaps(input, stats);
         for (const stat of stats) {
             onStatCap?.(stat, caps[stat]);
         }
@@ -224,15 +236,10 @@ function logSolverTiming(label: string, startedAt: number, status: 'canceled' | 
     });
 }
 
-function workerCount() {
-    const hardwareConcurrency = typeof navigator === 'undefined' ? 2 : (navigator.hardwareConcurrency ?? 2);
-    return Math.max(1, Math.min(ARMOR_STATS.length, 4, hardwareConcurrency - 1));
-}
-
 export function createArmorSolverClient(): SolverWorkerClient {
     if (typeof Worker === 'undefined') {
         return new DirectSolverWorkerClient();
     }
 
-    return new BrowserSolverWorkerClient(workerCount());
+    return new BrowserSolverWorkerClient(1);
 }

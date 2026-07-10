@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-    ARMOR_STATS,
     type ArmorItem,
     type ArmorSlot,
     type ArmorStat,
@@ -11,8 +10,7 @@ import {
     createDefaultStatModOptions,
     createTierFiveTuningOptions,
     type StatVector,
-    solveArmor,
-    statTotal
+    solveArmor
 } from '.';
 
 const slots: ArmorSlot[] = ['helmet', 'arms', 'chest', 'legs', 'classItem'];
@@ -247,28 +245,26 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.score.totalStats).toBe(515);
     });
 
-    test('uses pair tuning without a dump stat', () => {
+    test('does not calculate tuning without a dump stat', () => {
         const tuned = item('helmet', { tier: 5 });
         tuned.tuningOptions = createTierFiveTuningOptions(tuned);
+        const armor = inventory([tuned, ...slots.slice(1).map((slot) => item(slot))]);
 
         const result = solveArmor({
             characterId: 'hunter',
             classType: 'hunter',
             statTargets: { health: 55 },
             setRequirements: [],
-            armor: inventory([tuned, ...slots.slice(1).map((slot) => item(slot))])
+            armor
         });
 
-        expect(result.ok).toBe(true);
-        expect(result.ok && result.builds[0]?.stats.health).toBeGreaterThanOrEqual(55);
-        expect(result.ok && result.builds[0]?.score.totalStats).toBe(result.ok ? statTotal(result.builds[0].stats) : 0);
-        expect(result.ok && result.builds[0]?.score.totalStats).toBe(300);
-        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
-        if (result.ok) {
-            const decreasedStat = ARMOR_STATS.find((stat) => (result.builds[0]?.pieces.helmet.tuning?.deltas[stat] ?? 0) < 0);
-            expect(decreasedStat).toBeDefined();
-            expect(decreasedStat ? result.builds[0]?.stats[decreasedStat] : undefined).toBe(45);
-        }
+        expect(result.ok).toBe(false);
+        expect(
+            calculateArmorStatTargetCap(
+                { characterId: 'hunter', classType: 'hunter', statTargets: {}, setRequirements: [], armor },
+                'health'
+            )
+        ).toBe(50);
     });
 
     test('uses tier five tuning to reach requested targets when a dump stat is selected', () => {
@@ -289,7 +285,7 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
     });
 
-    test('solves standard Armor 3.0 mods and pair tuning as one compiled addon plan', () => {
+    test('solves standard mods and pair tuning as one compiled addon plan', () => {
         const tunedHelmet = item('helmet', {
             tier: 5,
             statModOptions: createDefaultStatModOptions(),
@@ -317,6 +313,40 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.stats.grenade).toBe(105);
         expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas).toEqual({ grenade: 5, health: -5 });
         expect(calculateArmorStatTargetCap({ ...input, statTargets: {} }, 'grenade')).toBe(105);
+    });
+
+    test('keeps balanced tuning inside the compiled cap and solve path', () => {
+        const balanced = { id: 'tuning:balanced', name: 'Balanced Tuning', deltas: { health: 1, melee: 1, grenade: 1 } };
+        const armor = inventory([
+            item('helmet', {
+                tier: 5,
+                statModOptions: createDefaultStatModOptions(),
+                tuningOptions: [{ id: 'tuning:none', name: 'No tuning', deltas: {} }, balanced]
+            }),
+            ...slots.slice(1).map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() }))
+        ]);
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'class',
+            statTargets: {},
+            setRequirements: [],
+            armor
+        } as const;
+
+        expect(calculateArmorStatTargetCap(input, 'health')).toBe(100);
+        expect(calculateArmorStatTargetCap({ ...input, allowBalancedTuning: true }, 'health')).toBe(101);
+
+        const result = solveArmor({
+            ...input,
+            allowBalancedTuning: true,
+            statTargets: { health: 101 },
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.health).toBe(101);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.id).toBe(balanced.id);
     });
 
     test('uses balanced tuning only when explicitly allowed', () => {
@@ -629,6 +659,25 @@ describe('solveArmor', () => {
 
         expect(result.ok && result.builds[0]?.stats.melee).toBe(10);
         expect(calculateArmorStatTargetCap(input, 'melee')).toBe(10);
+    });
+
+    test('calculates only requested target caps for background batches', () => {
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { weapons: 100 },
+            setRequirements: [],
+            armor: inventory(slots.map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() })))
+        } as const;
+
+        const caps = calculateArmorStatTargetCaps(input, ['grenade', 'weapons']);
+
+        expect(caps.health).toBe(0);
+        expect(caps.melee).toBe(0);
+        expect(caps.super).toBe(0);
+        expect(caps.class).toBe(0);
+        expect(caps.grenade).toBeGreaterThanOrEqual(0);
+        expect(caps.weapons).toBeGreaterThanOrEqual(100);
     });
 
     test('uses exact addon search when greedy mod and tuning choices miss a displayed cap', () => {

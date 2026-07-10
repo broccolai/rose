@@ -2,6 +2,8 @@ import { emptyStats } from './stats';
 import { ARMOR_SLOTS, ARMOR_STATS, type ArmorItem, type ArmorSlot, type ArmorStat, type StatAdjustment, type StatVector } from './types';
 
 const MAX_DISPLAY_STAT = 200;
+const MAX_TUNING_ALLOCATION_CACHE = 2_048;
+const BALANCED_TUNING = -2;
 const NO_TUNING = -1;
 
 type StatTuple = [number, number, number, number, number, number];
@@ -29,24 +31,42 @@ interface StatModOptions {
     major: StatAdjustment;
 }
 
-export interface Armor3PairAddonProfile {
+export interface CompiledAddonProfile {
     statMods: Record<ArmorStat, StatModOptions>;
     tuningByStat: Partial<Record<ArmorStat, StatAdjustment>>;
     tuningMask: number;
+    signature: number;
+    balancedTuning?: StatAdjustment | undefined;
 }
 
-export interface Armor3PairAddonSolveOptions {
-    profiles: Record<ArmorSlot, Armor3PairAddonProfile>;
+export interface CompiledAddonSolveOptions {
+    profiles: Record<ArmorSlot, CompiledAddonProfile>;
     baseStats: StatVector;
     targets: StatVector;
     dumpStat: ArmorStat;
+    allowBalancedTuning: boolean;
     retainState: boolean;
+}
+
+export interface CompiledAddonCapsOptions {
+    profiles: Record<ArmorSlot, CompiledAddonProfile>;
+    baseStats: StatVector;
+    targets: StatVector;
+    dumpStat: ArmorStat;
+    allowBalancedTuning: boolean;
+    requestedStats: readonly ArmorStat[];
+}
+
+export interface StandardModCapsOptions {
+    baseStats: StatVector;
+    targets: StatVector;
+    requestedStats: readonly ArmorStat[];
 }
 
 interface TuningAllocation {
     assignments: SlotAssignments;
-    gainUnits: StatTuple;
-    usedCount: number;
+    deltas: StatTuple;
+    usedTuningCount: number;
 }
 
 interface ModRequest {
@@ -65,19 +85,25 @@ interface EvaluatedAllocation {
 
 const allocationCache = new Map<string, TuningAllocation[]>();
 
-export const createArmor3PairAddonProfile = (item: ArmorItem, dumpStat: ArmorStat): Armor3PairAddonProfile | null => {
+export const createCompiledAddonProfile = (item: ArmorItem, dumpStat: ArmorStat): CompiledAddonProfile | null => {
     const statMods = collectStandardStatMods(item);
     if (!statMods) {
         return null;
     }
 
     const tuningByStat: Partial<Record<ArmorStat, StatAdjustment>> = {};
+    let balancedTuning: StatAdjustment | undefined;
     let tuningMask = 0;
     let hasNoTuning = false;
 
     for (const option of item.tuningOptions) {
         if (isZeroAdjustment(option)) {
             hasNoTuning = true;
+            continue;
+        }
+
+        if (isBalancedTuning(option)) {
+            balancedTuning = option;
             continue;
         }
 
@@ -108,20 +134,18 @@ export const createArmor3PairAddonProfile = (item: ArmorItem, dumpStat: ArmorSta
     return {
         statMods,
         tuningByStat,
-        tuningMask
+        tuningMask,
+        signature: tuningMask | (balancedTuning ? adjustmentMask(balancedTuning) << ARMOR_STATS.length : 0),
+        balancedTuning
     };
 };
 
-export const solveArmor3PairAddons = (options: Armor3PairAddonSolveOptions): AddonPlanResult | null => {
+export const solveCompiledAddons = (options: CompiledAddonSolveOptions): AddonPlanResult | null => {
     const baseStats = toTuple(options.baseStats);
     const targets = toTuple(options.targets);
-    if (!hasFivePointStatValues(baseStats) || !hasFivePointStatValues(targets)) {
-        return null;
-    }
-
     const dumpStatIndex = ARMOR_STATS.indexOf(options.dumpStat);
     const profiles = ARMOR_SLOTS.map((slot) => options.profiles[slot]);
-    const allocations = getTuningAllocations(profiles);
+    const allocations = getTuningAllocations(profiles, dumpStatIndex, options.allowBalancedTuning, false);
     let best: EvaluatedAllocation | null = null;
 
     for (const allocation of allocations) {
@@ -147,6 +171,34 @@ export const solveArmor3PairAddons = (options: Armor3PairAddonSolveOptions): Add
         valid: true,
         state: materializeAddonState(profiles, best)
     };
+};
+
+export const calculateCompiledAddonCaps = (options: CompiledAddonCapsOptions): StatVector => {
+    const baseStats = toTuple(options.baseStats);
+    const targets = toTuple(options.targets);
+    const caps = emptyStats();
+    const dumpStatIndex = ARMOR_STATS.indexOf(options.dumpStat);
+    const requestedIndexes = options.requestedStats.map((stat) => ARMOR_STATS.indexOf(stat));
+    const profiles = ARMOR_SLOTS.map((slot) => options.profiles[slot]);
+
+    for (const allocation of getTuningAllocations(profiles, dumpStatIndex, options.allowBalancedTuning, true)) {
+        const tunedStats = applyTuningAllocation(baseStats, allocation);
+        updateCapsForStats(caps, tunedStats, targets, dumpStatIndex, requestedIndexes);
+    }
+
+    return caps;
+};
+
+export const calculateStandardModCaps = (options: StandardModCapsOptions): StatVector => {
+    const caps = emptyStats();
+    updateCapsForStats(
+        caps,
+        toTuple(options.baseStats),
+        toTuple(options.targets),
+        -1,
+        options.requestedStats.map((stat) => ARMOR_STATS.indexOf(stat))
+    );
+    return caps;
 };
 
 const collectStandardStatMods = (item: ArmorItem): Record<ArmorStat, StatModOptions> | null => {
@@ -187,8 +239,15 @@ const findSingleStatMod = (item: ArmorItem, stat: ArmorStat, value: ModValue): S
     );
 
 // Pair tuning choices depend only on each piece's supported +5 stat mask.
-const getTuningAllocations = (profiles: Armor3PairAddonProfile[]): TuningAllocation[] => {
-    const key = profiles.map((profile) => profile.tuningMask).join(',');
+const getTuningAllocations = (
+    profiles: CompiledAddonProfile[],
+    dumpStatIndex: number,
+    allowBalancedTuning: boolean,
+    requireTuningWhenAvailable: boolean
+): TuningAllocation[] => {
+    const key = `${dumpStatIndex}:${allowBalancedTuning ? 'balanced' : 'pair'}:${requireTuningWhenAvailable ? 'required' : 'optional'}:${profiles
+        .map((profile) => profile.signature)
+        .join(',')}`;
     const cached = allocationCache.get(key);
     if (cached) {
         return cached;
@@ -196,38 +255,53 @@ const getTuningAllocations = (profiles: Armor3PairAddonProfile[]): TuningAllocat
 
     const unique = new Map<string, TuningAllocation>();
     const assignments: SlotAssignments = [NO_TUNING, NO_TUNING, NO_TUNING, NO_TUNING, NO_TUNING];
-    const gainUnits = zeroTuple();
+    const deltas = zeroTuple();
 
-    const visit = (slotIndex: number, usedCount: number) => {
+    const visit = (slotIndex: number, usedTuningCount: number) => {
         if (slotIndex >= ARMOR_SLOTS.length) {
             const allocation = {
                 assignments: [...assignments] as SlotAssignments,
-                gainUnits: [...gainUnits] as StatTuple,
-                usedCount
+                deltas: [...deltas] as StatTuple,
+                usedTuningCount
             };
-            unique.set(tupleKey(gainUnits), allocation);
+            unique.set(tupleKey(deltas), allocation);
             return;
         }
 
-        assignments[slotIndex] = NO_TUNING;
-        visit(slotIndex + 1, usedCount);
+        const balanced = profiles[slotIndex].balancedTuning;
+        if (!requireTuningWhenAvailable || (profiles[slotIndex].tuningMask === 0 && (!allowBalancedTuning || !balanced))) {
+            assignments[slotIndex] = NO_TUNING;
+            visit(slotIndex + 1, usedTuningCount);
+        }
 
         let mask = profiles[slotIndex].tuningMask;
         while (mask > 0) {
             const bit = mask & -mask;
             const statIndex = 31 - Math.clz32(bit);
             assignments[slotIndex] = statIndex;
-            gainUnits[statIndex] += 1;
-            visit(slotIndex + 1, usedCount + 1);
-            gainUnits[statIndex] -= 1;
+            deltas[statIndex] += 5;
+            deltas[dumpStatIndex] -= 5;
+            visit(slotIndex + 1, usedTuningCount + 1);
+            deltas[statIndex] -= 5;
+            deltas[dumpStatIndex] += 5;
             mask &= mask - 1;
+        }
+
+        if (allowBalancedTuning && balanced) {
+            assignments[slotIndex] = BALANCED_TUNING;
+            addAdjustmentInPlace(deltas, balanced, 1);
+            visit(slotIndex + 1, usedTuningCount + 1);
+            addAdjustmentInPlace(deltas, balanced, -1);
         }
     };
 
     visit(0, 0);
     const allocations = [...unique.values()].sort(
-        (left, right) => left.usedCount - right.usedCount || tupleKey(left.gainUnits).localeCompare(tupleKey(right.gainUnits))
+        (left, right) => left.usedTuningCount - right.usedTuningCount || tupleKey(left.deltas).localeCompare(tupleKey(right.deltas))
     );
+    if (allocationCache.size >= MAX_TUNING_ALLOCATION_CACHE) {
+        allocationCache.clear();
+    }
     allocationCache.set(key, allocations);
     return allocations;
 };
@@ -238,13 +312,8 @@ const evaluateAllocation = (
     dumpStatIndex: number,
     allocation: TuningAllocation
 ): EvaluatedAllocation | null => {
-    const finalStats = [...baseStats] as StatTuple;
+    const finalStats = applyTuningAllocation(baseStats, allocation);
     const modRequests: ModRequest[] = [];
-
-    for (let index = 0; index < ARMOR_STATS.length; index++) {
-        finalStats[index] += allocation.gainUnits[index] * 5;
-    }
-    finalStats[dumpStatIndex] -= allocation.usedCount * 5;
 
     for (let index = 0; index < ARMOR_STATS.length; index++) {
         if (index === dumpStatIndex) {
@@ -253,10 +322,6 @@ const evaluateAllocation = (
 
         while (finalStats[index] < targets[index]) {
             const value = finalStats[index] + 10 <= MAX_DISPLAY_STAT ? 10 : 5;
-            if (finalStats[index] + value > MAX_DISPLAY_STAT) {
-                return null;
-            }
-
             finalStats[index] += value;
             modRequests.push({ statIndex: index, value });
             if (modRequests.length > ARMOR_SLOTS.length) {
@@ -280,9 +345,53 @@ const evaluateAllocation = (
         finalStats,
         modRequests,
         totalStats,
-        usedTuningCount: allocation.usedCount,
+        usedTuningCount: allocation.usedTuningCount,
         wastedStats
     };
+};
+
+const applyTuningAllocation = (baseStats: StatTuple, allocation: TuningAllocation): StatTuple => {
+    const tunedStats = [...baseStats] as StatTuple;
+    for (let index = 0; index < ARMOR_STATS.length; index++) {
+        tunedStats[index] += allocation.deltas[index];
+    }
+    return tunedStats;
+};
+
+const minimumModSlots = (current: number, target: number): number => Math.max(0, Math.ceil((target - current) / 10));
+
+const updateCapsForStats = (
+    caps: StatVector,
+    currentStats: StatTuple,
+    targets: StatTuple,
+    dumpStatIndex: number,
+    requestedIndexes: number[]
+): void => {
+    const requiredSlots = zeroTuple();
+    let totalRequiredSlots = 0;
+
+    for (let index = 0; index < ARMOR_STATS.length; index++) {
+        if (index === dumpStatIndex) {
+            continue;
+        }
+
+        requiredSlots[index] = minimumModSlots(currentStats[index], targets[index]);
+        totalRequiredSlots += requiredSlots[index];
+    }
+
+    for (const scoreIndex of requestedIndexes) {
+        if (scoreIndex === dumpStatIndex) {
+            continue;
+        }
+
+        const remainingSlots = ARMOR_SLOTS.length - (totalRequiredSlots - requiredSlots[scoreIndex]);
+        if (remainingSlots < 0) {
+            continue;
+        }
+
+        const stat = ARMOR_STATS[scoreIndex];
+        caps[stat] = Math.max(caps[stat], Math.max(0, Math.min(MAX_DISPLAY_STAT, currentStats[scoreIndex] + remainingSlots * 10)));
+    }
 };
 
 const isBetterAllocation = (candidate: EvaluatedAllocation, current: EvaluatedAllocation): boolean =>
@@ -292,7 +401,7 @@ const isBetterAllocation = (candidate: EvaluatedAllocation, current: EvaluatedAl
         candidate.usedTuningCount === current.usedTuningCount &&
         candidate.wastedStats < current.wastedStats);
 
-const materializeAddonState = (profiles: Armor3PairAddonProfile[], evaluated: EvaluatedAllocation): AddonState => {
+const materializeAddonState = (profiles: CompiledAddonProfile[], evaluated: EvaluatedAllocation): AddonState => {
     const choices = {} as Record<ArmorSlot, AddonChoice>;
 
     for (let slotIndex = 0; slotIndex < ARMOR_SLOTS.length; slotIndex++) {
@@ -303,7 +412,12 @@ const materializeAddonState = (profiles: Armor3PairAddonProfile[], evaluated: Ev
             ? profile.statMods[ARMOR_STATS[modRequest.statIndex]][modRequest.value === 10 ? 'major' : 'minor']
             : undefined;
         const tuningStatIndex = evaluated.allocation.assignments[slotIndex];
-        const tuning = tuningStatIndex === NO_TUNING ? undefined : profile.tuningByStat[ARMOR_STATS[tuningStatIndex]];
+        const tuning =
+            tuningStatIndex === NO_TUNING
+                ? undefined
+                : tuningStatIndex === BALANCED_TUNING
+                  ? profile.balancedTuning
+                  : profile.tuningByStat[ARMOR_STATS[tuningStatIndex]];
         const deltas = emptyStats();
 
         for (const stat of ARMOR_STATS) {
@@ -333,13 +447,25 @@ const hasOnlyPairTuningValues = (option: StatAdjustment, positiveStat: ArmorStat
 
 const isZeroAdjustment = (option: StatAdjustment): boolean => ARMOR_STATS.every((stat) => (option.deltas[stat] ?? 0) === 0);
 
-const hasFivePointStatValues = (stats: StatTuple): boolean => stats.every((value) => value % 5 === 0);
+const isBalancedTuning = (option: StatAdjustment): boolean => {
+    const values = ARMOR_STATS.map((stat) => option.deltas[stat] ?? 0);
+    return values.filter((value) => value === 1).length >= 3 && values.every((value) => value === 0 || value === 1);
+};
+
+const addAdjustmentInPlace = (tuple: StatTuple, adjustment: StatAdjustment, multiplier: 1 | -1): void => {
+    for (let index = 0; index < ARMOR_STATS.length; index++) {
+        tuple[index] += (adjustment.deltas[ARMOR_STATS[index]] ?? 0) * multiplier;
+    }
+};
 
 const zeroTuple = (): StatTuple => [0, 0, 0, 0, 0, 0];
 
 const tupleKey = (tuple: StatTuple): string => tuple.join(',');
 
 const toTuple = (stats: StatVector): StatTuple => [stats.health, stats.melee, stats.grenade, stats.super, stats.class, stats.weapons];
+
+const adjustmentMask = (adjustment: StatAdjustment): number =>
+    ARMOR_STATS.reduce((mask, stat, index) => mask | ((adjustment.deltas[stat] ?? 0) > 0 ? 1 << index : 0), 0);
 
 const toStats = (tuple: StatTuple): StatVector => ({
     health: tuple[0],

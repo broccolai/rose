@@ -46,7 +46,7 @@ self.onmessage = (event: MessageEvent<SolverWorkerRequest>) => {
             message.type === 'calculate-stat-cap'
                 ? calculateArmorStatTargetCap(message.input, message.stat)
                 : message.type === 'calculate-stat-caps'
-                  ? calculateArmorStatTargetCaps(message.input)
+                  ? calculateArmorStatTargetCaps(message.input, message.stats)
                   : solveArmor(message.input);
 
         self.postMessage({
