@@ -16,6 +16,7 @@
     --rose-exotic: #a970ff;
     --rose-success: #a970ff;
     --rose-danger: #d8b4ff;
+    --rose-warning: #f06a72;
     --rose-button: #a970ff;
     --rose-button-text: #050506;
     --rose-table-header: #0a0a0c;
@@ -58,6 +59,7 @@
     --rose-exotic: #a970ff;
     --rose-success: #a970ff;
     --rose-danger: #e0c1ff;
+    --rose-warning: #ff7a82;
     --rose-button: #b482ff;
     --rose-button-text: #0b0b0d;
     --rose-table-header: #17171b;
@@ -88,6 +90,7 @@
     --rose-exotic: #7b3ff2;
     --rose-success: #7b3ff2;
     --rose-danger: #7b3ff2;
+    --rose-warning: #b42331;
     --rose-button: #7b3ff2;
     --rose-button-text: #fffdf8;
     --rose-table-header: #ded6cb;
@@ -118,6 +121,7 @@
     --rose-exotic: #9c467e;
     --rose-success: #9c467e;
     --rose-danger: #9c467e;
+    --rose-warning: #a62f3f;
     --rose-button: #9c467e;
     --rose-button-text: #fff9f7;
     --rose-table-header: #efc7c0;

@@ -86,10 +86,31 @@ const customSelectTriggerRecipe = cva({
                 px: 'var(--rose-space-sm)',
                 fontSize: '0.78rem'
             }
+        },
+        intent: {
+            default: {},
+            warning: {
+                borderColor: 'color-mix(in srgb, var(--rose-warning) 72%, var(--rose-border))',
+                color: 'var(--rose-warning)',
+                bg: 'color-mix(in srgb, var(--rose-warning) 8%, var(--rose-surface-soft))',
+                _hover: {
+                    borderColor: 'var(--rose-warning)',
+                    bg: 'color-mix(in srgb, var(--rose-warning) 12%, var(--rose-surface-raised))'
+                },
+                _focusVisible: {
+                    borderColor: 'var(--rose-warning)',
+                    outline: '2px solid color-mix(in srgb, var(--rose-warning) 24%, transparent)'
+                },
+                '&[data-open="true"]': {
+                    borderColor: 'var(--rose-warning)',
+                    boxShadow: '0 0 0 1px color-mix(in srgb, var(--rose-warning) 14%, transparent)'
+                }
+            }
         }
     },
     defaultVariants: {
-        size: 'default'
+        size: 'default',
+        intent: 'default'
     }
 });
 
@@ -204,6 +225,7 @@ export interface CustomSelectProps {
     disabled?: boolean | undefined;
     placeholder?: string | undefined;
     size?: 'default' | 'compact' | undefined;
+    intent?: 'default' | 'warning' | undefined;
 }
 
 function nextSelectableIndex(options: readonly CustomSelectOption[], startIndex: number, direction: 1 | -1): number {
@@ -311,6 +333,7 @@ export function CustomSelect(props: CustomSelectProps) {
                 disabled={props.disabled}
                 data-open={open()}
                 size={props.size}
+                intent={props.intent}
                 onClick={() => (open() ? closeMenu() : openMenu())}
                 onKeyDown={handleTriggerKeyDown}
             >
