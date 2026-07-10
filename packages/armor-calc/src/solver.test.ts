@@ -289,6 +289,36 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
     });
 
+    test('solves standard Armor 3.0 mods and pair tuning as one compiled addon plan', () => {
+        const tunedHelmet = item('helmet', {
+            tier: 5,
+            statModOptions: createDefaultStatModOptions(),
+            tuningOptions: [{ id: 'tuning:none', name: 'No tuning', deltas: {} }, tuning('grenade', 'health')]
+        });
+        const armor = inventory([
+            tunedHelmet,
+            ...slots.slice(1).map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() }))
+        ]);
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'health',
+            statTargets: { grenade: 105 },
+            setRequirements: [],
+            armor
+        } as const;
+        const result = solveArmor({
+            ...input,
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats.grenade).toBe(105);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas).toEqual({ grenade: 5, health: -5 });
+        expect(calculateArmorStatTargetCap({ ...input, statTargets: {} }, 'grenade')).toBe(105);
+    });
+
     test('uses balanced tuning only when explicitly allowed', () => {
         const balancedOnly = item('helmet', {
             tier: 5,
