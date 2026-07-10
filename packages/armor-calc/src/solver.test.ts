@@ -245,7 +245,7 @@ describe('solveArmor', () => {
         expect(result.ok && result.builds[0]?.score.totalStats).toBe(515);
     });
 
-    test('does not calculate tuning without a dump stat', () => {
+    test('uses pair tuning without requiring a dump stat', () => {
         const tuned = item('helmet', { tier: 5 });
         tuned.tuningOptions = createTierFiveTuningOptions(tuned);
         const armor = inventory([tuned, ...slots.slice(1).map((slot) => item(slot))]);
@@ -258,13 +258,41 @@ describe('solveArmor', () => {
             armor
         });
 
-        expect(result.ok).toBe(false);
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas.health).toBe(5);
         expect(
             calculateArmorStatTargetCap(
                 { characterId: 'hunter', classType: 'hunter', statTargets: {}, setRequirements: [], armor },
                 'health'
             )
-        ).toBe(50);
+        ).toBe(55);
+    });
+
+    test('can mix tuning penalty stats when no dump stat is selected', () => {
+        const armor = inventory([
+            item('helmet', {
+                statModOptions: createDefaultStatModOptions(),
+                tuningOptions: [{ id: 'tuning:none', name: 'No tuning', deltas: {} }, tuning('health', 'melee')]
+            }),
+            item('arms', {
+                statModOptions: createDefaultStatModOptions(),
+                tuningOptions: [{ id: 'tuning:none', name: 'No tuning', deltas: {} }, tuning('grenade', 'class')]
+            }),
+            ...slots.slice(2).map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() }))
+        ]);
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { health: 75, grenade: 75 },
+            setRequirements: [],
+            armor,
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.deltas).toEqual({ health: 5, melee: -5 });
+        expect(result.ok && result.builds[0]?.pieces.arms.tuning?.deltas).toEqual({ grenade: 5, class: -5 });
     });
 
     test('uses tier five tuning to reach requested targets when a dump stat is selected', () => {
@@ -383,6 +411,37 @@ describe('solveArmor', () => {
         expect(withBalanced.ok && withBalanced.builds[0]?.stats.grenade).toBe(51);
         expect(withBalanced.ok && withBalanced.builds[0]?.score.totalStats).toBe(303);
         expect(withBalanced.ok && withBalanced.builds[0]?.pieces.helmet.tuning?.id).toBe('tuning:balanced');
+    });
+
+    test('allows balanced tuning without requiring a dump stat', () => {
+        const balanced = { id: 'tuning:balanced', name: 'Balanced Tuning', deltas: { health: 1, melee: 1, grenade: 1 } };
+        const armor = inventory([
+            item('helmet', {
+                statModOptions: createDefaultStatModOptions(),
+                tuningOptions: [{ id: 'tuning:none', name: 'No tuning', deltas: {} }, balanced]
+            }),
+            ...slots.slice(1).map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() }))
+        ]);
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: {},
+            setRequirements: [],
+            armor
+        } as const;
+
+        expect(calculateArmorStatTargetCap(input, 'health')).toBe(100);
+        expect(calculateArmorStatTargetCap({ ...input, allowBalancedTuning: true }, 'health')).toBe(101);
+
+        const result = solveArmor({
+            ...input,
+            allowBalancedTuning: true,
+            statTargets: { health: 101 },
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.pieces.helmet.tuning?.id).toBe(balanced.id);
     });
 
     test('does not select zero-effect balanced tuning as a no-op', () => {

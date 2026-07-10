@@ -273,7 +273,7 @@ function calculatePreparedCompiledStatTargetCaps(
             plan.armor[slot].every((item) => (tuningMode === 'off' ? item.simpleAddons : item.compiledAddonProfile !== null))
         )
     );
-    if (!supportsCompiledAddons || (tuningMode !== 'off' && !dumpStat)) {
+    if (!supportsCompiledAddons) {
         return null;
     }
 
@@ -817,7 +817,7 @@ function prepareArmorItem(item: ArmorItem, tuningMode: TuningMode, dumpStat: Arm
         base: toStatTuple(item.baseStats),
         max: toStatTuple(itemMaximumStats(item, tuningMode, dumpStat)),
         simpleAddons: hasSimpleStatModsAndNoTuning(item, tuningMode, dumpStat),
-        compiledAddonProfile: tuningMode !== 'off' && dumpStat ? createCompiledAddonProfile(item, dumpStat) : null
+        compiledAddonProfile: tuningMode !== 'off' ? createCompiledAddonProfile(item, dumpStat) : null
     };
 
     cache.set(key, prepared);
@@ -916,7 +916,7 @@ function evaluateAddonState(
     retainState: boolean
 ): AddonPlanResult {
     let allSimpleAddons = true;
-    let allCompiledAddons = context.dumpStat !== undefined;
+    let allCompiledAddons = context.tuningMode !== 'off';
     for (let slotIndex = 0; slotIndex < ARMOR_SLOTS.length; slotIndex++) {
         const piece = pieces[ARMOR_SLOTS[slotIndex]];
         allSimpleAddons = allSimpleAddons && piece.simpleAddons;
@@ -1368,7 +1368,7 @@ function tuningCacheKey(tuningMode: TuningMode, dumpStat: ArmorStat | undefined)
 
 function tuningModeForInput(dumpStat: ArmorStat | undefined, allowBalancedTuning: boolean | undefined): TuningMode {
     if (!dumpStat) {
-        return 'off';
+        return allowBalancedTuning ? 'all' : 'pair';
     }
 
     return allowBalancedTuning ? 'all' : 'pair';
