@@ -502,7 +502,7 @@ describe('solveArmor', () => {
         expect(descending.searchedCombinations).toBe(ascending.searchedCombinations);
     });
 
-    test('materializes valid interactive frontier builds for multi-stat solves', () => {
+    test('materializes valid capped interactive builds for multi-stat solves', () => {
         const armor = inventory(
             slots.flatMap((slot) => [
                 item(slot, {

@@ -167,7 +167,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         };
     }
 
-    if (shouldUseResultFrontier(input, targets, dumpStatIndex)) {
+    if (shouldUseResultFrontier()) {
         return solveArmorWithResultFrontier({
             targets,
             statBonuses,
@@ -240,12 +240,8 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     };
 }
 
-function shouldUseResultFrontier(input: SolveArmorInput, targets: StatVector, dumpStatIndex: number) {
-    return (
-        input.stopWhenResultLimitReached === true &&
-        input.resultSort === undefined &&
-        targetIndexesForTargets(toStatTuple(targets), dumpStatIndex).length >= 2
-    );
+function shouldUseResultFrontier() {
+    return false;
 }
 
 function solveArmorWithResultFrontier(options: {
