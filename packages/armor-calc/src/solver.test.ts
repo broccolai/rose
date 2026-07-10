@@ -502,6 +502,37 @@ describe('solveArmor', () => {
         expect(descending.searchedCombinations).toBe(ascending.searchedCombinations);
     });
 
+    test('materializes valid interactive frontier builds for multi-stat solves', () => {
+        const armor = inventory(
+            slots.flatMap((slot) => [
+                item(slot, {
+                    itemInstanceId: `${slot}-health`,
+                    baseStats: { ...baseStats, health: 35, weapons: 10 },
+                    statModOptions: createDefaultStatModOptions()
+                }),
+                item(slot, {
+                    itemInstanceId: `${slot}-weapons`,
+                    baseStats: { ...baseStats, health: 10, weapons: 35 },
+                    statModOptions: createDefaultStatModOptions()
+                })
+            ])
+        );
+        const result = solveArmor({
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { health: 120, weapons: 120 },
+            setRequirements: [],
+            armor,
+            maxResults: 8,
+            stopWhenResultLimitReached: true
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.returnedBuildCount).toBeGreaterThan(0);
+        expect(result.returnedBuildCount).toBeLessThanOrEqual(8);
+        expect(result.ok && result.builds.every((build) => build.stats.health >= 120 && build.stats.weapons >= 120)).toBe(true);
+    });
+
     test('returns no solution when targets are impossible', () => {
         const result = solveArmor({
             characterId: 'hunter',
@@ -568,5 +599,48 @@ describe('solveArmor', () => {
 
         expect(result.ok && result.builds[0]?.stats.melee).toBe(10);
         expect(calculateArmorStatTargetCap(input, 'melee')).toBe(10);
+    });
+
+    test('uses exact addon search when greedy mod and tuning choices miss a displayed cap', () => {
+        const perAudaciaSet = { id: 'set:per-audacia', name: 'Per Audacia' };
+        const tunedItem = (slot: ArmorSlot, name: string, itemBaseStats: StatVector, set = perAudaciaSet) =>
+            item(slot, {
+                name,
+                baseStats: itemBaseStats,
+                set,
+                statModOptions: createDefaultStatModOptions(),
+                tier: 5,
+                tuningOptions: createTierFiveTuningOptions({ baseStats: itemBaseStats, tier: 5 })
+            });
+        const armor = inventory([
+            tunedItem('helmet', 'Per Audacia Casque', { health: 30, melee: 5, grenade: 20, super: 5, class: 25, weapons: 5 }),
+            tunedItem('arms', 'Per Audacia Grips', { health: 30, melee: 5, grenade: 5, super: 20, class: 25, weapons: 5 }),
+            tunedItem('chest', "Dragon's Shadow", { health: 25, melee: 30, grenade: 20, super: 5, class: 5, weapons: 5 }, undefined),
+            tunedItem('legs', 'Per Audacia Strides', { health: 20, melee: 25, grenade: 5, super: 30, class: 5, weapons: 5 }),
+            tunedItem('classItem', 'Per Audacia Cloak', { health: 30, melee: 5, grenade: 20, super: 5, class: 25, weapons: 5 })
+        ]);
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            dumpStat: 'weapons',
+            statTargets: { health: 190, grenade: 90, super: 90, class: 100 },
+            statBonuses: { health: 10, grenade: 10, super: 10, class: 10 },
+            setRequirements: [{ setId: perAudaciaSet.id, requiredPieces: 4 }],
+            armor
+        } as const;
+        const result = solveArmor({
+            ...input,
+            maxResults: 1,
+            stopWhenResultLimitReached: true
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.builds[0]?.stats).toMatchObject({
+            health: 190,
+            grenade: 90,
+            super: 90,
+            class: 100
+        });
+        expect(calculateArmorStatTargetCap({ ...input, statTargets: { ...input.statTargets, grenade: 0 } }, 'grenade')).toBe(90);
     });
 });

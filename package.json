@@ -17,6 +17,7 @@
         "test": "bun test",
         "test:bench": "bun test packages/armor-bench/src",
         "bench:d2ap": "bun packages/armor-bench/src/cli.ts",
+        "bench:interactive-solve": "bun packages/armor-bench/src/interactive-solve-cli.ts",
         "bench:slider-caps": "bun packages/armor-bench/src/slider-caps-cli.ts",
         "hooks:install": "git config core.hooksPath .githooks",
         "version:bump": "bun scripts/bump-version.ts"

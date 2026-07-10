@@ -1,4 +1,11 @@
-import { type ArmorStat, type ArmorStatTargetCapsInput, calculateArmorStatTargetCap, type SolveArmorInput, solveArmor } from '@armor-calc';
+import {
+    type ArmorStat,
+    type ArmorStatTargetCapsInput,
+    calculateArmorStatTargetCap,
+    calculateArmorStatTargetCaps,
+    type SolveArmorInput,
+    solveArmor
+} from '@armor-calc';
 
 export type SolverWorkerRequest =
     | {
@@ -6,6 +13,12 @@ export type SolverWorkerRequest =
           type: 'calculate-stat-cap';
           input: ArmorStatTargetCapsInput;
           stat: ArmorStat;
+      }
+    | {
+          id: number;
+          type: 'calculate-stat-caps';
+          input: ArmorStatTargetCapsInput;
+          stats: readonly ArmorStat[];
       }
     | {
           id: number;
@@ -30,7 +43,11 @@ self.onmessage = (event: MessageEvent<SolverWorkerRequest>) => {
 
     try {
         const result =
-            message.type === 'calculate-stat-cap' ? calculateArmorStatTargetCap(message.input, message.stat) : solveArmor(message.input);
+            message.type === 'calculate-stat-cap'
+                ? calculateArmorStatTargetCap(message.input, message.stat)
+                : message.type === 'calculate-stat-caps'
+                  ? calculateArmorStatTargetCaps(message.input)
+                  : solveArmor(message.input);
 
         self.postMessage({
             id: message.id,

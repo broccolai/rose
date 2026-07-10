@@ -3,6 +3,7 @@ import {
     type ArmorStat,
     type ArmorStatTargetCapsInput,
     calculateArmorStatTargetCap,
+    calculateArmorStatTargetCaps,
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector,
@@ -50,14 +51,14 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         stats: readonly ArmorStat[],
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ) {
-        const caps = Object.fromEntries(ARMOR_STATS.map((stat) => [stat, 0])) as StatVector;
-        await Promise.all(
-            stats.map(async (stat) => {
-                const cap = await this.calculateStatCap(input, stat);
-                caps[stat] = cap;
-                onStatCap?.(stat, cap);
-            })
+        const caps = await this.request<StatVector>(
+            { id: 0, type: 'calculate-stat-caps', input, stats },
+            this.workerForStat(stats[0] ?? ARMOR_STATS[0])
         );
+
+        for (const stat of stats) {
+            onStatCap?.(stat, caps[stat]);
+        }
 
         return caps;
     }
@@ -175,13 +176,13 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
         stats: readonly ArmorStat[],
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ) {
-        const caps = Object.fromEntries(ARMOR_STATS.map((stat) => [stat, 0])) as StatVector;
+        const startedAt = performance.now();
+        const caps = calculateArmorStatTargetCaps(input);
         for (const stat of stats) {
-            const cap = calculateArmorStatTargetCap(input, stat);
-            caps[stat] = cap;
-            onStatCap?.(stat, cap);
+            onStatCap?.(stat, caps[stat]);
         }
 
+        logSolverTiming('direct caps', startedAt, 'done');
         return caps;
     }
 
@@ -202,6 +203,10 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
 function solverRequestLabel(id: number, request: SolverWorkerRequest) {
     if (request.type === 'calculate-stat-cap') {
         return `worker#${id} cap:${request.stat}`;
+    }
+
+    if (request.type === 'calculate-stat-caps') {
+        return `worker#${id} caps:${request.stats.join(',')}`;
     }
 
     return `worker#${id} ${request.type}`;

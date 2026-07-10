@@ -22,13 +22,12 @@ import {
 const DEFAULT_MAX_RESULTS = 50;
 const DEFAULT_RESULT_SORT: ArmorBuildSort = { key: 'wastedStats', direction: 'asc' };
 const MAX_DISPLAY_STAT = 200;
-const MAX_DP_TARGET_INDEXES = 3;
 const TUNING_MODES = ['off', 'pair', 'all'] as const;
 const itemMaximumStatsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
 const simpleAddonCapabilityCache = new WeakMap<ArmorItem, Map<string, boolean>>();
 const preparedArmorItemCache = new WeakMap<ArmorItem, Map<string, PreparedArmorItem>>();
 const itemOutcomeCache = new WeakMap<ArmorItem, Map<string, StatTuple[]>>();
-const adjustmentTupleCache = new WeakMap<StatAdjustment, StatTuple>();
+const itemAddonChoiceOutcomeCache = new WeakMap<ArmorItem, Map<string, AddonChoiceOutcome[]>>();
 
 type StatTuple = [number, number, number, number, number, number];
 type TuningMode = (typeof TUNING_MODES)[number];
@@ -51,6 +50,46 @@ type AddonChoice = {
 type AddonState = {
     stats: StatVector;
     choices: Record<ArmorSlot, AddonChoice>;
+};
+
+type AddonPlanResult = {
+    valid: boolean;
+    state: AddonState | null;
+};
+
+type AddonChoiceOutcome = {
+    statMod?: StatAdjustment | undefined;
+    tuning?: StatAdjustment | undefined;
+    deltas: StatVector;
+    tuple: StatTuple;
+};
+
+type ExactAddonSearchState = {
+    capped: StatTuple;
+    stats: StatTuple;
+    choices: Partial<Record<ArmorSlot, AddonChoice>>;
+};
+
+type FrontierState = {
+    stats: StatTuple;
+    setCounts: number[];
+};
+
+type ResultFrontierState = FrontierState & {
+    fullStats: StatTuple;
+    pieces: Partial<Record<ArmorSlot, PreparedArmorItem>>;
+    choices: Partial<Record<ArmorSlot, AddonChoice>>;
+};
+
+type FrontierSearch = {
+    targetValues: StatTuple;
+    trackedCaps: StatTuple;
+    trackedIndexes: number[];
+    targetIndexes: number[];
+    scoreIndex: number;
+    setRequirements: ArmorSetRequirement[];
+    tuningMode: TuningMode;
+    dumpStat?: ArmorStat | undefined;
 };
 
 type SimpleStatModRequest = {
@@ -115,12 +154,7 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         };
     }
 
-    const targetIndexes = targetIndexesForTargets(toStatTuple(targets), dumpStatIndex);
-    if (
-        input.setRequirements.length === 0 &&
-        canUseDpForTargetIndexes(targetIndexes) &&
-        !canReachPreparedArmorStatTargetsByDp(plans, targets, statBonuses, dumpStatIndex, tuningMode, input.dumpStat)
-    ) {
+    if (!canReachPreparedArmorStatTargets(plans, targets, statBonuses, input.dumpStat, dumpStatIndex, tuningMode, input.setRequirements)) {
         return {
             ok: false,
             reason: 'No build matched the selected targets and constraints.',
@@ -131,6 +165,20 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
             rejectedCombinations: 0,
             warnings
         };
+    }
+
+    if (shouldUseResultFrontier(input, targets, dumpStatIndex)) {
+        return solveArmorWithResultFrontier({
+            targets,
+            statBonuses,
+            dumpStat: input.dumpStat,
+            dumpStatIndex,
+            tuningMode,
+            maxResults,
+            setRequirements: input.setRequirements,
+            plans,
+            warnings
+        });
     }
 
     const builds: ArmorBuild[] = [];
@@ -192,11 +240,122 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
     };
 }
 
+function shouldUseResultFrontier(input: SolveArmorInput, targets: StatVector, dumpStatIndex: number) {
+    return (
+        input.stopWhenResultLimitReached === true &&
+        input.resultSort === undefined &&
+        targetIndexesForTargets(toStatTuple(targets), dumpStatIndex).length >= 2
+    );
+}
+
+function solveArmorWithResultFrontier(options: {
+    targets: StatVector;
+    statBonuses: StatVector;
+    dumpStat?: ArmorStat | undefined;
+    dumpStatIndex: number;
+    tuningMode: TuningMode;
+    maxResults: number;
+    setRequirements: ArmorSetRequirement[];
+    plans: CandidatePlan[];
+    warnings: string[];
+}): SolveArmorResult {
+    const builds: ArmorBuild[] = [];
+    let expandedStates = 0;
+    let retainedStates = 0;
+    const search = createFrontierSearch(
+        toStatTuple(options.targets),
+        options.dumpStatIndex,
+        -1,
+        options.setRequirements,
+        options.tuningMode,
+        options.dumpStat
+    );
+
+    for (const plan of options.plans) {
+        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
+            continue;
+        }
+
+        const result = buildResultFrontierStates(plan, search, toStatTuple(options.statBonuses), options.maxResults - builds.length);
+        expandedStates += result.expandedStates;
+        retainedStates += result.retainedStates;
+
+        for (const state of result.states) {
+            if (!frontierStateMeetsTargets(state, search) || !hasAllResultFrontierPieces(state)) {
+                continue;
+            }
+
+            builds.push(createBuildFromResultFrontierState(state, options.targets, options.dumpStat));
+            if (builds.length >= options.maxResults) {
+                break;
+            }
+        }
+
+        if (builds.length >= options.maxResults) {
+            break;
+        }
+    }
+
+    builds.sort((left, right) => compareBuilds(left, right, DEFAULT_RESULT_SORT));
+
+    if (builds.length === 0) {
+        return {
+            ok: false,
+            reason: 'No build matched the selected targets and constraints.',
+            validBuildCount: 0,
+            returnedBuildCount: 0,
+            resultLimitReached: false,
+            searchedCombinations: expandedStates,
+            rejectedCombinations: retainedStates,
+            warnings: options.warnings
+        };
+    }
+
+    return {
+        ok: true,
+        builds,
+        validBuildCount: builds.length,
+        returnedBuildCount: builds.length,
+        resultLimitReached: true,
+        searchedCombinations: expandedStates,
+        rejectedCombinations: retainedStates,
+        warnings: [
+            ...options.warnings,
+            'Interactive frontier solve returned a representative build pool; exact total build count was skipped.'
+        ]
+    };
+}
+
 export function calculateArmorStatTargetCaps(input: ArmorStatTargetCapsInput): StatVector {
     const caps = emptyStats();
+    const baseTargets = normalizeTargets(input.statTargets);
+    const statBonuses = normalizeStatBonuses(input.statBonuses);
+    const dumpStatIndex = input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : -1;
+    const tuningMode: TuningMode = input.allowBalancedTuning ? 'all' : 'pair';
+    const plans = createCandidatePlans(input.armor, input.classType, input.selectedExoticItemHash, tuningMode, input.dumpStat);
+
+    if (plans.every((plan) => ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0))) {
+        return caps;
+    }
+
+    if (input.dumpStat) {
+        baseTargets[input.dumpStat] = 0;
+    }
 
     for (const stat of ARMOR_STATS) {
-        caps[stat] = calculateArmorStatTargetCap(input, stat);
+        caps[stat] =
+            stat === input.dumpStat
+                ? 0
+                : calculatePreparedArmorStatTargetCapByFrontier(
+                      plans,
+                      baseTargets,
+                      statBonuses,
+                      ARMOR_STATS.indexOf(stat),
+                      dumpStatIndex,
+                      tuningMode,
+                      input.dumpStat,
+                      input.setRequirements
+                  );
     }
 
     return caps;
@@ -221,132 +380,16 @@ export function calculateArmorStatTargetCap(input: ArmorStatTargetCapsInput, sta
         baseTargets[input.dumpStat] = 0;
     }
 
-    const capTargetIndexes = targetIndexesForTargets(toStatTuple(baseTargets), dumpStatIndex, ARMOR_STATS.indexOf(stat));
-    if (input.setRequirements.length === 0 && canUseDpForTargetIndexes(capTargetIndexes)) {
-        const optimisticCap = calculatePreparedArmorStatTargetCapByDp(
-            plans,
-            baseTargets,
-            statBonuses,
-            ARMOR_STATS.indexOf(stat),
-            dumpStatIndex,
-            tuningMode,
-            input.dumpStat
-        );
-
-        return verifyTargetCapWithSolver(input, baseTargets, stat, optimisticCap);
-    }
-
-    const maxTargetResult = solveArmor({
-        ...input,
-        statTargets: {
-            ...baseTargets,
-            [stat]: 200
-        },
-        maxResults: 1,
-        stopWhenResultLimitReached: true
-    });
-
-    if (maxTargetResult.ok) {
-        return Math.min(200, maxTargetResult.builds[0]?.stats[stat] ?? 200);
-    }
-
-    const bestTarget = calculatePreparedArmorStatTargetCap(
+    return calculatePreparedArmorStatTargetCapByFrontier(
         plans,
         baseTargets,
         statBonuses,
-        stat,
-        input.dumpStat,
+        ARMOR_STATS.indexOf(stat),
         dumpStatIndex,
         tuningMode,
+        input.dumpStat,
         input.setRequirements
     );
-    const statTargets = {
-        ...baseTargets,
-        [stat]: bestTarget
-    };
-    const result = solveArmor({
-        ...input,
-        statTargets,
-        maxResults: 1
-    });
-
-    if (!result.ok) {
-        return 0;
-    }
-
-    return result.builds[0]?.stats[stat] ?? 0;
-}
-
-function verifyTargetCapWithSolver(input: ArmorStatTargetCapsInput, baseTargets: StatVector, stat: ArmorStat, optimisticCap: number) {
-    const step = input.allowBalancedTuning ? 1 : 5;
-    const firstCandidate = Math.floor(Math.min(MAX_DISPLAY_STAT, optimisticCap) / step) * step;
-
-    for (let target = firstCandidate; target >= 0; target -= step) {
-        const result = solveArmor({
-            ...input,
-            statTargets: {
-                ...baseTargets,
-                [stat]: target
-            },
-            maxResults: 1,
-            stopWhenResultLimitReached: true
-        });
-
-        if (!result.ok) {
-            continue;
-        }
-
-        const displayedStat = Math.min(MAX_DISPLAY_STAT, result.builds[0]?.stats[stat] ?? target);
-        if (displayedStat <= target) {
-            return target;
-        }
-
-        const displayedStatResult = solveArmor({
-            ...input,
-            statTargets: {
-                ...baseTargets,
-                [stat]: displayedStat
-            },
-            maxResults: 1,
-            stopWhenResultLimitReached: true
-        });
-
-        return displayedStatResult.ok ? displayedStat : target;
-    }
-
-    return 0;
-}
-
-function calculatePreparedArmorStatTargetCap(
-    plans: CandidatePlan[],
-    baseTargets: StatVector,
-    statBonuses: StatVector,
-    stat: ArmorStat,
-    dumpStat: ArmorStat | undefined,
-    dumpStatIndex: number,
-    tuningMode: TuningMode,
-    setRequirements: ArmorSetRequirement[]
-) {
-    let low = 0;
-    let high = 200;
-    let best = 0;
-
-    while (low <= high) {
-        const midpoint = Math.floor((low + high) / 2);
-        const targets = {
-            ...baseTargets,
-            [stat]: midpoint
-        };
-
-        if (canReachPreparedArmorStatTargets(plans, targets, statBonuses, dumpStat, dumpStatIndex, tuningMode, setRequirements)) {
-            best = midpoint;
-            low = midpoint + 1;
-        } else {
-            high = midpoint - 1;
-        }
-    }
-
-    return best;
 }
 
 export function canReachArmorStatTargets(input: ArmorStatTargetCapsInput) {
@@ -373,41 +416,32 @@ function canReachPreparedArmorStatTargets(
     tuningMode: TuningMode,
     setRequirements: ArmorSetRequirement[]
 ) {
-    const targetIndexes = targetIndexesForTargets(toStatTuple(targets), dumpStatIndex);
-    if (setRequirements.length === 0 && canUseDpForTargetIndexes(targetIndexes)) {
-        return canReachPreparedArmorStatTargetsByDp(plans, targets, statBonuses, dumpStatIndex, tuningMode, dumpStat);
-    }
+    return canReachPreparedArmorStatTargetsByFrontier(plans, targets, statBonuses, dumpStatIndex, tuningMode, dumpStat, setRequirements);
+}
 
-    const context: SearchContext = {
-        targets,
-        targetValues: toStatTuple(targets),
-        statBonusValues: toStatTuple(statBonuses),
-        dumpStat,
-        dumpStatIndex,
-        tuningMode,
-        maxResults: 0,
-        resultSort: undefined,
-        setRequirements,
-        builds: [],
-        counters: {
-            searchedCombinations: 0,
-            rejectedCombinations: 0,
-            validBuildCount: 0
-        },
-        stopAfterFirstValid: true,
-        stopWhenResultLimitReached: false,
-        resultLimitReached: false,
-        foundValid: false
-    };
+function canReachPreparedArmorStatTargetsByFrontier(
+    plans: CandidatePlan[],
+    targets: StatVector,
+    statBonuses: StatVector,
+    dumpStatIndex: number,
+    tuningMode: TuningMode,
+    dumpStat: ArmorStat | undefined,
+    setRequirements: ArmorSetRequirement[]
+) {
+    const search = createFrontierSearch(toStatTuple(targets), dumpStatIndex, -1, setRequirements, tuningMode, dumpStat);
 
     for (const plan of plans) {
         if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
             continue;
         }
 
-        searchPlan(prioritizePlanForTargets(plan, context.targetValues, dumpStatIndex, setRequirements), context);
+        const initialState = createInitialFrontierState(toStatTuple(statBonuses), search);
+        if (frontierStateMeetsTargets(initialState, search)) {
+            return true;
+        }
 
-        if (context.foundValid) {
+        const result = buildFrontierStates(plan, search, initialState, true);
+        if (result.foundTarget) {
             return true;
         }
     }
@@ -415,73 +449,22 @@ function canReachPreparedArmorStatTargets(
     return false;
 }
 
-function canReachPreparedArmorStatTargetsByDp(
-    plans: CandidatePlan[],
-    targets: StatVector,
-    statBonuses: StatVector,
-    dumpStatIndex: number,
-    tuningMode: TuningMode,
-    dumpStat: ArmorStat | undefined
-) {
-    const targetValues = toStatTuple(targets);
-    const targetIndexes = targetIndexesForTargets(targetValues, dumpStatIndex);
-
-    if (targetIndexes.length === 0) {
-        return true;
-    }
-
-    for (const plan of plans) {
-        if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
-            continue;
-        }
-
-        let states: StatTuple[] = [capTupleToTargets(toStatTuple(statBonuses), targetValues, targetIndexes)];
-
-        for (const slot of ARMOR_SLOTS) {
-            const nextStates: StatTuple[] = [];
-
-            for (const state of states) {
-                for (const item of plan.armor[slot]) {
-                    for (const outcome of itemOutcomeTuples(item.item, tuningMode, dumpStat)) {
-                        const nextState = capTupleToTargets(addTuples(state, outcome), targetValues, targetIndexes);
-                        if (tupleMeetsTargetIndexes(nextState, targetValues, targetIndexes)) {
-                            return true;
-                        }
-
-                        nextStates.push(nextState);
-                    }
-                }
-            }
-
-            states = pruneDominatedTargetStates(nextStates, targetIndexes);
-            if (states.length === 0) {
-                break;
-            }
-        }
-    }
-
-    return false;
-}
-
-function calculatePreparedArmorStatTargetCapByDp(
+function calculatePreparedArmorStatTargetCapByFrontier(
     plans: CandidatePlan[],
     targets: StatVector,
     statBonuses: StatVector,
     statIndex: number,
     dumpStatIndex: number,
     tuningMode: TuningMode,
-    dumpStat: ArmorStat | undefined
+    dumpStat: ArmorStat | undefined,
+    setRequirements: ArmorSetRequirement[]
 ) {
     if (statIndex === dumpStatIndex) {
         return 0;
     }
 
     const targetValues = toStatTuple(targets);
-    const targetIndexes = targetValues
-        .map((target, index) => ({ index, target }))
-        .filter(({ index, target }) => index !== dumpStatIndex && index !== statIndex && target > 0)
-        .map(({ index }) => index);
-    const scoreIndexes = [...targetIndexes, statIndex];
+    const search = createFrontierSearch(targetValues, dumpStatIndex, statIndex, setRequirements, tuningMode, dumpStat);
     let best = 0;
 
     for (const plan of plans) {
@@ -489,30 +472,15 @@ function calculatePreparedArmorStatTargetCapByDp(
             continue;
         }
 
-        let states: StatTuple[] = [capTupleForCapSearch(toStatTuple(statBonuses), targetValues, targetIndexes, statIndex)];
+        const initialState = createInitialFrontierState(toStatTuple(statBonuses), search);
+        const result = buildFrontierStates(plan, search, initialState, false);
 
-        for (const slot of ARMOR_SLOTS) {
-            const nextStates: StatTuple[] = [];
-
-            for (const state of states) {
-                for (const item of plan.armor[slot]) {
-                    for (const outcome of itemOutcomeTuples(item.item, tuningMode, dumpStat)) {
-                        const nextState = capTupleForCapSearch(addTuples(state, outcome), targetValues, targetIndexes, statIndex);
-                        if (tupleMeetsTargetIndexes(nextState, targetValues, targetIndexes)) {
-                            best = Math.max(best, nextState[statIndex]);
-                            if (best >= MAX_DISPLAY_STAT) {
-                                return MAX_DISPLAY_STAT;
-                            }
-                        }
-
-                        nextStates.push(nextState);
-                    }
+        for (const state of result.states) {
+            if (frontierStateMeetsTargets(state, search)) {
+                best = Math.max(best, state.stats[statIndex]);
+                if (best >= MAX_DISPLAY_STAT) {
+                    return MAX_DISPLAY_STAT;
                 }
-            }
-
-            states = pruneDominatedTargetStates(nextStates, scoreIndexes);
-            if (states.length === 0) {
-                break;
             }
         }
     }
@@ -520,15 +488,302 @@ function calculatePreparedArmorStatTargetCapByDp(
     return best;
 }
 
+function createFrontierSearch(
+    targetValues: StatTuple,
+    dumpStatIndex: number,
+    scoreIndex: number,
+    setRequirements: ArmorSetRequirement[],
+    tuningMode: TuningMode,
+    dumpStat: ArmorStat | undefined
+): FrontierSearch {
+    const targetIndexes = targetIndexesForTargets(targetValues, dumpStatIndex, scoreIndex);
+    const trackedIndexes = scoreIndex >= 0 ? [...targetIndexes, scoreIndex] : targetIndexes;
+    const trackedCaps = zeroTuple();
+
+    for (const index of trackedIndexes) {
+        trackedCaps[index] = index === scoreIndex ? MAX_DISPLAY_STAT : targetValues[index];
+    }
+
+    return {
+        targetValues,
+        trackedCaps,
+        trackedIndexes,
+        targetIndexes,
+        scoreIndex,
+        setRequirements,
+        tuningMode,
+        dumpStat
+    };
+}
+
+function createInitialFrontierState(stats: StatTuple, search: FrontierSearch): FrontierState {
+    return {
+        stats: capTupleForFrontier(stats, search),
+        setCounts: search.setRequirements.map(() => 0)
+    };
+}
+
+function buildFrontierStates(plan: CandidatePlan, search: FrontierSearch, initialState: FrontierState, stopAfterFirstTarget: boolean) {
+    let states = [initialState];
+
+    for (const slot of ARMOR_SLOTS) {
+        const nextStates: FrontierState[] = [];
+
+        for (const state of states) {
+            for (const item of plan.armor[slot]) {
+                for (const outcome of itemOutcomeTuples(item.item, search.tuningMode, search.dumpStat)) {
+                    const nextState = addFrontierOutcome(state, item, outcome, search);
+                    if (stopAfterFirstTarget && frontierStateMeetsTargets(nextState, search)) {
+                        return {
+                            foundTarget: true,
+                            states: [nextState]
+                        };
+                    }
+
+                    nextStates.push(nextState);
+                }
+            }
+        }
+
+        states = pruneDominatedFrontierStates(nextStates, search);
+        if (states.length === 0) {
+            break;
+        }
+    }
+
+    return {
+        foundTarget: states.some((state) => frontierStateMeetsTargets(state, search)),
+        states
+    };
+}
+
+function buildResultFrontierStates(plan: CandidatePlan, search: FrontierSearch, statBonuses: StatTuple, maxResults: number) {
+    let states: ResultFrontierState[] = [
+        {
+            stats: capTupleForFrontier(statBonuses, search),
+            fullStats: statBonuses,
+            setCounts: search.setRequirements.map(() => 0),
+            pieces: {},
+            choices: {}
+        }
+    ];
+    let expandedStates = 0;
+    let retainedStates = 1;
+
+    for (const slot of ARMOR_SLOTS) {
+        const nextStates: ResultFrontierState[] = [];
+
+        for (const state of states) {
+            for (const item of plan.armor[slot]) {
+                for (const outcome of itemAddonChoiceOutcomes(item.item, search.tuningMode, search.dumpStat)) {
+                    expandedStates += 1;
+                    nextStates.push(addResultFrontierOutcome(state, slot, item, outcome, search));
+                }
+            }
+        }
+
+        states = pruneDominatedResultFrontierStates(nextStates, search, maxResults);
+        retainedStates += states.length;
+        if (states.length === 0) {
+            break;
+        }
+    }
+
+    return {
+        states: states.filter((state) => frontierStateMeetsTargets(state, search)),
+        expandedStates,
+        retainedStates
+    };
+}
+
+function addFrontierOutcome(state: FrontierState, item: PreparedArmorItem, outcome: StatTuple, search: FrontierSearch): FrontierState {
+    return {
+        stats: capTupleForFrontier(addTuples(state.stats, outcome), search),
+        setCounts: addFrontierSetCounts(state.setCounts, item, search.setRequirements)
+    };
+}
+
+function addResultFrontierOutcome(
+    state: ResultFrontierState,
+    slot: ArmorSlot,
+    item: PreparedArmorItem,
+    outcome: AddonChoiceOutcome,
+    search: FrontierSearch
+): ResultFrontierState {
+    return {
+        stats: capTupleForFrontier(addTuples(state.fullStats, addTuples(item.base, outcome.tuple)), search),
+        fullStats: addTuples(state.fullStats, addTuples(item.base, outcome.tuple)),
+        setCounts: addFrontierSetCounts(state.setCounts, item, search.setRequirements),
+        pieces: {
+            ...state.pieces,
+            [slot]: item
+        },
+        choices: {
+            ...state.choices,
+            [slot]: {
+                statMod: outcome.statMod,
+                tuning: outcome.tuning,
+                deltas: outcome.deltas
+            }
+        }
+    };
+}
+
+function addFrontierSetCounts(counts: number[], item: PreparedArmorItem, requirements: ArmorSetRequirement[]) {
+    if (requirements.length === 0 || !item.item.set) {
+        return counts;
+    }
+
+    const nextCounts = [...counts];
+    for (const [index, requirement] of requirements.entries()) {
+        if (item.item.set.id === requirement.setId) {
+            nextCounts[index] = Math.min(requirement.requiredPieces, nextCounts[index] + 1);
+        }
+    }
+
+    return nextCounts;
+}
+
+function capTupleForFrontier(tuple: StatTuple, search: FrontierSearch): StatTuple {
+    const capped = zeroTuple();
+
+    for (const index of search.trackedIndexes) {
+        capped[index] = Math.min(tuple[index], search.trackedCaps[index]);
+    }
+
+    return capped;
+}
+
+function frontierStateMeetsTargets(state: FrontierState, search: FrontierSearch) {
+    return (
+        tupleMeetsTargetIndexes(state.stats, search.targetValues, search.targetIndexes) && frontierStateMeetsSetRequirements(state, search)
+    );
+}
+
+function frontierStateMeetsSetRequirements(state: FrontierState, search: FrontierSearch) {
+    return search.setRequirements.every((requirement, index) => state.setCounts[index] >= requirement.requiredPieces);
+}
+
+function pruneDominatedFrontierStates(states: FrontierState[], search: FrontierSearch) {
+    const unique = new Map<string, FrontierState>();
+
+    for (const state of states) {
+        const key = frontierStateKey(state, search.trackedIndexes);
+        const current = unique.get(key);
+        if (!current || tupleTotal(state.stats) > tupleTotal(current.stats)) {
+            unique.set(key, state);
+        }
+    }
+
+    const pruned: FrontierState[] = [];
+    for (const state of unique.values()) {
+        let dominated = false;
+
+        for (let index = pruned.length - 1; index >= 0; index -= 1) {
+            const existing = pruned[index];
+            if (!existing) {
+                continue;
+            }
+
+            if (dominatesFrontierState(existing, state, search.trackedIndexes)) {
+                dominated = true;
+                break;
+            }
+
+            if (dominatesFrontierState(state, existing, search.trackedIndexes)) {
+                pruned.splice(index, 1);
+            }
+        }
+
+        if (!dominated) {
+            pruned.push(state);
+        }
+    }
+
+    return pruned;
+}
+
+function pruneDominatedResultFrontierStates(states: ResultFrontierState[], search: FrontierSearch, maxResults: number) {
+    const variantsPerBucket = Math.max(1, Math.min(maxResults, 256));
+    const buckets = new Map<string, ResultFrontierState[]>();
+
+    for (const state of states) {
+        const key = frontierStateKey(state, search.trackedIndexes);
+        const bucket = buckets.get(key);
+
+        if (!bucket) {
+            buckets.set(key, [state]);
+            continue;
+        }
+
+        insertResultFrontierVariant(bucket, state, search, variantsPerBucket);
+    }
+
+    const representatives = [...buckets.values()]
+        .map((bucket) => bucket[0])
+        .filter((state): state is ResultFrontierState => Boolean(state));
+    const nonDominatedRepresentatives = pruneDominatedFrontierStates(representatives, search) as ResultFrontierState[];
+    const nonDominatedKeys = new Set(nonDominatedRepresentatives.map((state) => frontierStateKey(state, search.trackedIndexes)));
+    const retained = [...buckets.entries()].filter(([key]) => nonDominatedKeys.has(key)).flatMap(([, bucket]) => bucket);
+
+    if (maxResults <= 0 || retained.length <= maxResults * 8) {
+        return retained;
+    }
+
+    return retained
+        .sort(
+            (left, right) =>
+                resultFrontierPriorityScore(right, search.targetValues, search.scoreIndex) -
+                    resultFrontierPriorityScore(left, search.targetValues, search.scoreIndex) || compareResultFrontierIds(left, right)
+        )
+        .slice(0, maxResults * 8);
+}
+
+function insertResultFrontierVariant(
+    bucket: ResultFrontierState[],
+    state: ResultFrontierState,
+    search: FrontierSearch,
+    variantsPerBucket: number
+) {
+    bucket.push(state);
+    bucket.sort(
+        (left, right) =>
+            resultFrontierPriorityScore(right, search.targetValues, search.scoreIndex) -
+                resultFrontierPriorityScore(left, search.targetValues, search.scoreIndex) || compareResultFrontierIds(left, right)
+    );
+
+    if (bucket.length > variantsPerBucket) {
+        bucket.length = variantsPerBucket;
+    }
+}
+
+function resultFrontierPriorityScore(state: ResultFrontierState, targets: StatTuple, dumpStatIndex: number) {
+    return tupleTotal(state.fullStats) * 10 - tupleWaste(state.fullStats, targets, dumpStatIndex);
+}
+
+function compareResultFrontierIds(left: ResultFrontierState, right: ResultFrontierState) {
+    return ARMOR_SLOTS.map((slot) => left.pieces[slot]?.item.itemInstanceId ?? '')
+        .join('|')
+        .localeCompare(ARMOR_SLOTS.map((slot) => right.pieces[slot]?.item.itemInstanceId ?? '').join('|'));
+}
+
+function dominatesFrontierState(left: FrontierState, right: FrontierState, trackedIndexes: number[]) {
+    return dominatesTargetState(left.stats, right.stats, trackedIndexes) && dominatesSetCounts(left.setCounts, right.setCounts);
+}
+
+function dominatesSetCounts(left: number[], right: number[]) {
+    return left.every((count, index) => count >= right[index]);
+}
+
+function frontierStateKey(state: FrontierState, trackedIndexes: number[]) {
+    return `${tupleTargetKey(state.stats, trackedIndexes)}|${state.setCounts.join(',')}`;
+}
+
 function targetIndexesForTargets(targetValues: StatTuple, dumpStatIndex: number, excludedIndex = -1) {
     return targetValues
         .map((target, index) => ({ index, target }))
         .filter(({ index, target }) => index !== dumpStatIndex && index !== excludedIndex && target > 0)
         .map(({ index }) => index);
-}
-
-function canUseDpForTargetIndexes(targetIndexes: number[]) {
-    return targetIndexes.length <= MAX_DP_TARGET_INDEXES;
 }
 
 function createCandidatePlans(
@@ -753,29 +1008,62 @@ function evaluateAddonState(
     retainState: boolean,
     supportsSimpleAddons: boolean
 ) {
-    if (supportsSimpleAddons) {
-        return evaluateSimpleStatMods(pieces, baseStats, targetValues, dumpStatIndex, retainState);
+    return resolveAddonPlan({
+        pieces,
+        baseStats,
+        targets,
+        targetValues,
+        dumpStat,
+        dumpStatIndex,
+        tuningMode,
+        retainState,
+        supportsSimpleAddons
+    });
+}
+
+function resolveAddonPlan(options: {
+    pieces: Record<ArmorSlot, PreparedArmorItem>;
+    baseStats: StatTuple;
+    targets: StatVector;
+    targetValues: StatTuple;
+    dumpStat: ArmorStat | undefined;
+    dumpStatIndex: number;
+    tuningMode: TuningMode;
+    retainState: boolean;
+    supportsSimpleAddons: boolean;
+}): AddonPlanResult {
+    if (options.supportsSimpleAddons) {
+        return evaluateSimpleStatMods(options.pieces, options.baseStats, options.targetValues, options.dumpStatIndex, options.retainState);
     }
 
-    if (tupleMeetsTargets(baseStats, targetValues, dumpStatIndex)) {
+    if (tupleMeetsTargets(options.baseStats, options.targetValues, options.dumpStatIndex)) {
         return {
             valid: true,
-            state: retainState ? createEmptyAddonState(tupleToStats(baseStats)) : null
+            state: options.retainState ? createEmptyAddonState(tupleToStats(options.baseStats)) : null
         };
     }
 
-    if (!retainState) {
+    const pieces = unpreparePieces(options.pieces);
+    const greedyState = findGreedyAddonState(
+        pieces,
+        tupleToStats(options.baseStats),
+        options.targets,
+        options.dumpStat,
+        options.tuningMode
+    );
+
+    if (meetsSolverTargets(greedyState.stats, options.targets, options.dumpStat)) {
         return {
-            valid: canMeetTargetsWithAddonTuples(pieces, baseStats, targetValues, dumpStatIndex, tuningMode, dumpStat),
-            state: null
+            valid: true,
+            state: options.retainState ? greedyState : null
         };
     }
 
-    const state = findBestAddonState(unpreparePieces(pieces), tupleToStats(baseStats), targets, dumpStat, tuningMode);
+    const exactState = findExactAddonState(pieces, tupleToStats(options.baseStats), options.targets, options.dumpStat, options.tuningMode);
 
     return {
-        valid: state !== null,
-        state
+        valid: exactState !== null,
+        state: options.retainState ? exactState : null
     };
 }
 
@@ -877,164 +1165,158 @@ function getSimpleStatModOption(item: ArmorItem, request?: SimpleStatModRequest)
     return item.statModOptions.find((option) => option.deltas[request.stat] === request.value && adjustmentTotal(option) === request.value);
 }
 
-function canMeetTargetsWithAddonTuples(
-    pieces: Record<ArmorSlot, PreparedArmorItem>,
-    baseStats: StatTuple,
-    targetValues: StatTuple,
-    dumpStatIndex: number,
-    tuningMode: TuningMode,
-    dumpStat: ArmorStat | undefined
+function findExactAddonState(
+    pieces: Record<ArmorSlot, ArmorItem>,
+    baseStats: StatVector,
+    targets: StatVector,
+    dumpStat: ArmorStat | undefined,
+    tuningMode: TuningMode
 ) {
-    const stats = [...baseStats] as StatTuple;
+    const targetValues = toStatTuple(targets);
+    const dumpStatIndex = dumpStat ? ARMOR_STATS.indexOf(dumpStat) : -1;
+    const targetIndexes = targetIndexesForTargets(targetValues, dumpStatIndex);
+    let states: ExactAddonSearchState[] = [
+        {
+            capped: capTupleToTargets(toStatTuple(baseStats), targetValues, targetIndexes),
+            stats: toStatTuple(baseStats),
+            choices: {}
+        }
+    ];
 
     for (const slot of ARMOR_SLOTS) {
-        const piece = pieces[slot].item;
-        const statMod = chooseBestAdjustmentForTuple(piece.statModOptions, stats, targetValues, dumpStatIndex, {
-            preferPositiveGain: true
-        });
+        const nextStates: ExactAddonSearchState[] = [];
 
-        addAdjustmentTupleInPlace(stats, statMod);
+        for (const state of states) {
+            for (const outcome of itemAddonChoiceOutcomes(pieces[slot], tuningMode, dumpStat)) {
+                const stats = addTuples(state.stats, outcome.tuple);
+                const capped = capTupleToTargets(stats, targetValues, targetIndexes);
+                const choices = {
+                    ...state.choices,
+                    [slot]: {
+                        statMod: outcome.statMod,
+                        tuning: outcome.tuning,
+                        deltas: outcome.deltas
+                    }
+                };
 
-        const tuning =
-            tuningMode === 'off'
-                ? undefined
-                : chooseBestAdjustmentForTuple(tuningOptionsForMode(piece, tuningMode, dumpStat), stats, targetValues, dumpStatIndex);
+                nextStates.push({ capped, stats, choices });
+            }
+        }
 
-        addAdjustmentTupleInPlace(stats, tuning);
-    }
-
-    return tupleMeetsTargets(stats, targetValues, dumpStatIndex);
-}
-
-function chooseBestAdjustmentForTuple(
-    options: StatAdjustment[],
-    stats: StatTuple,
-    targets: StatTuple,
-    dumpStatIndex: number,
-    preference: AdjustmentPreference = {}
-) {
-    const noChange = options.find((option) => adjustmentTupleTotal(option) === 0);
-    let best = noChange;
-    let bestScore = 0;
-    let bestDumpRelief = best ? dumpStatReliefByIndex(best, dumpStatIndex) : 0;
-    let bestOverflow = best ? tupleOverflowAmount(addAdjustmentToTuple(stats, best)) : 0;
-    let bestGain = best ? positiveAdjustmentTotal(best) : 0;
-
-    for (const option of options) {
-        const nextStats = addAdjustmentToTuple(stats, option);
-        const score = tupleTotalDeficit(stats, targets, dumpStatIndex) - tupleTotalDeficit(nextStats, targets, dumpStatIndex);
-        const relief = dumpStatReliefByIndex(option, dumpStatIndex);
-        const overflow = tupleOverflowAmount(nextStats);
-        const gain = positiveAdjustmentTotal(option);
-        const hasUsefulEffect = score > 0 || relief > 0;
-
-        if (
-            overflow < bestOverflow ||
-            (overflow === bestOverflow && score > bestScore) ||
-            (overflow === bestOverflow && score === bestScore && relief > bestDumpRelief) ||
-            (preference.preferPositiveGain &&
-                overflow === bestOverflow &&
-                score === bestScore &&
-                relief === bestDumpRelief &&
-                gain > bestGain) ||
-            (hasUsefulEffect &&
-                overflow === bestOverflow &&
-                score === bestScore &&
-                relief === bestDumpRelief &&
-                gain === bestGain &&
-                best &&
-                option.id.localeCompare(best.id) < 0)
-        ) {
-            best = option;
-            bestScore = score;
-            bestDumpRelief = relief;
-            bestOverflow = overflow;
-            bestGain = gain;
+        states = pruneDominatedExactAddonStates(nextStates, targetIndexes);
+        if (states.length === 0) {
+            return null;
         }
     }
 
-    return best;
-}
+    const validStates = states.filter((state) => tupleMeetsTargetIndexes(state.capped, targetValues, targetIndexes));
+    const bestState = validStates.sort(
+        (left, right) => exactAddonStateScore(right, targetValues, dumpStatIndex) - exactAddonStateScore(left, targetValues, dumpStatIndex)
+    )[0];
 
-function addAdjustmentToTuple(stats: StatTuple, adjustment: StatAdjustment): StatTuple {
-    const deltas = adjustmentTuple(adjustment);
-    return [
-        stats[0] + deltas[0],
-        stats[1] + deltas[1],
-        stats[2] + deltas[2],
-        stats[3] + deltas[3],
-        stats[4] + deltas[4],
-        stats[5] + deltas[5]
-    ];
-}
-
-function addAdjustmentTupleInPlace(stats: StatTuple, adjustment: StatAdjustment | undefined) {
-    if (!adjustment) {
-        return;
+    if (!bestState) {
+        return null;
     }
 
-    const deltas = adjustmentTuple(adjustment);
-    stats[0] += deltas[0];
-    stats[1] += deltas[1];
-    stats[2] += deltas[2];
-    stats[3] += deltas[3];
-    stats[4] += deltas[4];
-    stats[5] += deltas[5];
+    return {
+        stats: tupleToStats(bestState.stats),
+        choices: Object.fromEntries(
+            ARMOR_SLOTS.map((slot) => [
+                slot,
+                bestState.choices[slot] ?? {
+                    deltas: emptyStats()
+                }
+            ])
+        ) as Record<ArmorSlot, AddonChoice>
+    };
 }
 
-function adjustmentTuple(adjustment: StatAdjustment): StatTuple {
-    const cached = adjustmentTupleCache.get(adjustment);
+function itemAddonChoiceOutcomes(item: ArmorItem, tuningMode: TuningMode, dumpStat: ArmorStat | undefined) {
+    const cache = getItemCache(itemAddonChoiceOutcomeCache, item);
+    const key = tuningCacheKey(tuningMode, dumpStat);
+    const cached = cache.get(key);
 
     if (cached) {
         return cached;
     }
 
-    const tuple: StatTuple = [
-        adjustment.deltas.health ?? 0,
-        adjustment.deltas.melee ?? 0,
-        adjustment.deltas.grenade ?? 0,
-        adjustment.deltas.super ?? 0,
-        adjustment.deltas.class ?? 0,
-        adjustment.deltas.weapons ?? 0
-    ];
+    const outcomes = new Map<string, AddonChoiceOutcome>();
+    const tuningOptions = tuningMode === 'off' ? [undefined] : tuningOptionsForMode(item, tuningMode, dumpStat);
 
-    adjustmentTupleCache.set(adjustment, tuple);
-    return tuple;
-}
-
-function adjustmentTupleTotal(adjustment: StatAdjustment) {
-    const tuple = adjustmentTuple(adjustment);
-    return tuple[0] + tuple[1] + tuple[2] + tuple[3] + tuple[4] + tuple[5];
-}
-
-function tupleOverflowAmount(stats: StatTuple) {
-    return (
-        Math.max(0, stats[0] - MAX_DISPLAY_STAT) +
-        Math.max(0, stats[1] - MAX_DISPLAY_STAT) +
-        Math.max(0, stats[2] - MAX_DISPLAY_STAT) +
-        Math.max(0, stats[3] - MAX_DISPLAY_STAT) +
-        Math.max(0, stats[4] - MAX_DISPLAY_STAT) +
-        Math.max(0, stats[5] - MAX_DISPLAY_STAT)
-    );
-}
-
-function tupleTotalDeficit(stats: StatTuple, targets: StatTuple, dumpStatIndex: number) {
-    return (
-        (dumpStatIndex === 0 ? 0 : Math.max(0, targets[0] - stats[0])) +
-        (dumpStatIndex === 1 ? 0 : Math.max(0, targets[1] - stats[1])) +
-        (dumpStatIndex === 2 ? 0 : Math.max(0, targets[2] - stats[2])) +
-        (dumpStatIndex === 3 ? 0 : Math.max(0, targets[3] - stats[3])) +
-        (dumpStatIndex === 4 ? 0 : Math.max(0, targets[4] - stats[4])) +
-        (dumpStatIndex === 5 ? 0 : Math.max(0, targets[5] - stats[5]))
-    );
-}
-
-function dumpStatReliefByIndex(adjustment: StatAdjustment, dumpStatIndex: number) {
-    if (dumpStatIndex < 0) {
-        return 0;
+    for (const statMod of item.statModOptions) {
+        for (const tuning of tuningOptions) {
+            const deltas = sumStatVectors([statMod.deltas, tuning?.deltas ?? {}]);
+            const tuple = toStatTuple(deltas);
+            outcomes.set(tupleKey(tuple), {
+                statMod,
+                tuning,
+                deltas,
+                tuple
+            });
+        }
     }
 
-    return Math.max(0, -adjustmentTuple(adjustment)[dumpStatIndex]);
+    const values = [...outcomes.values()];
+    cache.set(key, values);
+    return values;
+}
+
+function pruneDominatedExactAddonStates(states: ExactAddonSearchState[], targetIndexes: number[]) {
+    const unique = new Map<string, ExactAddonSearchState>();
+
+    for (const state of states) {
+        const key = tupleTargetKey(state.capped, targetIndexes);
+        const current = unique.get(key);
+        if (!current || tupleTotal(state.stats) > tupleTotal(current.stats)) {
+            unique.set(key, state);
+        }
+    }
+
+    const pruned: ExactAddonSearchState[] = [];
+    for (const state of unique.values()) {
+        let dominated = false;
+
+        for (let index = pruned.length - 1; index >= 0; index -= 1) {
+            const existing = pruned[index];
+            if (!existing) {
+                continue;
+            }
+
+            if (dominatesTargetState(existing.capped, state.capped, targetIndexes)) {
+                dominated = true;
+                break;
+            }
+
+            if (dominatesTargetState(state.capped, existing.capped, targetIndexes)) {
+                pruned.splice(index, 1);
+            }
+        }
+
+        if (!dominated) {
+            pruned.push(state);
+        }
+    }
+
+    return pruned;
+}
+
+function exactAddonStateScore(state: ExactAddonSearchState, targets: StatTuple, dumpStatIndex: number) {
+    return -tupleWaste(state.stats, targets, dumpStatIndex) * 1_000 + tupleTotal(state.stats);
+}
+
+function tupleWaste(stats: StatTuple, targets: StatTuple, dumpStatIndex: number) {
+    return (
+        (dumpStatIndex === 0 ? 0 : Math.max(0, stats[0] - targets[0])) +
+        (dumpStatIndex === 1 ? 0 : Math.max(0, stats[1] - targets[1])) +
+        (dumpStatIndex === 2 ? 0 : Math.max(0, stats[2] - targets[2])) +
+        (dumpStatIndex === 3 ? 0 : Math.max(0, stats[3] - targets[3])) +
+        (dumpStatIndex === 4 ? 0 : Math.max(0, stats[4] - targets[4])) +
+        (dumpStatIndex === 5 ? 0 : Math.max(0, stats[5] - targets[5]))
+    );
+}
+
+function tupleTotal(stats: StatTuple) {
+    return stats[0] + stats[1] + stats[2] + stats[3] + stats[4] + stats[5];
 }
 
 function zeroTuple(): StatTuple {
@@ -1337,46 +1619,8 @@ function capTupleToTargets(tuple: StatTuple, targets: StatTuple, targetIndexes: 
     return capped;
 }
 
-function capTupleForCapSearch(tuple: StatTuple, targets: StatTuple, targetIndexes: number[], statIndex: number): StatTuple {
-    const capped = capTupleToTargets(tuple, targets, targetIndexes);
-    capped[statIndex] = Math.min(capped[statIndex], MAX_DISPLAY_STAT);
-    return capped;
-}
-
 function tupleMeetsTargetIndexes(tuple: StatTuple, targets: StatTuple, targetIndexes: number[]) {
     return targetIndexes.every((index) => tuple[index] >= targets[index]);
-}
-
-function pruneDominatedTargetStates(states: StatTuple[], targetIndexes: number[]) {
-    const unique = new Map<string, StatTuple>();
-
-    for (const state of states) {
-        unique.set(tupleTargetKey(state, targetIndexes), state);
-    }
-
-    const pruned: StatTuple[] = [];
-    for (const state of unique.values()) {
-        let dominated = false;
-
-        for (let index = pruned.length - 1; index >= 0; index--) {
-            const existing = pruned[index];
-
-            if (dominatesTargetState(existing, state, targetIndexes)) {
-                dominated = true;
-                break;
-            }
-
-            if (dominatesTargetState(state, existing, targetIndexes)) {
-                pruned.splice(index, 1);
-            }
-        }
-
-        if (!dominated) {
-            pruned.push(state);
-        }
-    }
-
-    return pruned;
 }
 
 function dominatesTargetState(left: StatTuple, right: StatTuple, targetIndexes: number[]) {
@@ -1412,7 +1656,7 @@ function productRemainingSlots(armor: PreparedArmorBySlot, nextSlotIndex: number
     return product;
 }
 
-function findBestAddonState(
+function findGreedyAddonState(
     pieces: Record<ArmorSlot, ArmorItem>,
     baseStats: StatVector,
     targets: StatVector,
@@ -1442,7 +1686,7 @@ function findBestAddonState(
         };
     }
 
-    return meetsSolverTargets(state.stats, targets, dumpStat) ? state : null;
+    return state;
 }
 
 function chooseBestAdjustment(
@@ -1552,6 +1796,33 @@ function createBuild(pieces: Record<ArmorSlot, ArmorItem>, addonState: AddonStat
             totalStats: statTotal(finalStats)
         }
     };
+}
+
+function hasAllResultFrontierPieces(state: ResultFrontierState): state is ResultFrontierState & {
+    pieces: Record<ArmorSlot, PreparedArmorItem>;
+    choices: Record<ArmorSlot, AddonChoice>;
+} {
+    return ARMOR_SLOTS.every((slot) => state.pieces[slot] && state.choices[slot]);
+}
+
+function createBuildFromResultFrontierState(
+    state: ResultFrontierState & {
+        pieces: Record<ArmorSlot, PreparedArmorItem>;
+        choices: Record<ArmorSlot, AddonChoice>;
+    },
+    targets: StatVector,
+    dumpStat?: ArmorStat
+): ArmorBuild {
+    const pieces = Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, state.pieces[slot].item])) as Record<ArmorSlot, ArmorItem>;
+    return createBuild(
+        pieces,
+        {
+            stats: tupleToStats(state.fullStats),
+            choices: state.choices
+        },
+        targets,
+        dumpStat
+    );
 }
 
 function clampDisplayStats(stats: StatVector) {
