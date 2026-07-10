@@ -3,10 +3,12 @@ import {
     type AddonPlanResult,
     type AddonState,
     type CompiledAddonProfile,
-    calculateCompiledAddonCaps,
-    calculateStandardModCaps,
+    type CompiledAddonWorkspace,
     createCompiledAddonProfile,
-    solveCompiledAddons
+    createCompiledAddonWorkspace,
+    solveCompiledAddons,
+    updateCompiledAddonCaps,
+    updateStandardModCaps
 } from './compiled-addons';
 import { addStats, emptyStats, normalizeTargets, statTotal, sumStatVectors } from './stats';
 import {
@@ -118,6 +120,8 @@ type SearchContext = {
     stopWhenResultLimitReached: boolean;
     resultLimitReached: boolean;
     foundValid: boolean;
+    compiledAddonProfiles: Array<CompiledAddonProfile | null>;
+    compiledAddonWorkspace: CompiledAddonWorkspace;
 };
 
 export function solveArmor(input: SolveArmorInput): SolveArmorResult {
@@ -134,19 +138,6 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         return {
             ok: false,
             reason: 'No compatible armor found for every armor slot.',
-            validBuildCount: 0,
-            returnedBuildCount: 0,
-            resultLimitReached: false,
-            searchedCombinations: 0,
-            rejectedCombinations: 0,
-            warnings
-        };
-    }
-
-    if (!canReachPreparedArmorStatTargets(plans, targets, statBonuses, input.dumpStat, dumpStatIndex, tuningMode, input.setRequirements)) {
-        return {
-            ok: false,
-            reason: 'No build matched the selected targets and constraints.',
             validBuildCount: 0,
             returnedBuildCount: 0,
             resultLimitReached: false,
@@ -177,7 +168,9 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         stopAfterFirstValid: false,
         stopWhenResultLimitReached: input.stopWhenResultLimitReached === true && input.resultSort === undefined,
         resultLimitReached: false,
-        foundValid: false
+        foundValid: false,
+        compiledAddonProfiles: Array.from({ length: ARMOR_SLOTS.length }, () => null),
+        compiledAddonWorkspace: createCompiledAddonWorkspace()
     };
 
     for (const plan of plans) {
@@ -292,56 +285,44 @@ function calculatePreparedCompiledStatTargetCaps(
         return caps;
     }
 
-    const addonCapsCache = new Map<string, StatVector>();
+    const context: CompiledCapSearchContext = {
+        targetValues: toStatTuple(targets),
+        dumpStatIndex: dumpStat ? ARMOR_STATS.indexOf(dumpStat) : -1,
+        tuningMode,
+        allowBalancedTuning: tuningMode === 'all',
+        requestedIndexes,
+        setRequirements,
+        caps,
+        compiledAddonProfiles: Array.from({ length: ARMOR_SLOTS.length }, () => null),
+        compiledAddonWorkspace: createCompiledAddonWorkspace()
+    };
+
     for (const plan of plans) {
         if (ARMOR_SLOTS.some((slot) => plan.armor[slot].length === 0)) {
             continue;
         }
 
-        searchCompiledCaps(
-            plan,
-            {
-                targets,
-                targetValues: toStatTuple(targets),
-                dumpStat,
-                dumpStatIndex: dumpStat ? ARMOR_STATS.indexOf(dumpStat) : -1,
-                tuningMode,
-                allowBalancedTuning: tuningMode === 'all',
-                requestedStats,
-                requestedIndexes,
-                setRequirements,
-                caps,
-                addonCapsCache
-            },
-            {},
-            [],
-            0,
-            toStatTuple(statBonuses),
-            toStatTuple(statBonuses)
-        );
+        searchCompiledCaps(plan, context, [], 0, toStatTuple(statBonuses), toStatTuple(statBonuses));
     }
 
     return caps;
 }
 
 interface CompiledCapSearchContext {
-    targets: StatVector;
     targetValues: StatTuple;
-    dumpStat?: ArmorStat | undefined;
     dumpStatIndex: number;
     tuningMode: TuningMode;
     allowBalancedTuning: boolean;
-    requestedStats: readonly ArmorStat[];
     requestedIndexes: number[];
     setRequirements: ArmorSetRequirement[];
     caps: StatVector;
-    addonCapsCache: Map<string, StatVector>;
+    compiledAddonProfiles: Array<CompiledAddonProfile | null>;
+    compiledAddonWorkspace: CompiledAddonWorkspace;
 }
 
 function searchCompiledCaps(
     plan: CandidatePlan,
     context: CompiledCapSearchContext,
-    selectedPieces: Partial<Record<ArmorSlot, PreparedArmorItem>>,
     selectedList: PreparedArmorItem[],
     slotIndex: number,
     baseStats: StatTuple,
@@ -369,55 +350,35 @@ function searchCompiledCaps(
             return;
         }
 
-        const pieces = selectedPieces as Record<ArmorSlot, PreparedArmorItem>;
-        const cacheKey = `${baseStats.join(',')}|${
-            context.tuningMode === 'off' ? 'mods' : ARMOR_SLOTS.map((slot) => pieces[slot].compiledAddonProfile?.signature ?? 0).join(',')
-        }`;
-        let candidateCaps = context.addonCapsCache.get(cacheKey);
-        if (!candidateCaps) {
-            candidateCaps = context.dumpStat
-                ? calculateCompiledAddonCaps({
-                      profiles: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, pieces[slot].compiledAddonProfile])) as Record<
-                          ArmorSlot,
-                          CompiledAddonProfile
-                      >,
-                      baseStats: tupleToStats(baseStats),
-                      targets: context.targets,
-                      dumpStat: context.dumpStat,
-                      allowBalancedTuning: context.allowBalancedTuning,
-                      requestedStats: context.requestedStats
-                  })
-                : calculateStandardModCaps({
-                      baseStats: tupleToStats(baseStats),
-                      targets: context.targets,
-                      requestedStats: context.requestedStats
-                  });
-            if (context.addonCapsCache.size >= 32_768) {
-                context.addonCapsCache.clear();
-            }
-            context.addonCapsCache.set(cacheKey, candidateCaps);
-        }
-
-        for (const index of context.requestedIndexes) {
-            const stat = ARMOR_STATS[index];
-            context.caps[stat] = Math.max(context.caps[stat], candidateCaps[stat]);
+        if (context.tuningMode === 'off') {
+            updateStandardModCaps(context.caps, baseStats, context.targetValues, context.requestedIndexes, context.compiledAddonWorkspace);
+        } else {
+            updateCompiledAddonCaps(
+                context.caps,
+                context.compiledAddonProfiles as CompiledAddonProfile[],
+                baseStats,
+                context.targetValues,
+                context.dumpStatIndex,
+                context.allowBalancedTuning,
+                context.requestedIndexes,
+                context.compiledAddonWorkspace
+            );
         }
         return;
     }
 
     const slot = ARMOR_SLOTS[slotIndex];
     for (const item of plan.armor[slot]) {
-        selectedPieces[slot] = item;
+        context.compiledAddonProfiles[slotIndex] = item.compiledAddonProfile;
         selectedList.push(item);
         addTupleInPlace(baseStats, item.base, 1);
         addTupleInPlace(potentialStats, item.max, 1);
 
-        searchCompiledCaps(plan, context, selectedPieces, selectedList, slotIndex + 1, baseStats, potentialStats);
+        searchCompiledCaps(plan, context, selectedList, slotIndex + 1, baseStats, potentialStats);
 
         addTupleInPlace(baseStats, item.base, -1);
         addTupleInPlace(potentialStats, item.max, -1);
         selectedList.pop();
-        delete selectedPieces[slot];
     }
 }
 
@@ -903,16 +864,7 @@ function searchSlot(
 
         const pieces = selectedPieces as Record<ArmorSlot, PreparedArmorItem>;
         const shouldRetainBuild = context.resultSort !== undefined || context.builds.length < context.maxResults;
-        const bestAddonState = evaluateAddonState(
-            pieces,
-            baseStats,
-            context.targets,
-            context.targetValues,
-            context.dumpStat,
-            context.dumpStatIndex,
-            context.tuningMode,
-            shouldRetainBuild
-        );
+        const bestAddonState = evaluateAddonState(pieces, baseStats, context, shouldRetainBuild);
 
         if (!bestAddonState.valid) {
             context.counters.rejectedCombinations += 1;
@@ -935,6 +887,7 @@ function searchSlot(
 
     for (const item of plan.armor[slot]) {
         selectedPieces[slot] = item;
+        context.compiledAddonProfiles[slotIndex] = item.compiledAddonProfile;
         selectedList.push(item);
         addTupleInPlace(baseStats, item.base, 1);
         addTupleInPlace(potentialStats, item.max, 1);
@@ -959,87 +912,63 @@ function searchSlot(
 function evaluateAddonState(
     pieces: Record<ArmorSlot, PreparedArmorItem>,
     baseStats: StatTuple,
-    targets: StatVector,
-    targetValues: StatTuple,
-    dumpStat: ArmorStat | undefined,
-    dumpStatIndex: number,
-    tuningMode: TuningMode,
+    context: SearchContext,
     retainState: boolean
-) {
-    return resolveAddonPlan({
-        pieces,
-        baseStats,
-        targets,
-        targetValues,
-        dumpStat,
-        dumpStatIndex,
-        tuningMode,
-        retainState
-    });
-}
-
-function resolveAddonPlan(options: {
-    pieces: Record<ArmorSlot, PreparedArmorItem>;
-    baseStats: StatTuple;
-    targets: StatVector;
-    targetValues: StatTuple;
-    dumpStat: ArmorStat | undefined;
-    dumpStatIndex: number;
-    tuningMode: TuningMode;
-    retainState: boolean;
-}): AddonPlanResult {
-    if (ARMOR_SLOTS.every((slot) => options.pieces[slot].simpleAddons)) {
-        return evaluateSimpleStatMods(options.pieces, options.baseStats, options.targetValues, options.dumpStatIndex, options.retainState);
+): AddonPlanResult {
+    let allSimpleAddons = true;
+    let allCompiledAddons = context.dumpStat !== undefined;
+    for (let slotIndex = 0; slotIndex < ARMOR_SLOTS.length; slotIndex++) {
+        const piece = pieces[ARMOR_SLOTS[slotIndex]];
+        allSimpleAddons = allSimpleAddons && piece.simpleAddons;
+        allCompiledAddons = allCompiledAddons && context.compiledAddonProfiles[slotIndex] !== null;
     }
 
-    if (options.dumpStat && ARMOR_SLOTS.every((slot) => options.pieces[slot].compiledAddonProfile !== null)) {
-        const compiledResult = solveCompiledAddons({
-            profiles: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, options.pieces[slot].compiledAddonProfile])) as Record<
-                ArmorSlot,
-                CompiledAddonProfile
-            >,
-            baseStats: tupleToStats(options.baseStats),
-            targets: options.targets,
-            dumpStat: options.dumpStat,
-            allowBalancedTuning: options.tuningMode === 'all',
-            retainState: options.retainState
-        });
-
-        if (compiledResult) {
-            return compiledResult;
-        }
+    if (allSimpleAddons) {
+        return evaluateSimpleStatMods(pieces, baseStats, context.targetValues, context.dumpStatIndex, retainState);
     }
 
-    if (tupleMeetsTargets(options.baseStats, options.targetValues, options.dumpStatIndex)) {
+    if (allCompiledAddons) {
+        return solveCompiledAddons(
+            context.compiledAddonProfiles as CompiledAddonProfile[],
+            baseStats,
+            context.targetValues,
+            context.dumpStatIndex,
+            context.tuningMode === 'all',
+            retainState,
+            context.compiledAddonWorkspace
+        );
+    }
+
+    if (tupleMeetsTargets(baseStats, context.targetValues, context.dumpStatIndex)) {
         return {
             valid: true,
-            state: options.retainState ? createEmptyAddonState(tupleToStats(options.baseStats)) : null
+            state: retainState ? createEmptyAddonState(tupleToStats(baseStats)) : null
         };
     }
 
-    const pieces = unpreparePieces(options.pieces);
+    const unpreparedPieces = unpreparePieces(pieces);
     const greedyState = findGreedyAddonState(
-        pieces,
-        tupleToStats(options.baseStats),
-        options.targets,
-        options.dumpStat,
-        options.tuningMode
+        unpreparedPieces,
+        tupleToStats(baseStats),
+        context.targets,
+        context.dumpStat,
+        context.tuningMode
     );
 
-    if (meetsSolverTargets(greedyState.stats, options.targets, options.dumpStat)) {
+    if (meetsSolverTargets(greedyState.stats, context.targets, context.dumpStat)) {
         return {
             valid: true,
-            state: options.retainState ? greedyState : null
+            state: retainState ? greedyState : null
         };
     }
 
     const exactState = findExactAddonState(
-        pieces,
-        tupleToStats(options.baseStats),
-        options.targets,
-        options.dumpStat,
-        options.tuningMode,
-        options.retainState
+        unpreparedPieces,
+        tupleToStats(baseStats),
+        context.targets,
+        context.dumpStat,
+        context.tuningMode,
+        retainState
     );
 
     if (!exactState) {
@@ -1051,7 +980,7 @@ function resolveAddonPlan(options: {
 
     return {
         valid: true,
-        state: options.retainState ? exactState : null
+        state: retainState ? exactState : null
     };
 }
 
