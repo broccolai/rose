@@ -1,9 +1,11 @@
 import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
 import { styled } from '@panda/jsx';
-import { createEffect, createSignal, For } from 'solid-js';
+import { createEffect, createSignal, For, Show } from 'solid-js';
 
+import { HelpTooltip } from '@/features/armor/components/help-tooltip';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
+import { armorStatEffectsAt } from '@/features/armor/stat-effects';
 import { snapStatTarget, statTargetMax, statTargetStep } from '@/features/armor/target-cap-state';
 
 const MAX_STAT_TARGET = 200;
@@ -100,7 +102,63 @@ const StatSliderFrame = styled('div', {
 const StatSliderName = styled(FieldLabel, {
     base: {
         gridArea: 'name',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xxs)',
         minW: 0
+    }
+});
+
+const StatEffectContent = styled('span', {
+    base: {
+        display: 'grid',
+        gap: 'var(--rose-space-xs)',
+        minW: 0
+    }
+});
+
+const StatEffectHeading = styled('strong', {
+    base: {
+        color: 'var(--rose-text)',
+        fontSize: '0.78rem',
+        fontWeight: 700
+    }
+});
+
+const StatEffectList = styled('span', {
+    base: {
+        display: 'grid',
+        gap: '0.3rem'
+    }
+});
+
+const StatEffectRow = styled('span', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)',
+        gap: 'var(--rose-space-sm)',
+        alignItems: 'start'
+    }
+});
+
+const StatEffectLabel = styled('span', {
+    base: {
+        color: 'var(--rose-muted)'
+    }
+});
+
+const StatEffectValue = styled('span', {
+    base: {
+        color: 'var(--rose-text)',
+        fontWeight: 600,
+        textAlign: 'right'
+    }
+});
+
+const StatEffectNote = styled('span', {
+    base: {
+        color: 'var(--rose-muted)',
+        fontSize: '0.68rem'
     }
 });
 
@@ -266,6 +324,7 @@ function StatTargetSlider(props: StatTargetSliderProps) {
 
     const clampDraft = (value: string | number) => snapStatTarget(Number(value) || 0, props.cap, props.allowBalancedTuning);
     const inputDisabled = () => props.disabled || props.pending || maxValue() <= 0;
+    const statEffects = () => armorStatEffectsAt(props.stat, draftValue());
 
     const previewDraftValue = (value: number) => {
         setDraftValue(value);
@@ -418,7 +477,25 @@ function StatTargetSlider(props: StatTargetSliderProps) {
 
     return (
         <StatSliderRow>
-            <StatSliderName>{props.label}</StatSliderName>
+            <StatSliderName>
+                {props.label}
+                <HelpTooltip label={`What ${props.label} does at ${draftValue()}`}>
+                    <StatEffectContent>
+                        <StatEffectHeading>{statEffects().heading}</StatEffectHeading>
+                        <StatEffectList>
+                            <For each={statEffects().effects}>
+                                {(effect) => (
+                                    <StatEffectRow>
+                                        <StatEffectLabel>{effect.label}</StatEffectLabel>
+                                        <StatEffectValue>{effect.value}</StatEffectValue>
+                                    </StatEffectRow>
+                                )}
+                            </For>
+                        </StatEffectList>
+                        <Show when={statEffects().note}>{(note) => <StatEffectNote>{note()}</StatEffectNote>}</Show>
+                    </StatEffectContent>
+                </HelpTooltip>
+            </StatSliderName>
             <StatSliderFrame>
                 <StatSliderTrack
                     role="slider"

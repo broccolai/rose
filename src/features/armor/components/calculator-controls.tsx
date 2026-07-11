@@ -7,6 +7,7 @@ import { CharacterPicker } from '@/features/armor/components/character-picker';
 import { DumpControls } from '@/features/armor/components/dump-controls';
 import { FragmentControls } from '@/features/armor/components/fragment-controls';
 import { ArmorSetFields, ExoticPicker } from '@/features/armor/components/gear-settings';
+import { HelpTooltip } from '@/features/armor/components/help-tooltip';
 import { PaneScroll } from '@/features/armor/components/scroll-primitives';
 import { StatTargetFields } from '@/features/armor/components/stat-target-fields';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
@@ -111,7 +112,13 @@ export function CalculatorControls() {
                                 </FormRow>
 
                                 <FormRow as="div">
-                                    <RowLabel>Dump</RowLabel>
+                                    <RowLabel>
+                                        Dump
+                                        <HelpTooltip label="About dump stats">
+                                            The stat you are willing to lose. Tuning can move +5 into another stat by taking -5 from this
+                                            one, and choosing it makes solving much faster.
+                                        </HelpTooltip>
+                                    </RowLabel>
                                     <DumpControls dumpStat={controls.dumpStat()} onDumpStatChange={actions.setDumpStat} />
                                 </FormRow>
 

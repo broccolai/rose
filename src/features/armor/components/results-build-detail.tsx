@@ -1,6 +1,7 @@
-import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorSlot } from '@armor-calc';
+import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { debounce } from '@solid-primitives/scheduled';
+import { Shield } from 'lucide-solid';
 import { createSignal, For, Show } from 'solid-js';
 
 import { ButtonGroup, TonalButton } from '@/features/armor/components/calculator-control-primitives';
@@ -50,6 +51,60 @@ const PieceName = styled('span', {
         fontWeight: 700
     }
 });
+
+const PieceIdentity = styled('span', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: '1.75rem minmax(0, 1fr)',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
+        minW: 0
+    }
+});
+
+const PieceIcon = styled('img', {
+    base: {
+        display: 'block',
+        w: '1.75rem',
+        h: '1.75rem',
+        borderRadius: 'var(--rose-radius-xs)',
+        objectFit: 'cover',
+        bg: 'var(--rose-surface-raised)'
+    }
+});
+
+const PieceIconPlaceholder = styled('span', {
+    base: {
+        display: 'grid',
+        placeItems: 'center',
+        w: '1.75rem',
+        h: '1.75rem',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-xs)',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-muted)'
+    }
+});
+
+const ArmorPieceIdentity = (props: { item: ArmorItem }) => {
+    const [iconFailed, setIconFailed] = createSignal(false);
+
+    return (
+        <PieceIdentity>
+            <Show
+                when={props.item.iconUrl && !iconFailed()}
+                fallback={
+                    <PieceIconPlaceholder aria-hidden="true">
+                        <Shield size={14} strokeWidth={1.8} />
+                    </PieceIconPlaceholder>
+                }
+            >
+                <PieceIcon src={props.item.iconUrl} alt="" loading="lazy" onError={() => setIconFailed(true)} />
+            </Show>
+            <PieceName title={props.item.name}>{props.item.name}</PieceName>
+        </PieceIdentity>
+    );
+};
 
 const addonName = (build: ArmorBuild, slot: ArmorSlot, addonKey: 'statMod' | 'tuning'): string => {
     const addon = build.pieces[slot][addonKey];
@@ -197,7 +252,7 @@ export function ResultsBuildDetail(props: ResultsBuildDetailProps) {
                                     <tr>
                                         <td data-muted>{SLOT_LABELS[slot]}</td>
                                         <td>
-                                            <PieceName title={piece().item.name}>{piece().item.name}</PieceName>
+                                            <ArmorPieceIdentity item={piece().item} />
                                         </td>
                                         <td data-muted>{addonName(props.build, slot, 'statMod')}</td>
                                         <Show when={props.showTuningResults}>

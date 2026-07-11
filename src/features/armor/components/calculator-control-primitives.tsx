@@ -16,6 +16,9 @@ export const FormRow = styled('label', {
 
 export const RowLabel = styled('span', {
     base: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xxs)',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
         lineHeight: 1,
