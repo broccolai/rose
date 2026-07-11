@@ -150,6 +150,7 @@ export function CalculatorControls() {
                         <FragmentControls
                             selectedSubclass={controls.selectedSubclass()}
                             selectedFragmentIds={controls.selectedFragmentIds()}
+                            fragmentDescriptions={controls.fragmentDescriptions()}
                             onSubclassChange={actions.setSubclass}
                             onFragmentToggle={actions.toggleFragment}
                             onImportFragmentsFromGame={actions.importFragmentsFromGame}

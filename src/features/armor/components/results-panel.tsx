@@ -232,6 +232,9 @@ export function ResultsPanel() {
             <ResultsHeader>
                 <ResultsTitle>Results</ResultsTitle>
                 <HeaderTools>
+                    <Show when={results.view() === 'history' || results.result()?.ok}>
+                        <TinyMuted>{resultCountLabel()}</TinyMuted>
+                    </Show>
                     <ResultsTabs role="tablist" aria-label="Result views">
                         <ResultsTab
                             type="button"
@@ -252,9 +255,6 @@ export function ResultsPanel() {
                             History
                         </ResultsTab>
                     </ResultsTabs>
-                    <Show when={results.view() === 'history' || results.result()?.ok}>
-                        <TinyMuted>{resultCountLabel()}</TinyMuted>
-                    </Show>
                 </HeaderTools>
             </ResultsHeader>
             <ResultsBody>

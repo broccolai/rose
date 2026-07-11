@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { fragmentsForSubclass, getFragmentByHash, inferSubclassTypeFromName } from '@/features/armor/subclass-fragments';
+import {
+    fragmentDescriptionsFromDefinitions,
+    fragmentsForSubclass,
+    getFragmentByHash,
+    inferSubclassTypeFromName,
+    resolveFragmentDescriptions
+} from '@/features/armor/subclass-fragments';
 
 describe('subclass fragment helpers', () => {
     test('infers subclass type from equipped subclass names', () => {
@@ -12,6 +18,59 @@ describe('subclass fragment helpers', () => {
     test('finds known fragments by Bungie plug hash', () => {
         expect(getFragmentByHash(2483898431)?.id).toBe('stasis:whisper-of-hunger');
         expect(getFragmentByHash(4180586737)?.id).toBe('solar:ember-of-mercy');
+    });
+
+    test('resolves official fragment descriptions from inventory definitions', async () => {
+        const descriptions = await resolveFragmentDescriptions(async (hash) => ({
+            displayProperties: {
+                description: hash === 4180586737 ? 'Picking up a Firesprite grants restoration.' : ''
+            }
+        }));
+
+        expect(descriptions['solar:ember-of-mercy']).toBe('Picking up a Firesprite grants restoration.');
+        expect(descriptions['stasis:whisper-of-hunger']).toBeUndefined();
+    });
+
+    test('falls back to the manifest name when a legacy fragment hash is duplicated', async () => {
+        const descriptions = await resolveFragmentDescriptions(
+            async (hash) => ({
+                displayProperties: {
+                    name: hash === 2272984668 ? 'Echo of Undermining' : '',
+                    description: hash === 2272984668 ? 'Grenades weaken targets.' : ''
+                }
+            }),
+            (name) =>
+                name === 'Echo of Exchange'
+                    ? {
+                          definition: {
+                              displayProperties: {
+                                  name,
+                                  description: 'Melee final blows grant grenade energy.'
+                              }
+                          }
+                      }
+                    : null
+        );
+
+        expect(descriptions['void:echo-of-undermining']).toBe('Grenades weaken targets.');
+        expect(descriptions['void:echo-of-exchange']).toBe('Melee final blows grant grenade energy.');
+    });
+
+    test('reads fragment descriptions from loaded benchmark definitions', () => {
+        expect(
+            fragmentDescriptionsFromDefinitions([
+                {
+                    hash: 2483898431,
+                    definition: { displayProperties: { description: 'Increases melee energy gained from shards.' } }
+                },
+                {
+                    hash: 123,
+                    definition: { displayProperties: { description: 'Not a fragment.' } }
+                }
+            ])
+        ).toEqual({
+            'stasis:whisper-of-hunger': 'Increases melee energy gained from shards.'
+        });
     });
 
     test('sorts subclass fragments by affected stat order', () => {

@@ -12,6 +12,17 @@ export type SubclassFragment = {
     bonuses: Partial<StatVector>;
 };
 
+export type FragmentDescriptionMap = Record<string, string>;
+
+type FragmentDefinition = {
+    displayProperties?:
+        | {
+              name?: string | undefined;
+              description?: string | undefined;
+          }
+        | undefined;
+};
+
 export const SUBCLASS_FRAGMENTS: SubclassFragment[] = [
     fragment('stasis:whisper-of-durance', 'Whisper of Durance', 'Stasis', 3469412969, { melee: 10 }),
     fragment('stasis:whisper-of-chains', 'Whisper of Chains', 'Stasis', 537774540, { class: 10 }),
@@ -122,6 +133,49 @@ export function fragmentsForSubclass(subclass: SubclassType) {
 
 export function getFragmentByHash(hash: number) {
     return FRAGMENTS_BY_HASH.get(hash) ?? null;
+}
+
+export async function resolveFragmentDescriptions(
+    getDefinition: (hash: number) => Promise<FragmentDefinition | null>,
+    getDefinitionByName?: (name: string) => { definition: FragmentDefinition } | null
+): Promise<FragmentDescriptionMap> {
+    const descriptions = await Promise.all(
+        SUBCLASS_FRAGMENTS.map(async (fragment) => {
+            const hashDefinition = await getDefinition(fragment.hash);
+            const hashDefinitionName = hashDefinition?.displayProperties?.name;
+            const definition =
+                hashDefinitionName && hashDefinitionName !== fragment.name
+                    ? getDefinitionByName?.(fragment.name)?.definition
+                    : hashDefinition;
+
+            return [fragment.id, definition?.displayProperties?.description?.trim()] as const;
+        })
+    );
+
+    return Object.fromEntries(descriptions.filter((entry): entry is readonly [string, string] => Boolean(entry[1])));
+}
+
+export function fragmentDescriptionsFromDefinitions(
+    definitions: readonly { hash: number; definition: FragmentDefinition }[]
+): FragmentDescriptionMap {
+    const definitionsByHash = new Map(definitions.map((entry) => [entry.hash, entry.definition]));
+    const definitionsByName = new Map(
+        definitions.flatMap((entry) => {
+            const name = entry.definition.displayProperties?.name;
+            return name ? [[name, entry.definition] as const] : [];
+        })
+    );
+
+    return Object.fromEntries(
+        SUBCLASS_FRAGMENTS.map((fragment) => {
+            const hashDefinition = definitionsByHash.get(fragment.hash);
+            const hashDefinitionName = hashDefinition?.displayProperties?.name;
+            const definition =
+                hashDefinitionName && hashDefinitionName !== fragment.name ? definitionsByName.get(fragment.name) : hashDefinition;
+
+            return [fragment.id, definition?.displayProperties?.description?.trim()] as const;
+        }).filter((entry): entry is readonly [string, string] => Boolean(entry[1]))
+    );
 }
 
 export function inferSubclassTypeFromName(name: string | undefined) {

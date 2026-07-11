@@ -42,6 +42,7 @@ export type LoadedManifestEquipableItemSetDefinition = {
 
 export type LoadedManifestResolver = ManifestResolver & {
     getLoadedInventoryItemDefinitions(): LoadedManifestDefinition[];
+    getInventoryItemDefinitionByName?: ((name: string) => LoadedManifestDefinition | null) | undefined;
     getInventoryItemDefinitionsByPlugCategory?: ((plugCategoryIdentifier: string) => LoadedManifestDefinition[]) | undefined;
     getManifestCacheMetadata?:
         | (() => {

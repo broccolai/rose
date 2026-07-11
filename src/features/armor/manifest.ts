@@ -59,6 +59,13 @@ export async function createBungieManifestResolver(options: ManifestResolverOpti
                     definition
                 }));
         },
+        getInventoryItemDefinitionByName(name: string) {
+            const entry = Object.entries(manifestCache?.inventoryItemDefinitions ?? {}).find(
+                ([, definition]) => definition.displayProperties?.name === name
+            );
+
+            return entry ? { hash: Number(entry[0]), definition: entry[1] } : null;
+        },
         getInventoryItemDefinitionsByPlugCategory(plugCategoryIdentifier: string) {
             return Object.entries(manifestCache?.inventoryItemDefinitions ?? {})
                 .filter(([, definition]) => definition.plug?.plugCategoryIdentifier === plugCategoryIdentifier)

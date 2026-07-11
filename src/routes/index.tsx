@@ -87,8 +87,11 @@ import {
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
 import { createArmorSolverClient } from '@/features/armor/solver-worker-client';
 import {
+    type FragmentDescriptionMap,
     formatFragmentBonus,
+    fragmentDescriptionsFromDefinitions,
     fragmentsForSubclass,
+    resolveFragmentDescriptions,
     type SubclassType,
     sanitizeFragmentIds,
     sumFragmentBonuses
@@ -157,6 +160,7 @@ export default function Home() {
     const [armorSetDisplayMode, setArmorSetDisplayMode] = createSignal<ArmorSetDisplayMode>('sets');
     const [selectedSubclass, setSelectedSubclass] = createSignal<SubclassType>('Prismatic');
     const [selectedFragmentIds, setSelectedFragmentIds] = createSignal<string[]>([]);
+    const [fragmentDescriptions, setFragmentDescriptions] = createSignal<FragmentDescriptionMap>({});
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
     const [allowBalancedTuning, setAllowBalancedTuning] = createSignal(false);
     const [onlyFullyMasterworkedGear, setOnlyFullyMasterworkedGear] = createSignal(false);
@@ -700,6 +704,7 @@ export default function Home() {
         setNormalizedProfile(null);
         setLoadedSnapshot(null);
         setLoadedManifestDefinitions([]);
+        setFragmentDescriptions({});
         setFavoriteExoticItemHashes([]);
         setSavedBuilds([]);
         setPersonalLibraryOwnerId('');
@@ -919,18 +924,21 @@ export default function Home() {
             total: 0,
             percent: 12
         });
-        const nextProfile = await normalizeVaultExport(nextSnapshot, manifest, {
-            onProgress: (progress) => {
-                const ratio = progress.total > 0 ? progress.current / progress.total : 0;
-                setLoadProgress({
-                    active: true,
-                    label: progress.label,
-                    current: progress.current,
-                    total: progress.total,
-                    percent: Math.max(12, Math.min(98, Math.round(12 + ratio * 86)))
-                });
-            }
-        });
+        const [nextProfile, nextFragmentDescriptions] = await Promise.all([
+            normalizeVaultExport(nextSnapshot, manifest, {
+                onProgress: (progress) => {
+                    const ratio = progress.total > 0 ? progress.current / progress.total : 0;
+                    setLoadProgress({
+                        active: true,
+                        label: progress.label,
+                        current: progress.current,
+                        total: progress.total,
+                        percent: Math.max(12, Math.min(98, Math.round(12 + ratio * 86)))
+                    });
+                }
+            }),
+            resolveFragmentDescriptions(manifest.getInventoryItem, manifest.getInventoryItemDefinitionByName)
+        ]);
         const preparedState = prepareLoadedCalculatorState({
             profile: nextProfile,
             currentCharacterId: selectedCharacterId(),
@@ -941,6 +949,7 @@ export default function Home() {
 
         setNormalizedProfile(nextProfile);
         setLoadedSnapshot(nextSnapshot);
+        setFragmentDescriptions(nextFragmentDescriptions);
         loadPersonalLibrary(nextSnapshot);
         setLoadedManifestDefinitions(manifest.getLoadedInventoryItemDefinitions());
         setSelectedCharacterId(preparedState.characterId);
@@ -973,6 +982,7 @@ export default function Home() {
     ) {
         setLoadedSnapshot(null);
         setLoadedManifestDefinitions([]);
+        setFragmentDescriptions({});
         if (!options.preserveSolve) {
             invalidateSolve();
         }
@@ -987,6 +997,7 @@ export default function Home() {
 
         setNormalizedProfile(nextProfile);
         setLoadedSnapshot(nextSnapshot);
+        setFragmentDescriptions(fragmentDescriptionsFromDefinitions(nextManifestDefinitions));
         loadPersonalLibrary(nextSnapshot);
         setLoadedManifestDefinitions(nextManifestDefinitions);
         setSelectedCharacterId(preparedState.characterId);
@@ -1417,6 +1428,7 @@ export default function Home() {
             armorSetDisplayMode,
             selectedSubclass,
             selectedFragmentIds,
+            fragmentDescriptions,
             importingFragments,
             dumpStat,
             allowBalancedTuning: effectiveAllowBalancedTuning,

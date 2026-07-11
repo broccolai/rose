@@ -6,7 +6,7 @@ import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption, ResultS
 import type { LoadProgress } from '@/features/armor/components/app-toolbar';
 import type { SavedArmorBuild } from '@/features/armor/model/personal-library';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
-import type { SubclassType } from '@/features/armor/subclass-fragments';
+import type { FragmentDescriptionMap, SubclassType } from '@/features/armor/subclass-fragments';
 
 export type ResultsView = 'results' | 'history';
 
@@ -18,6 +18,7 @@ export interface ArmorCalculatorContextValue {
         armorSetDisplayMode: Accessor<ArmorSetDisplayMode>;
         selectedSubclass: Accessor<SubclassType>;
         selectedFragmentIds: Accessor<string[]>;
+        fragmentDescriptions: Accessor<FragmentDescriptionMap>;
         importingFragments: Accessor<boolean>;
         dumpStat: Accessor<ArmorStat | ''>;
         allowBalancedTuning: Accessor<boolean>;

@@ -10,6 +10,12 @@ interface HelpTooltipProps {
     tone?: 'help' | 'warning' | undefined;
 }
 
+interface HoverTooltipProps {
+    label: string;
+    content: JSX.Element;
+    children: JSX.Element;
+}
+
 const tooltipTriggerRecipe = cva({
     base: {
         position: 'relative',
@@ -80,13 +86,28 @@ const TooltipPanel = styled('span', {
     }
 });
 
-export const HelpTooltip = (props: HelpTooltipProps): JSX.Element => {
-    let triggerElement: HTMLButtonElement | undefined;
+const HoverTooltipTrigger = styled('span', {
+    base: {
+        display: 'block',
+        maxW: '100%',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        cursor: 'help',
+        outline: 'none',
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        }
+    }
+});
+
+const createTooltipState = () => {
+    let triggerElement: HTMLElement | undefined;
     const [hovered, setHovered] = createSignal(false);
     const [focused, setFocused] = createSignal(false);
     const [position, setPosition] = createSignal({ top: 0, left: 0 });
     const visible = () => hovered() || focused();
-    const tone = () => props.tone ?? 'help';
     const updatePosition = () => {
         if (!triggerElement || typeof window === 'undefined') {
             return;
@@ -113,26 +134,68 @@ export const HelpTooltip = (props: HelpTooltipProps): JSX.Element => {
         });
     });
 
+    return {
+        setTriggerElement: (element: HTMLElement) => {
+            triggerElement = element;
+        },
+        setHovered,
+        setFocused,
+        position,
+        visible
+    };
+};
+
+export const HelpTooltip = (props: HelpTooltipProps): JSX.Element => {
+    const tooltip = createTooltipState();
+    const tone = () => props.tone ?? 'help';
+
     return (
         <>
             <TooltipTrigger
-                ref={triggerElement}
+                ref={tooltip.setTriggerElement}
                 type="button"
                 aria-label={props.label}
                 tone={tone()}
-                onPointerEnter={() => setHovered(true)}
-                onPointerLeave={() => setHovered(false)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
+                onPointerEnter={() => tooltip.setHovered(true)}
+                onPointerLeave={() => tooltip.setHovered(false)}
+                onFocus={() => tooltip.setFocused(true)}
+                onBlur={() => tooltip.setFocused(false)}
             >
                 <Show when={tone() === 'warning'} fallback={<CircleHelp size={14} strokeWidth={2} aria-hidden="true" />}>
                     <CircleAlert size={17} strokeWidth={2} aria-hidden="true" />
                 </Show>
             </TooltipTrigger>
-            <Show when={visible()}>
+            <Show when={tooltip.visible()}>
                 <Portal>
-                    <TooltipPanel role="tooltip" style={{ top: `${position().top}px`, left: `${position().left}px` }}>
+                    <TooltipPanel role="tooltip" style={{ top: `${tooltip.position().top}px`, left: `${tooltip.position().left}px` }}>
                         {props.children}
+                    </TooltipPanel>
+                </Portal>
+            </Show>
+        </>
+    );
+};
+
+export const HoverTooltip = (props: HoverTooltipProps): JSX.Element => {
+    const tooltip = createTooltipState();
+
+    return (
+        <>
+            <HoverTooltipTrigger
+                ref={tooltip.setTriggerElement}
+                tabIndex={0}
+                aria-label={props.label}
+                onPointerEnter={() => tooltip.setHovered(true)}
+                onPointerLeave={() => tooltip.setHovered(false)}
+                onFocus={() => tooltip.setFocused(true)}
+                onBlur={() => tooltip.setFocused(false)}
+            >
+                {props.children}
+            </HoverTooltipTrigger>
+            <Show when={tooltip.visible()}>
+                <Portal>
+                    <TooltipPanel role="tooltip" style={{ top: `${tooltip.position().top}px`, left: `${tooltip.position().left}px` }}>
+                        {props.content}
                     </TooltipPanel>
                 </Portal>
             </Show>

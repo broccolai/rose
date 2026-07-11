@@ -4,13 +4,15 @@ import { For } from 'solid-js';
 
 import { CollapsibleSection, CustomSelect, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';
+import { HoverTooltip } from '@/features/armor/components/help-tooltip';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { COMPACT_STAT_LABELS } from '@/features/armor/display-metadata';
-import { fragmentsForSubclass, SUBCLASS_TYPES, type SubclassType } from '@/features/armor/subclass-fragments';
+import { type FragmentDescriptionMap, fragmentsForSubclass, SUBCLASS_TYPES, type SubclassType } from '@/features/armor/subclass-fragments';
 
 interface FragmentControlsProps {
     selectedSubclass: SubclassType;
     selectedFragmentIds: string[];
+    fragmentDescriptions: FragmentDescriptionMap;
     onSubclassChange: (subclass: SubclassType) => void;
     onFragmentToggle: (fragmentId: string) => void;
     onImportFragmentsFromGame: () => void;
@@ -180,7 +182,14 @@ export function FragmentControls(props: FragmentControlsProps) {
 
                                 return (
                                     <tr data-selected={selected()}>
-                                        <FragmentNameCell title={fragment.name}>{fragment.name}</FragmentNameCell>
+                                        <FragmentNameCell>
+                                            <HoverTooltip
+                                                label={`${fragment.name} description`}
+                                                content={props.fragmentDescriptions[fragment.id] || 'Description unavailable.'}
+                                            >
+                                                {fragment.name}
+                                            </HoverTooltip>
+                                        </FragmentNameCell>
                                         <FragmentBonusCell>
                                             <FragmentBonusList>
                                                 <For each={ARMOR_STATS.filter((stat) => fragment.bonuses[stat])}>
