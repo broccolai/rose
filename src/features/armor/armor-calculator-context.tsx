@@ -22,6 +22,7 @@ export interface ArmorCalculatorContextValue {
         dumpStat: Accessor<ArmorStat | ''>;
         allowBalancedTuning: Accessor<boolean>;
         onlyFullyMasterworkedGear: Accessor<boolean>;
+        refreshVaultOnStartup: Accessor<boolean>;
         targets: Accessor<StatVector>;
         targetCaps: Accessor<StatVector>;
         targetCapsPending: Accessor<boolean>;
@@ -60,6 +61,7 @@ export interface ArmorCalculatorContextValue {
         setDumpStat: (stat: string) => void;
         setAllowBalancedTuning: (enabled: boolean) => void;
         setOnlyFullyMasterworkedGear: (enabled: boolean) => void;
+        setRefreshVaultOnStartup: (enabled: boolean) => void;
         setTarget: (stat: ArmorStat, value: string) => void;
         setRequirement: (setId: string, value: string) => void;
         solve: () => void;

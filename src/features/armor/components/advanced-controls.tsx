@@ -8,9 +8,11 @@ interface AdvancedControlsProps {
     allowBalancedTuning: boolean;
     armorSetDisplayMode: ArmorSetDisplayMode;
     onlyFullyMasterworkedGear: boolean;
+    refreshVaultOnStartup: boolean;
     onArmorSetDisplayModeChange: (mode: ArmorSetDisplayMode) => void;
     onBalancedTuningChange: (enabled: boolean) => void;
     onOnlyFullyMasterworkedGearChange: (enabled: boolean) => void;
+    onRefreshVaultOnStartupChange: (enabled: boolean) => void;
 }
 
 const AdvancedGrid = styled('div', {
@@ -93,6 +95,12 @@ export function AdvancedControlsBody(props: AdvancedControlsProps) {
                 name="balanced-tuning"
                 value={props.allowBalancedTuning}
                 onChange={props.onBalancedTuningChange}
+            />
+            <AdvancedYesNoRow
+                label="Refresh Vault on Startup"
+                name="refresh-vault-on-startup"
+                value={props.refreshVaultOnStartup}
+                onChange={props.onRefreshVaultOnStartupChange}
             />
             <AdvancedYesNoRow
                 label="Only use Masterworked items"

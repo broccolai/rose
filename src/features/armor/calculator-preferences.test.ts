@@ -24,6 +24,7 @@ describe('calculator preferences', () => {
                 dumpStat: 'health',
                 allowBalancedTuning: 'yes',
                 onlyFullyMasterworkedGear: true,
+                refreshVaultOnStartup: true,
                 targets: {
                     health: -10,
                     melee: 42.9,
@@ -53,6 +54,7 @@ describe('calculator preferences', () => {
             dumpStat: 'health',
             allowBalancedTuning: false,
             onlyFullyMasterworkedGear: true,
+            refreshVaultOnStartup: true,
             targets: {
                 health: 0,
                 melee: 42,

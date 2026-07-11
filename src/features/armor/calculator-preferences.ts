@@ -18,6 +18,7 @@ export type CalculatorPreferences = {
     dumpStat?: ArmorStat | '' | undefined;
     allowBalancedTuning?: boolean | undefined;
     onlyFullyMasterworkedGear?: boolean | undefined;
+    refreshVaultOnStartup?: boolean | undefined;
     targets?: Partial<StatVector> | undefined;
     setSelections?: Record<string, SetSelectionValue> | undefined;
     resultSort?: ArmorBuildSort | undefined;
@@ -101,6 +102,7 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         dumpStat: candidate.dumpStat && isArmorStat(candidate.dumpStat) ? candidate.dumpStat : '',
         allowBalancedTuning: candidate.allowBalancedTuning === true,
         onlyFullyMasterworkedGear: candidate.onlyFullyMasterworkedGear === true,
+        refreshVaultOnStartup: candidate.refreshVaultOnStartup === true,
         targets: sanitizeTargets(candidate.targets),
         setSelections: sanitizeSetSelectionRecord(candidate.setSelections),
         resultSort: sanitizeResultSort(candidate.resultSort)

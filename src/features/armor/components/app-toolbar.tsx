@@ -346,9 +346,11 @@ function ToolbarActions(props: AppToolbarProps) {
                             allowBalancedTuning={controls.allowBalancedTuning()}
                             armorSetDisplayMode={controls.armorSetDisplayMode()}
                             onlyFullyMasterworkedGear={controls.onlyFullyMasterworkedGear()}
+                            refreshVaultOnStartup={controls.refreshVaultOnStartup()}
                             onArmorSetDisplayModeChange={actions.setArmorSetDisplayMode}
                             onBalancedTuningChange={actions.setAllowBalancedTuning}
                             onOnlyFullyMasterworkedGearChange={actions.setOnlyFullyMasterworkedGear}
+                            onRefreshVaultOnStartupChange={actions.setRefreshVaultOnStartup}
                         />
                     </SettingsPopover>
                 </Show>

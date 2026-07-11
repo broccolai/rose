@@ -154,6 +154,7 @@ export default function Home() {
     const [dumpStat, setDumpStat] = createSignal<ArmorStat | ''>('');
     const [allowBalancedTuning, setAllowBalancedTuning] = createSignal(false);
     const [onlyFullyMasterworkedGear, setOnlyFullyMasterworkedGear] = createSignal(false);
+    const [refreshVaultOnStartup, setRefreshVaultOnStartup] = createSignal(false);
     const [targets, setTargets] = createSignal<StatVector>({ ...EMPTY_STAT_TARGETS });
     const [targetCaps, setTargetCaps] = createSignal<StatVector>({ ...MAX_STAT_TARGET_CAPS });
     const [targetCapsPending, setTargetCapsPending] = createSignal(false);
@@ -568,6 +569,7 @@ export default function Home() {
             dumpStat: dumpStat(),
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             onlyFullyMasterworkedGear: onlyFullyMasterworkedGear(),
+            refreshVaultOnStartup: refreshVaultOnStartup(),
             targets: targets(),
             setSelections: setSelections(),
             resultSort: resultSort()
@@ -756,6 +758,10 @@ export default function Home() {
         }
 
         setAuthenticated(true);
+        if (!refreshVaultOnStartup() && (await loadCachedCalculatorData({ silentMissing: true }))) {
+            return;
+        }
+
         try {
             setStatus('loading');
             setMessage('Refreshing profile from Bungie...');
@@ -838,9 +844,9 @@ export default function Home() {
         }
     }
 
-    async function loadCachedCalculatorData(options: { silentMissing?: boolean } = {}) {
+    async function loadCachedCalculatorData(options: { silentMissing?: boolean } = {}): Promise<boolean> {
         if (equipOperationActive()) {
-            return;
+            return false;
         }
 
         try {
@@ -863,14 +869,16 @@ export default function Home() {
                         ? 'No cached profile found. Sign in and refresh once.'
                         : 'No cached profile found yet. Refresh from Bungie once first.'
                 );
-                return;
+                return false;
             }
 
             await applyLoadedCalculatorData(cachedSnapshot as VaultExportSnapshot, 'cached profile');
+            return true;
         } catch (error) {
             setStatus('error');
             setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage(error instanceof Error ? error.message : 'Unknown cached calculator load failure.');
+            return false;
         }
     }
 
@@ -1343,6 +1351,7 @@ export default function Home() {
         setDumpStat(nextDumpStat);
         setAllowBalancedTuning(nextAllowBalancedTuning);
         setOnlyFullyMasterworkedGear(preferences.onlyFullyMasterworkedGear === true);
+        setRefreshVaultOnStartup(preferences.refreshVaultOnStartup === true);
         setTargets(nextTargets);
         setSetSelections(preferences.setSelections ?? {});
         setResultSort(preferences.resultSort ?? DEFAULT_RESULT_SORT);
@@ -1368,6 +1377,7 @@ export default function Home() {
             dumpStat,
             allowBalancedTuning: effectiveAllowBalancedTuning,
             onlyFullyMasterworkedGear,
+            refreshVaultOnStartup,
             targets,
             targetCaps,
             targetCapsPending,
@@ -1420,6 +1430,7 @@ export default function Home() {
                 setOnlyFullyMasterworkedGear(enabled);
                 invalidateSolve();
             },
+            setRefreshVaultOnStartup,
             setTarget: updateTarget,
             setRequirement: updateSetRequirement,
             solve: solveCurrentBuilds,
