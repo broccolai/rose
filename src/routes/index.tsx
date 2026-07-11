@@ -104,7 +104,7 @@ import {
     snapStatTarget,
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
-import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
+import type { LoadedManifestDefinition, LoadedManifestResolver, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
 import {
     clearCachedVaultSnapshot,
     downloadJsonFile,
@@ -130,6 +130,13 @@ type LoadedBenchmarkBundle = {
         inventoryItemDefinitions?: Record<string, DestinyInventoryItemDefinition>;
     };
 };
+
+const resolveManifestFragmentDescriptions = (manifest: LoadedManifestResolver): Promise<FragmentDescriptionMap> =>
+    resolveFragmentDescriptions({
+        getDefinition: manifest.getInventoryItem,
+        getDefinitionByName: manifest.getInventoryItemDefinitionByName,
+        getPerk: manifest.getSandboxPerk
+    });
 
 export default function Home() {
     let targetCapRequestId = 0;
@@ -846,6 +853,14 @@ export default function Home() {
                     })),
                 'local test data'
             );
+            if (Object.keys(fragmentDescriptions()).length === 0) {
+                try {
+                    const manifest = await createBungieManifestResolver();
+                    setFragmentDescriptions(await resolveManifestFragmentDescriptions(manifest));
+                } catch (error) {
+                    console.warn('[rose manifest] Fragment descriptions unavailable', error);
+                }
+            }
             return true;
         } catch (error) {
             setStatus('error');
@@ -937,7 +952,7 @@ export default function Home() {
                     });
                 }
             }),
-            resolveFragmentDescriptions(manifest.getInventoryItem, manifest.getInventoryItemDefinitionByName)
+            resolveManifestFragmentDescriptions(manifest)
         ]);
         const preparedState = prepareLoadedCalculatorState({
             profile: nextProfile,

@@ -21,7 +21,23 @@ type FragmentDefinition = {
               description?: string | undefined;
           }
         | undefined;
+    perks?: Array<{ perkHash: number }> | undefined;
 };
+
+type FragmentPerkDefinition = {
+    displayProperties?:
+        | {
+              name?: string | undefined;
+              description?: string | undefined;
+          }
+        | undefined;
+};
+
+interface FragmentDescriptionResolver {
+    getDefinition: (hash: number) => Promise<FragmentDefinition | null>;
+    getDefinitionByName?: ((name: string) => { definition: FragmentDefinition } | null) | undefined;
+    getPerk?: ((hash: number) => Promise<FragmentPerkDefinition | null>) | undefined;
+}
 
 export const SUBCLASS_FRAGMENTS: SubclassFragment[] = [
     fragment('stasis:whisper-of-durance', 'Whisper of Durance', 'Stasis', 3469412969, { melee: 10 }),
@@ -135,20 +151,31 @@ export function getFragmentByHash(hash: number) {
     return FRAGMENTS_BY_HASH.get(hash) ?? null;
 }
 
-export async function resolveFragmentDescriptions(
-    getDefinition: (hash: number) => Promise<FragmentDefinition | null>,
-    getDefinitionByName?: (name: string) => { definition: FragmentDefinition } | null
-): Promise<FragmentDescriptionMap> {
+export async function resolveFragmentDescriptions(resolver: FragmentDescriptionResolver): Promise<FragmentDescriptionMap> {
     const descriptions = await Promise.all(
         SUBCLASS_FRAGMENTS.map(async (fragment) => {
-            const hashDefinition = await getDefinition(fragment.hash);
+            const hashDefinition = await resolver.getDefinition(fragment.hash);
             const hashDefinitionName = hashDefinition?.displayProperties?.name;
             const definition =
                 hashDefinitionName && hashDefinitionName !== fragment.name
-                    ? getDefinitionByName?.(fragment.name)?.definition
+                    ? resolver.getDefinitionByName?.(fragment.name)?.definition
                     : hashDefinition;
+            const directDescription = definition?.displayProperties?.description?.trim();
+            if (directDescription) {
+                return [fragment.id, directDescription] as const;
+            }
 
-            return [fragment.id, definition?.displayProperties?.description?.trim()] as const;
+            const perkDefinitions = resolver.getPerk
+                ? await Promise.all((definition?.perks ?? []).map(({ perkHash }) => resolver.getPerk?.(perkHash)))
+                : [];
+            const namedPerk = perkDefinitions.find(
+                (perk) => perk?.displayProperties?.name === fragment.name && perk.displayProperties.description?.trim()
+            );
+            const description =
+                namedPerk?.displayProperties?.description?.trim() ??
+                perkDefinitions.find((perk) => perk?.displayProperties?.description?.trim())?.displayProperties?.description?.trim();
+
+            return [fragment.id, description] as const;
         })
     );
 

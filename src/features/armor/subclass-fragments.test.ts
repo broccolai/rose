@@ -21,25 +21,27 @@ describe('subclass fragment helpers', () => {
     });
 
     test('resolves official fragment descriptions from inventory definitions', async () => {
-        const descriptions = await resolveFragmentDescriptions(async (hash) => ({
-            displayProperties: {
-                description: hash === 4180586737 ? 'Picking up a Firesprite grants restoration.' : ''
-            }
-        }));
+        const descriptions = await resolveFragmentDescriptions({
+            getDefinition: async (hash) => ({
+                displayProperties: {
+                    description: hash === 4180586737 ? 'Picking up a Firesprite grants restoration.' : ''
+                }
+            })
+        });
 
         expect(descriptions['solar:ember-of-mercy']).toBe('Picking up a Firesprite grants restoration.');
         expect(descriptions['stasis:whisper-of-hunger']).toBeUndefined();
     });
 
     test('falls back to the manifest name when a legacy fragment hash is duplicated', async () => {
-        const descriptions = await resolveFragmentDescriptions(
-            async (hash) => ({
+        const descriptions = await resolveFragmentDescriptions({
+            getDefinition: async (hash) => ({
                 displayProperties: {
                     name: hash === 2272984668 ? 'Echo of Undermining' : '',
                     description: hash === 2272984668 ? 'Grenades weaken targets.' : ''
                 }
             }),
-            (name) =>
+            getDefinitionByName: (name) =>
                 name === 'Echo of Exchange'
                     ? {
                           definition: {
@@ -50,10 +52,30 @@ describe('subclass fragment helpers', () => {
                           }
                       }
                     : null
-        );
+        });
 
         expect(descriptions['void:echo-of-undermining']).toBe('Grenades weaken targets.');
         expect(descriptions['void:echo-of-exchange']).toBe('Melee final blows grant grenade energy.');
+    });
+
+    test('follows linked sandbox perks when Bungie leaves the item description empty', async () => {
+        const descriptions = await resolveFragmentDescriptions({
+            getDefinition: async (hash) => ({
+                displayProperties: { name: hash === 4180586737 ? 'Ember of Mercy' : '' },
+                perks: hash === 4180586737 ? [{ perkHash: 1765272724 }, { perkHash: 833744803 }] : []
+            }),
+            getPerk: async (hash) => ({
+                displayProperties:
+                    hash === 1765272724
+                        ? {
+                              name: 'Ember of Mercy',
+                              description: 'Picking up a Firesprite grants restoration.'
+                          }
+                        : { name: '+10 Health', description: '+10 Health' }
+            })
+        });
+
+        expect(descriptions['solar:ember-of-mercy']).toBe('Picking up a Firesprite grants restoration.');
     });
 
     test('reads fragment descriptions from loaded benchmark definitions', () => {
