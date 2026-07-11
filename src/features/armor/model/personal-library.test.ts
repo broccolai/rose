@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot, type StatVector } from '@armor-calc';
 import {
+    EMPTY_PERSONAL_ARMOR_LIBRARY,
     isArmorBuildSaved,
     readPersonalArmorLibrary,
     removeSavedArmorBuild,
@@ -79,9 +80,49 @@ describe('personal armor library', () => {
             })
         };
 
-        writePersonalArmorLibrary('owner', library, targetStorage);
+        expect(writePersonalArmorLibrary('owner', library, targetStorage)).toEqual({ ok: true });
         expect(readPersonalArmorLibrary('owner', targetStorage)).toEqual(library);
         expect(readPersonalArmorLibrary('different-owner', targetStorage).savedBuilds).toEqual([]);
+    });
+
+    test('compacts solver-only armor data before persisting history', () => {
+        let persisted = '';
+        const targetStorage = {
+            getItem: () => persisted || null,
+            setItem: (_key: string, value: string) => {
+                persisted = value;
+            }
+        };
+        const build = makeBuild();
+        const library = {
+            favoriteExoticItemHashes: [123],
+            savedBuilds: saveArmorBuild([], build, {
+                characterId: 'character',
+                characterClass: 'warlock',
+                savedAt: '2026-07-11T00:00:00.000Z'
+            })
+        };
+
+        expect(writePersonalArmorLibrary('owner', library, targetStorage)).toEqual({ ok: true });
+        expect(persisted).not.toContain('baseStats');
+        expect(persisted).not.toContain('statModOptions');
+        expect(persisted).not.toContain('tuningOptions');
+        expect(readPersonalArmorLibrary('owner', targetStorage)).toEqual(library);
+    });
+
+    test('reports quota failures instead of throwing', () => {
+        const quotaError = Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+        const targetStorage = {
+            getItem: () => null,
+            setItem: () => {
+                throw quotaError;
+            }
+        };
+
+        expect(writePersonalArmorLibrary('owner', EMPTY_PERSONAL_ARMOR_LIBRARY, targetStorage)).toEqual({
+            ok: false,
+            reason: 'quota-exceeded'
+        });
     });
 
     test('drops malformed persisted values', () => {

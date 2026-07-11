@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type DestinyClass } from '@armor-calc';
+import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot, type DestinyClass } from '@armor-calc';
 
 import { buildExpansionKey } from '@/features/armor/result-display';
 
@@ -20,6 +20,22 @@ export interface PersonalArmorLibrary {
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
+export type PersonalArmorLibraryWriteResult =
+    | { ok: true }
+    | { ok: false; reason: 'storage-unavailable' | 'quota-exceeded' | 'write-failed' };
+
+type CompactArmorItem = Omit<ArmorItem, 'baseStats' | 'statModOptions' | 'tuningOptions' | 'debugWarnings'>;
+
+type CompactArmorBuild = Omit<ArmorBuild, 'pieces'> & {
+    pieces: Record<ArmorSlot, Omit<ArmorBuild['pieces'][ArmorSlot], 'item'> & { item: CompactArmorItem }>;
+};
+
+type StoredPersonalArmorLibrary = {
+    schemaVersion: 2;
+    favoriteExoticItemHashes: number[];
+    savedBuilds: Array<Omit<SavedArmorBuild, 'build'> & { build: CompactArmorBuild }>;
+};
+
 export const EMPTY_PERSONAL_ARMOR_LIBRARY: PersonalArmorLibrary = {
     favoriteExoticItemHashes: [],
     savedBuilds: []
@@ -30,24 +46,36 @@ export const readPersonalArmorLibrary = (ownerId: string, storage = getLocalStor
         return { ...EMPTY_PERSONAL_ARMOR_LIBRARY };
     }
 
-    const raw = storage.getItem(storageKey(ownerId));
-    if (!raw) {
-        return { ...EMPTY_PERSONAL_ARMOR_LIBRARY };
-    }
-
     try {
+        const raw = storage.getItem(storageKey(ownerId));
+        if (!raw) {
+            return { ...EMPTY_PERSONAL_ARMOR_LIBRARY };
+        }
+
         return sanitizePersonalArmorLibrary(JSON.parse(raw));
     } catch {
         return { ...EMPTY_PERSONAL_ARMOR_LIBRARY };
     }
 };
 
-export const writePersonalArmorLibrary = (ownerId: string, library: PersonalArmorLibrary, storage = getLocalStorage()): void => {
+export const writePersonalArmorLibrary = (
+    ownerId: string,
+    library: PersonalArmorLibrary,
+    storage = getLocalStorage()
+): PersonalArmorLibraryWriteResult => {
     if (!storage || !ownerId) {
-        return;
+        return { ok: false, reason: 'storage-unavailable' };
     }
 
-    storage.setItem(storageKey(ownerId), JSON.stringify(sanitizePersonalArmorLibrary(library)));
+    try {
+        storage.setItem(storageKey(ownerId), JSON.stringify(compactPersonalArmorLibrary(library)));
+        return { ok: true };
+    } catch (error) {
+        return {
+            ok: false,
+            reason: isQuotaExceededError(error) ? 'quota-exceeded' : 'write-failed'
+        };
+    }
 };
 
 export const toggleFavoriteExotic = (favorites: readonly number[], itemHash: number): number[] => {
@@ -97,7 +125,7 @@ export const sanitizePersonalArmorLibrary = (value: unknown): PersonalArmorLibra
         ? [...new Set(value['favoriteExoticItemHashes'].filter(isItemHash))]
         : [];
     const savedBuilds = Array.isArray(value['savedBuilds'])
-        ? value['savedBuilds'].filter(isSavedArmorBuild).slice(0, MAX_SAVED_BUILDS)
+        ? value['savedBuilds'].filter(isSavedArmorBuild).slice(0, MAX_SAVED_BUILDS).map(hydrateSavedArmorBuild)
         : [];
 
     return {
@@ -105,6 +133,60 @@ export const sanitizePersonalArmorLibrary = (value: unknown): PersonalArmorLibra
         savedBuilds
     };
 };
+
+const compactPersonalArmorLibrary = (library: PersonalArmorLibrary): StoredPersonalArmorLibrary => {
+    const sanitized = sanitizePersonalArmorLibrary(library);
+
+    return {
+        schemaVersion: 2,
+        favoriteExoticItemHashes: sanitized.favoriteExoticItemHashes,
+        savedBuilds: sanitized.savedBuilds.map((entry) => ({
+            ...entry,
+            build: {
+                ...entry.build,
+                pieces: Object.fromEntries(
+                    ARMOR_SLOTS.map((slot) => {
+                        const piece = entry.build.pieces[slot];
+                        const {
+                            baseStats: _baseStats,
+                            statModOptions: _statModOptions,
+                            tuningOptions: _tuningOptions,
+                            debugWarnings: _debugWarnings,
+                            ...item
+                        } = piece.item;
+
+                        return [slot, { ...piece, item }];
+                    })
+                ) as CompactArmorBuild['pieces']
+            }
+        }))
+    };
+};
+
+const hydrateSavedArmorBuild = (entry: SavedArmorBuild): SavedArmorBuild => ({
+    ...entry,
+    build: {
+        ...entry.build,
+        pieces: Object.fromEntries(
+            ARMOR_SLOTS.map((slot) => {
+                const piece = entry.build.pieces[slot];
+
+                return [
+                    slot,
+                    {
+                        ...piece,
+                        item: {
+                            ...piece.item,
+                            baseStats: isStatVector(piece.item.baseStats) ? piece.item.baseStats : emptyStats(),
+                            statModOptions: Array.isArray(piece.item.statModOptions) ? piece.item.statModOptions : [],
+                            tuningOptions: Array.isArray(piece.item.tuningOptions) ? piece.item.tuningOptions : []
+                        }
+                    }
+                ];
+            })
+        ) as ArmorBuild['pieces']
+    }
+});
 
 const isSavedArmorBuild = (value: unknown): value is SavedArmorBuild => {
     if (!isRecord(value) || typeof value['id'] !== 'string' || typeof value['savedAt'] !== 'string') {
@@ -149,6 +231,21 @@ const isArmorBuild = (value: unknown): value is ArmorBuild => {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const isStatVector = (value: unknown): value is ArmorItem['baseStats'] =>
+    isRecord(value) && ARMOR_STATS.every((stat) => Number.isFinite(value[stat]));
+
+const emptyStats = (): ArmorItem['baseStats'] => ({
+    health: 0,
+    melee: 0,
+    grenade: 0,
+    super: 0,
+    class: 0,
+    weapons: 0
+});
+
+const isQuotaExceededError = (error: unknown): boolean =>
+    isRecord(error) && (error['name'] === 'QuotaExceededError' || error['code'] === 22 || error['code'] === 1014);
 
 const isItemHash = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) > 0;
 
