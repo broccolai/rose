@@ -192,9 +192,30 @@ export function selectDestinyMembership(membershipsResponse: ServerResponse<User
 }
 
 export async function fetchProfile(token: BungieToken, membership: SelectedMembership): Promise<ServerResponse<DestinyProfileResponse>> {
-    return bungieFetch<DestinyProfileResponse>(token, { logLabel: 'profile' }, (http) =>
+    return fetchProfileComponents(token, membership, requestedComponentIds(), 'profile');
+}
+
+export async function fetchEquippedSubclassProfile(
+    token: BungieToken,
+    membership: DestinyMembership
+): Promise<ServerResponse<DestinyProfileResponse>> {
+    return fetchProfileComponents(
+        token,
+        membership,
+        [DESTINY_PROFILE_COMPONENTS.CharacterEquipment, DESTINY_PROFILE_COMPONENTS.ItemSockets],
+        'equipped subclass'
+    );
+}
+
+async function fetchProfileComponents(
+    token: BungieToken,
+    membership: DestinyMembership,
+    components: DestinyComponentType[],
+    logLabel: string
+): Promise<ServerResponse<DestinyProfileResponse>> {
+    return bungieFetch<DestinyProfileResponse>(token, { logLabel }, (http) =>
         bungieGetProfile(http, {
-            components: requestedComponentIds(),
+            components,
             destinyMembershipId: membership.membershipId,
             membershipType: membership.membershipType
         })

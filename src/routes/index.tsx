@@ -12,7 +12,7 @@ import {
 import { createEventListener } from '@solid-primitives/event-listener';
 import { debounce } from '@solid-primitives/scheduled';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
-import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
 import { applyArmorBuild } from '@/features/armor/api/equip-build';
 import { absoluteBungieAssetUrl, readBungieUser, readSnapshotMembershipType } from '@/features/armor/api/profile-items';
@@ -102,7 +102,13 @@ import {
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
 import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
-import { clearCachedVaultSnapshot, downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
+import {
+    clearCachedVaultSnapshot,
+    downloadJsonFile,
+    exportVaultSnapshot,
+    fetchEquippedSubclassProfile,
+    readCachedVaultSnapshot
+} from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
 import { createAuthorizationUrl, getTokenDebugState, getValidToken, logout } from '@/features/bungie/oauth';
 
@@ -1155,24 +1161,39 @@ export default function Home() {
         }
 
         setImportingFragments(true);
+        const startedAt = performance.now();
 
         try {
             setMessage('Importing equipped subclass fragments from Bungie...');
 
-            const token = await getValidToken();
-            const freshSnapshot = token ? ((await exportVaultSnapshot(token)) as VaultExportSnapshot) : loadedSnapshot();
-            if (token) {
-                setAuthenticated(true);
-            }
-
-            if (!freshSnapshot) {
+            const snapshot = loadedSnapshot();
+            if (!snapshot) {
                 setMessage('No loaded profile is available to import fragments from.');
                 return;
             }
 
-            const manifest = await createBungieManifestResolver();
-            const imported = await readEquippedSubclassImport(freshSnapshot, selectedCharacterId(), loadedManifestDefinitions(), (hash) =>
-                manifest.getInventoryItem(hash)
+            const token = await getValidToken();
+            const selectedMembership = snapshot.selectedMembership;
+            const fragmentProfileResponse =
+                token && selectedMembership ? await fetchEquippedSubclassProfile(token, selectedMembership) : snapshot.profileResponse;
+            if (token) {
+                setAuthenticated(true);
+            }
+
+            if (!fragmentProfileResponse) {
+                setMessage('No profile data is available to import fragments from.');
+                return;
+            }
+
+            let manifestPromise: ReturnType<typeof createBungieManifestResolver> | undefined;
+            const imported = await readEquippedSubclassImport(
+                { ...snapshot, profileResponse: fragmentProfileResponse },
+                selectedCharacterId(),
+                loadedManifestDefinitions(),
+                async (hash) => {
+                    manifestPromise ??= createBungieManifestResolver();
+                    return (await manifestPromise).getInventoryItem(hash);
+                }
             );
 
             if (!imported) {
@@ -1180,12 +1201,13 @@ export default function Home() {
                 return;
             }
 
-            setLoadedSnapshot(freshSnapshot);
-            setNextTargetCapRefreshBackground(true);
-            setSelectedSubclass(imported.subclass);
-            setSelectedFragmentIds(sanitizeFragmentIds(imported.fragmentIds, imported.subclass));
-            setTargetCapPriorityStat(null);
-            invalidateSolve();
+            batch(() => {
+                setNextTargetCapRefreshBackground(true);
+                setSelectedSubclass(imported.subclass);
+                setSelectedFragmentIds(sanitizeFragmentIds(imported.fragmentIds, imported.subclass));
+                setTargetCapPriorityStat(null);
+                invalidateSolve();
+            });
             setMessage(
                 [
                     `Imported ${imported.subclassItemName}: ${imported.fragmentIds.length} known fragments selected.`,
@@ -1196,6 +1218,11 @@ export default function Home() {
                     .filter(Boolean)
                     .join(' ')
             );
+            logDevTiming('fragment import completed', {
+                ms: elapsedMs(startedAt),
+                subclass: imported.subclass,
+                fragmentCount: imported.fragmentIds.length
+            });
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'Unknown equipped subclass import failure.');
         } finally {
