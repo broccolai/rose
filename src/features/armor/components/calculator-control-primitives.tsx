@@ -19,6 +19,7 @@ export const RowLabel = styled('span', {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 'var(--rose-space-xxs)',
+        minH: '1.15rem',
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.78rem',
         lineHeight: 1,

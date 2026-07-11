@@ -220,6 +220,10 @@ export function ResultsPanel() {
             return '';
         }
 
+        if (results.loading()) {
+            return `${result.returnedBuildCount} builds ready - Calculating more...`;
+        }
+
         return `${result.validBuildCount} builds found`;
     }
 

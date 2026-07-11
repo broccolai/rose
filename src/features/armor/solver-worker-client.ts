@@ -5,6 +5,7 @@ import {
     calculateArmorStatTargetCap,
     calculateArmorStatTargetCaps,
     type SolveArmorInput,
+    type SolveArmorProgress,
     type SolveArmorResult,
     type StatVector,
     solveArmor
@@ -19,6 +20,12 @@ type PendingRequest = {
     reject: (reason?: unknown) => void;
     label: string;
     startedAt: number;
+    onProgress?: ((progress: SolveArmorProgress) => void) | undefined;
+};
+
+type SolveRequestOptions = {
+    progressBuildCount?: number | undefined;
+    onProgress?: ((progress: SolveArmorProgress) => void) | undefined;
 };
 
 type SolverWorkerClient = {
@@ -28,7 +35,7 @@ type SolverWorkerClient = {
         stats: readonly ArmorStat[],
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ): Promise<StatVector>;
-    solve(input: SolveArmorInput): Promise<SolveArmorResult>;
+    solve(input: SolveArmorInput, options?: SolveRequestOptions): Promise<SolveArmorResult>;
     cancelPending(): void;
     dispose(): void;
 };
@@ -63,8 +70,12 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         return caps;
     }
 
-    solve(input: SolveArmorInput) {
-        return this.request<SolveArmorResult>({ id: 0, type: 'solve', input }, this.workers[0]);
+    solve(input: SolveArmorInput, options: SolveRequestOptions = {}) {
+        return this.request<SolveArmorResult>(
+            { id: 0, type: 'solve', input, progressBuildCount: options.progressBuildCount },
+            this.workers[0],
+            options.onProgress
+        );
     }
 
     cancelPending() {
@@ -89,6 +100,11 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             const message = event.data;
             const request = this.pending.get(message.id);
             if (!request) {
+                return;
+            }
+
+            if (message.type === 'progress') {
+                request.onProgress?.(message.result);
                 return;
             }
 
@@ -146,7 +162,7 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         this.workers = Array.from({ length: this.workers.length }, () => this.createWorker());
     }
 
-    private request<T>(request: SolverWorkerRequest, worker: Worker | undefined) {
+    private request<T>(request: SolverWorkerRequest, worker: Worker | undefined, onProgress?: (progress: SolveArmorProgress) => void) {
         if (!worker) {
             return Promise.reject(new Error('No armor solver worker available.'));
         }
@@ -158,7 +174,8 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
                 resolve: (value) => resolve(value as T),
                 reject,
                 label,
-                startedAt: performance.now()
+                startedAt: performance.now(),
+                onProgress
             });
             if (DEV_SOLVER_TIMING) {
                 console.debug('[rose timing] solver request started', { label });
@@ -198,10 +215,10 @@ class DirectSolverWorkerClient implements SolverWorkerClient {
         return caps;
     }
 
-    async solve(input: SolveArmorInput) {
+    async solve(input: SolveArmorInput, options: SolveRequestOptions = {}) {
         const startedAt = performance.now();
         try {
-            return solveArmor(input);
+            return solveArmor(input, options);
         } finally {
             logSolverTiming('direct solve', startedAt, 'done');
         }

@@ -127,3 +127,10 @@ export type SolveArmorResult =
           rejectedCombinations: number;
           warnings: string[];
       };
+
+export type SolveArmorProgress = Extract<SolveArmorResult, { ok: true }>;
+
+export interface SolveArmorOptions {
+    progressBuildCount?: number | undefined;
+    onProgress?: ((progress: SolveArmorProgress) => void) | undefined;
+}

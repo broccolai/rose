@@ -1101,7 +1101,24 @@ export default function Home() {
         });
         let result: SolveArmorResult;
         try {
-            result = await armorSolver.solve(solveInput);
+            result = await armorSolver.solve(solveInput, {
+                progressBuildCount: VISIBLE_RESULT_LIMIT,
+                onProgress: (progress) => {
+                    if (requestId !== solveRequestId) {
+                        return;
+                    }
+
+                    setSolveResult(progress);
+                    setLoadProgress({
+                        active: true,
+                        label: 'Calculating more...',
+                        current: progress.returnedBuildCount,
+                        total: SOLVER_RESULT_POOL_LIMIT,
+                        percent: 68
+                    });
+                    setMessage(`${progress.returnedBuildCount} builds ready. Calculating more...`);
+                }
+            });
         } catch (error) {
             if (requestId !== solveRequestId) {
                 logDevTiming('solve failed stale', {

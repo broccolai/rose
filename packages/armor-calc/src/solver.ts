@@ -26,6 +26,8 @@ import {
     type BuildArmorPiece,
     type DestinyClass,
     type SolveArmorInput,
+    type SolveArmorOptions,
+    type SolveArmorProgress,
     type SolveArmorResult,
     type StatAdjustment,
     type StatVector
@@ -122,9 +124,13 @@ type SearchContext = {
     foundValid: boolean;
     compiledAddonProfiles: Array<CompiledAddonProfile | null>;
     compiledAddonWorkspace: CompiledAddonWorkspace;
+    warnings: string[];
+    progressBuildCount: number;
+    progressReported: boolean;
+    onProgress?: ((progress: SolveArmorProgress) => void) | undefined;
 };
 
-export function solveArmor(input: SolveArmorInput): SolveArmorResult {
+export function solveArmor(input: SolveArmorInput, options: SolveArmorOptions = {}): SolveArmorResult {
     const warnings: string[] = [];
     const targets = normalizeTargets(input.statTargets);
     const statBonuses = normalizeStatBonuses(input.statBonuses);
@@ -170,7 +176,11 @@ export function solveArmor(input: SolveArmorInput): SolveArmorResult {
         resultLimitReached: false,
         foundValid: false,
         compiledAddonProfiles: Array.from({ length: ARMOR_SLOTS.length }, () => null),
-        compiledAddonWorkspace: createCompiledAddonWorkspace()
+        compiledAddonWorkspace: createCompiledAddonWorkspace(),
+        warnings,
+        progressBuildCount: Math.max(1, Math.trunc(options.progressBuildCount ?? 25)),
+        progressReported: false,
+        onProgress: options.onProgress
     };
 
     for (const plan of plans) {
@@ -1760,6 +1770,7 @@ function retainBuild(context: SearchContext, build: ArmorBuild) {
 
     if (context.builds.length < context.maxResults) {
         context.builds.push(build);
+        reportBuildProgress(context);
         return;
     }
 
@@ -1772,6 +1783,30 @@ function retainBuild(context: SearchContext, build: ArmorBuild) {
     if (compareBuilds(build, context.builds[worstIndex], context.resultSort) < 0) {
         context.builds[worstIndex] = build;
     }
+}
+
+function reportBuildProgress(context: SearchContext) {
+    if (
+        context.progressReported ||
+        !context.onProgress ||
+        context.counters.validBuildCount < context.progressBuildCount ||
+        context.builds.length === 0
+    ) {
+        return;
+    }
+
+    context.progressReported = true;
+    const builds = [...context.builds].sort((left, right) => compareBuilds(left, right, context.resultSort ?? DEFAULT_RESULT_SORT));
+    context.onProgress({
+        ok: true,
+        builds,
+        validBuildCount: context.counters.validBuildCount,
+        returnedBuildCount: builds.length,
+        resultLimitReached: true,
+        searchedCombinations: context.counters.searchedCombinations,
+        rejectedCombinations: context.counters.rejectedCombinations,
+        warnings: context.warnings
+    });
 }
 
 function findWorstRetainedBuildIndex(builds: ArmorBuild[], sort: ArmorBuildSort) {

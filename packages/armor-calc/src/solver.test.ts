@@ -78,6 +78,28 @@ function realBuildItem(
 }
 
 describe('solveArmor', () => {
+    test('reports retained builds while the same solve continues', () => {
+        const progressUpdates: number[] = [];
+        const armor = inventory(slots.flatMap((slot) => [item(slot, { name: `${slot}-a` }), item(slot, { name: `${slot}-b` })]));
+        const result = solveArmor(
+            {
+                characterId: 'hunter',
+                classType: 'hunter',
+                statTargets: {},
+                setRequirements: [],
+                armor,
+                maxResults: 100
+            },
+            {
+                progressBuildCount: 25,
+                onProgress: (progress) => progressUpdates.push(progress.returnedBuildCount)
+            }
+        );
+
+        expect(progressUpdates).toEqual([25]);
+        expect(result.ok && result.returnedBuildCount).toBe(32);
+    });
+
     test('matches exact stat targets', () => {
         const result = solveArmor({
             characterId: 'hunter',
