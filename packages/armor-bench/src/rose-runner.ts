@@ -8,7 +8,10 @@ export function runRoseScenario(prepared: PreparedScenario): SolverBenchmarkResu
         characterId: prepared.scenario.classType,
         classType: prepared.scenario.classType,
         selectedExoticItemHash: prepared.scenario.selectedExoticItemHash,
+        dumpStat: prepared.scenario.dumpStat,
+        allowBalancedTuning: prepared.scenario.allowBalancedTuning,
         statTargets: prepared.scenario.targets,
+        statBonuses: prepared.scenario.statBonuses,
         setRequirements: prepared.scenario.setRequirements ?? [],
         armor: prepared.armorBySlot,
         maxResults: prepared.scenario.maxResults ?? 30_000

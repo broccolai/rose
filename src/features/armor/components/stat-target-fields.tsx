@@ -2,7 +2,7 @@ import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
 import { styled } from '@panda/jsx';
 import { createEffect, createSignal, For, Show } from 'solid-js';
 
-import { HelpTooltip } from '@/features/armor/components/help-tooltip';
+import { HoverTooltip } from '@/features/armor/components/help-tooltip';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 import { armorStatEffectsAt } from '@/features/armor/stat-effects';
@@ -33,6 +33,7 @@ const FieldLabel = styled('span', {
 
 const StatGrid = styled('div', {
     base: {
+        '--rose-stat-icon-size': '1.75rem',
         display: 'grid',
         gap: 'var(--rose-space-xs)'
     }
@@ -41,8 +42,8 @@ const StatGrid = styled('div', {
 const StatSliderRow = styled('div', {
     base: {
         display: 'grid',
-        gridTemplateAreas: '"name value" "slider slider"',
-        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        gridTemplateAreas: '"spacer name value" "icon slider slider"',
+        gridTemplateColumns: 'var(--rose-stat-icon-size) minmax(0, 1fr) auto',
         gap: '0.2rem var(--rose-space-xs)',
         alignItems: 'center',
         py: 0,
@@ -53,7 +54,8 @@ const StatSliderRow = styled('div', {
 const StatScaleRow = styled('div', {
     base: {
         display: { base: 'none', md: 'grid' },
-        gridTemplateColumns: 'minmax(0, 1fr)',
+        gridTemplateColumns: 'var(--rose-stat-icon-size) minmax(0, 1fr)',
+        columnGap: 'var(--rose-space-xs)',
         alignItems: 'center',
         minW: 0
     }
@@ -61,6 +63,7 @@ const StatScaleRow = styled('div', {
 
 const StatScale = styled('div', {
     base: {
+        gridColumn: '2',
         position: 'relative',
         h: '0.85rem',
         mx: '7px',
@@ -106,6 +109,42 @@ const StatSliderName = styled(FieldLabel, {
         alignItems: 'center',
         gap: 'var(--rose-space-xxs)',
         minW: 0
+    }
+});
+
+const StatIconArea = styled('div', {
+    base: {
+        gridArea: 'icon',
+        display: 'grid',
+        placeItems: 'center',
+        alignSelf: 'center',
+        minW: 0
+    }
+});
+
+const StatIconTile = styled('span', {
+    base: {
+        display: 'grid',
+        placeItems: 'center',
+        w: 'var(--rose-stat-icon-size)',
+        h: 'var(--rose-stat-icon-size)',
+        transition: 'opacity 120ms ease, transform 120ms ease',
+        '& img': {
+            display: 'block',
+            w: '1.35rem',
+            h: '1.35rem',
+            objectFit: 'contain',
+            opacity: 0.72
+        },
+        _hover: {
+            transform: 'scale(1.06)',
+            '& img': {
+                opacity: 1
+            }
+        },
+        '&[data-disabled="true"]': {
+            opacity: 0.38
+        }
     }
 });
 
@@ -477,25 +516,32 @@ function StatTargetSlider(props: StatTargetSliderProps) {
 
     return (
         <StatSliderRow>
-            <StatSliderName>
-                {props.label}
-                <HelpTooltip label={`What ${props.label} does at ${draftValue()}`}>
-                    <StatEffectContent>
-                        <StatEffectHeading>{statEffects().heading}</StatEffectHeading>
-                        <StatEffectList>
-                            <For each={statEffects().effects}>
-                                {(effect) => (
-                                    <StatEffectRow>
-                                        <StatEffectLabel>{effect.label}</StatEffectLabel>
-                                        <StatEffectValue>{effect.value}</StatEffectValue>
-                                    </StatEffectRow>
-                                )}
-                            </For>
-                        </StatEffectList>
-                        <Show when={statEffects().note}>{(note) => <StatEffectNote>{note()}</StatEffectNote>}</Show>
-                    </StatEffectContent>
-                </HelpTooltip>
-            </StatSliderName>
+            <StatIconArea>
+                <HoverTooltip
+                    label={`What ${props.label} does at ${draftValue()}`}
+                    content={
+                        <StatEffectContent>
+                            <StatEffectHeading>{statEffects().heading}</StatEffectHeading>
+                            <StatEffectList>
+                                <For each={statEffects().effects}>
+                                    {(effect) => (
+                                        <StatEffectRow>
+                                            <StatEffectLabel>{effect.label}</StatEffectLabel>
+                                            <StatEffectValue>{effect.value}</StatEffectValue>
+                                        </StatEffectRow>
+                                    )}
+                                </For>
+                            </StatEffectList>
+                            <Show when={statEffects().note}>{(note) => <StatEffectNote>{note()}</StatEffectNote>}</Show>
+                        </StatEffectContent>
+                    }
+                >
+                    <StatIconTile data-disabled={props.disabled}>
+                        <img src={`/assets/stats/${props.stat}.png`} alt="" aria-hidden="true" />
+                    </StatIconTile>
+                </HoverTooltip>
+            </StatIconArea>
+            <StatSliderName>{props.label}</StatSliderName>
             <StatSliderFrame>
                 <StatSliderTrack
                     role="slider"

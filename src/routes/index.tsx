@@ -54,6 +54,7 @@ import { EquipProgressOverlay, type EquipProgressState } from '@/features/armor/
 import { ResultsPanel } from '@/features/armor/components/results-panel';
 import { createDebugArmorReport, createDebugExpandedResultReport } from '@/features/armor/debug/armor-debug-report';
 import { createBungieManifestResolver } from '@/features/armor/manifest';
+import { parseDebugExport } from '@/features/armor/model/debug-export-import';
 import {
     applyEquipProgressUpdate,
     completeEquipProgress,
@@ -870,6 +871,72 @@ export default function Home() {
         }
     }
 
+    async function importLocalDebugExport(file: File) {
+        if (!canLoadLocalTestData()) {
+            return;
+        }
+
+        if (equipOperationActive()) {
+            setMessage('Finish applying the current build before importing test data.');
+            return;
+        }
+
+        try {
+            cancelTargetCapRefresh();
+            invalidateSolve();
+            setStatus('loading');
+            setMessage(`Importing ${file.name}...`);
+            setLoadProgress({
+                active: true,
+                label: 'Reading debug export',
+                current: 0,
+                total: 0,
+                percent: 12
+            });
+
+            const imported = parseDebugExport(await file.text());
+            const importedPreferences = imported.calculatorPreferences;
+            const currentTheme = appTheme();
+            const currentRefreshPreference = refreshVaultOnStartup();
+
+            batch(() => {
+                setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
+                setTargetCapsPending(false);
+                setTargetCapCalculationActive(false);
+                setTargetCapPriorityStat(null);
+                setNextTargetCapRefreshBackground(false);
+
+                if (importedPreferences) {
+                    applyCalculatorPreferences({
+                        ...importedPreferences,
+                        appTheme: currentTheme,
+                        refreshVaultOnStartup: currentRefreshPreference
+                    });
+                }
+
+                applyLoadedNormalizedCalculatorData(
+                    imported.normalizedProfile,
+                    imported.vaultSnapshot,
+                    imported.loadedManifestDefinitions,
+                    `debug export ${file.name}`
+                );
+            });
+
+            if (Object.keys(fragmentDescriptions()).length === 0) {
+                try {
+                    const manifest = await createBungieManifestResolver();
+                    setFragmentDescriptions(await resolveManifestFragmentDescriptions(manifest));
+                } catch (error) {
+                    console.warn('[rose manifest] Fragment descriptions unavailable', error);
+                }
+            }
+        } catch (error) {
+            setStatus('error');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(error instanceof Error ? error.message : 'Unknown debug export import failure.');
+        }
+    }
+
     async function loadCachedCalculatorData(options: { silentMissing?: boolean } = {}): Promise<boolean> {
         if (equipOperationActive()) {
             return false;
@@ -1524,10 +1591,12 @@ export default function Home() {
                         avatarLabel={avatarLabel()}
                         avatarUrl={avatarUrl()}
                         loading={status() === 'loading'}
+                        localDebugImportEnabled={canLoadLocalTestData()}
                         theme={appTheme()}
                         onSignIn={signIn}
                         onRefresh={loadCalculatorData}
                         onLogout={() => void signOut()}
+                        onImportDebugExport={importLocalDebugExport}
                         onThemeChange={setAppTheme}
                     />
                 }

@@ -39,6 +39,7 @@ const FRONTIER_CHUNK_SIZE = 524_288;
 const MAX_DISPLAY_STAT = 200;
 const TUNING_MODES = ['off', 'pair', 'all'] as const;
 const itemMaximumStatsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
+const itemMaximumStatsWithoutModsCache = new WeakMap<ArmorItem, Map<string, StatVector>>();
 const simpleAddonCapabilityCache = new WeakMap<ArmorItem, Map<string, boolean>>();
 const preparedArmorItemCache = new WeakMap<ArmorItem, Map<string, PreparedArmorItem>>();
 const itemOutcomeCache = new WeakMap<ArmorItem, Map<string, StatTuple[]>>();
@@ -51,6 +52,7 @@ type PreparedArmorItem = {
     item: ArmorItem;
     base: StatTuple;
     max: StatTuple;
+    maxWithoutMods: StatTuple;
     simpleAddons: boolean;
     compiledAddonProfile: CompiledAddonProfile | null;
 };
@@ -98,6 +100,7 @@ type AdjustmentPreference = {
 type CandidatePlan = {
     armor: PreparedArmorBySlot;
     suffixMaxPotential: StatTuple[];
+    suffixMaxPotentialWithoutMods: StatTuple[];
 };
 
 type SearchCounters = {
@@ -237,6 +240,16 @@ export function calculateArmorStatTargetCaps(
         baseTargets[input.dumpStat] = 0;
     }
 
+    const currentTargetsReachable = canReachPreparedArmorStatTargets(
+        plans,
+        baseTargets,
+        statBonuses,
+        input.dumpStat,
+        dumpStatIndex,
+        tuningMode,
+        input.setRequirements
+    );
+
     const compiledCaps = calculatePreparedCompiledStatTargetCaps(
         plans,
         baseTargets,
@@ -244,7 +257,8 @@ export function calculateArmorStatTargetCaps(
         input.dumpStat,
         tuningMode,
         input.setRequirements,
-        requestedStats
+        requestedStats,
+        currentTargetsReachable
     );
     if (compiledCaps) {
         return compiledCaps;
@@ -276,7 +290,8 @@ function calculatePreparedCompiledStatTargetCaps(
     dumpStat: ArmorStat | undefined,
     tuningMode: TuningMode,
     setRequirements: ArmorSetRequirement[],
-    requestedStats: readonly ArmorStat[]
+    requestedStats: readonly ArmorStat[],
+    currentTargetsReachable: boolean
 ): StatVector | null {
     const supportsCompiledAddons = plans.every((plan) =>
         ARMOR_SLOTS.every((slot) =>
@@ -293,6 +308,12 @@ function calculatePreparedCompiledStatTargetCaps(
     const caps = emptyStats();
     if (requestedIndexes.length === 0) {
         return caps;
+    }
+
+    if (currentTargetsReachable) {
+        for (const index of requestedIndexes) {
+            caps[ARMOR_STATS[index]] = targets[ARMOR_STATS[index]];
+        }
     }
 
     const context: CompiledCapSearchContext = {
@@ -345,10 +366,11 @@ function searchCompiledCaps(
     if (
         !canStillReachAnyCapScenario(
             potentialStats,
-            plan.suffixMaxPotential[slotIndex],
+            plan.suffixMaxPotentialWithoutMods[slotIndex],
             context.targetValues,
             context.dumpStatIndex,
-            context.requestedIndexes
+            context.requestedIndexes,
+            context.caps
         ) ||
         (context.setRequirements.length > 0 && !canStillMeetSetRequirements(selectedList, plan.armor, slotIndex, context.setRequirements))
     ) {
@@ -382,12 +404,12 @@ function searchCompiledCaps(
         context.compiledAddonProfiles[slotIndex] = item.compiledAddonProfile;
         selectedList.push(item);
         addTupleInPlace(baseStats, item.base, 1);
-        addTupleInPlace(potentialStats, item.max, 1);
+        addTupleInPlace(potentialStats, item.maxWithoutMods, 1);
 
         searchCompiledCaps(plan, context, selectedList, slotIndex + 1, baseStats, potentialStats);
 
         addTupleInPlace(baseStats, item.base, -1);
-        addTupleInPlace(potentialStats, item.max, -1);
+        addTupleInPlace(potentialStats, item.maxWithoutMods, -1);
         selectedList.pop();
     }
 }
@@ -397,18 +419,22 @@ function canStillReachAnyCapScenario(
     remainingPotential: StatTuple,
     targets: StatTuple,
     dumpStatIndex: number,
-    requestedIndexes: number[]
+    requestedIndexes: number[],
+    caps: StatVector
 ) {
     for (const scoreIndex of requestedIndexes) {
-        let reachable = true;
+        let requiredModSlots = 0;
         for (let index = 0; index < ARMOR_STATS.length; index++) {
-            if (index !== dumpStatIndex && index !== scoreIndex && currentPotential[index] + remainingPotential[index] < targets[index]) {
-                reachable = false;
-                break;
+            if (index !== dumpStatIndex && index !== scoreIndex) {
+                requiredModSlots += minimumMajorModSlots(currentPotential[index] + remainingPotential[index], targets[index]);
             }
         }
 
-        if (reachable) {
+        const availableScoreModSlots = ARMOR_SLOTS.length - requiredModSlots;
+        if (
+            availableScoreModSlots >= 0 &&
+            currentPotential[scoreIndex] + remainingPotential[scoreIndex] + availableScoreModSlots * 10 > caps[ARMOR_STATS[scoreIndex]]
+        ) {
             return true;
         }
     }
@@ -762,7 +788,8 @@ function createCandidatePlans(
 function createCandidatePlan(armor: PreparedArmorBySlot): CandidatePlan {
     return {
         armor,
-        suffixMaxPotential: createSuffixMaxPotential(armor)
+        suffixMaxPotential: createSuffixMaxPotential(armor, (item) => item.max),
+        suffixMaxPotentialWithoutMods: createSuffixMaxPotential(armor, (item) => item.maxWithoutMods)
     };
 }
 
@@ -826,6 +853,7 @@ function prepareArmorItem(item: ArmorItem, tuningMode: TuningMode, dumpStat: Arm
         item,
         base: toStatTuple(item.baseStats),
         max: toStatTuple(itemMaximumStats(item, tuningMode, dumpStat)),
+        maxWithoutMods: toStatTuple(itemMaximumStatsWithoutMods(item, tuningMode, dumpStat)),
         simpleAddons: hasSimpleStatModsAndNoTuning(item, tuningMode, dumpStat),
         compiledAddonProfile: tuningMode !== 'off' ? createCompiledAddonProfile(item, dumpStat) : null
     };
@@ -1459,27 +1487,28 @@ function canStillMeetSetRequirements(
     });
 }
 
-function createSuffixMaxPotential(armor: PreparedArmorBySlot) {
+function createSuffixMaxPotential(armor: PreparedArmorBySlot, getPotential: (item: PreparedArmorItem) => StatTuple) {
     const suffix: StatTuple[] = Array.from({ length: ARMOR_SLOTS.length + 1 }, () => zeroTuple());
 
     for (let index = ARMOR_SLOTS.length - 1; index >= 0; index--) {
         const slot = ARMOR_SLOTS[index];
-        suffix[index] = addTuples(suffix[index + 1], maxSlotPotential(armor[slot]));
+        suffix[index] = addTuples(suffix[index + 1], maxSlotPotential(armor[slot], getPotential));
     }
 
     return suffix;
 }
 
-function maxSlotPotential(items: PreparedArmorItem[]) {
+function maxSlotPotential(items: PreparedArmorItem[], getPotential: (item: PreparedArmorItem) => StatTuple) {
     const maxStats = zeroTuple();
 
     for (const item of items) {
-        maxStats[0] = Math.max(maxStats[0], item.max[0]);
-        maxStats[1] = Math.max(maxStats[1], item.max[1]);
-        maxStats[2] = Math.max(maxStats[2], item.max[2]);
-        maxStats[3] = Math.max(maxStats[3], item.max[3]);
-        maxStats[4] = Math.max(maxStats[4], item.max[4]);
-        maxStats[5] = Math.max(maxStats[5], item.max[5]);
+        const potential = getPotential(item);
+        maxStats[0] = Math.max(maxStats[0], potential[0]);
+        maxStats[1] = Math.max(maxStats[1], potential[1]);
+        maxStats[2] = Math.max(maxStats[2], potential[2]);
+        maxStats[3] = Math.max(maxStats[3], potential[3]);
+        maxStats[4] = Math.max(maxStats[4], potential[4]);
+        maxStats[5] = Math.max(maxStats[5], potential[5]);
     }
 
     return maxStats;
@@ -1505,6 +1534,29 @@ function itemMaximumStats(item: ArmorItem, tuningMode: TuningMode, dumpStat: Arm
 
     cache.set(key, stats);
     return stats;
+}
+
+function itemMaximumStatsWithoutMods(item: ArmorItem, tuningMode: TuningMode, dumpStat: ArmorStat | undefined) {
+    const cache = getItemCache(itemMaximumStatsWithoutModsCache, item);
+    const key = tuningCacheKey(tuningMode, dumpStat);
+    const cached = cache.get(key);
+
+    if (cached) {
+        return cached;
+    }
+
+    const stats = emptyStats();
+    for (const stat of ARMOR_STATS) {
+        stats[stat] =
+            item.baseStats[stat] + (tuningMode === 'off' ? 0 : maxAdjustmentValue(tuningOptionsForMode(item, tuningMode, dumpStat), stat));
+    }
+
+    cache.set(key, stats);
+    return stats;
+}
+
+function minimumMajorModSlots(current: number, target: number) {
+    return Math.max(0, Math.ceil((target - current) / 10));
 }
 
 function maxAdjustmentValue(options: StatAdjustment[], stat: keyof StatVector) {

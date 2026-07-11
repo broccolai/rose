@@ -1,5 +1,5 @@
 import { styled } from '@panda/jsx';
-import { Eclipse, Hamburger, LogOut, Moon, RefreshCw, Settings, Sun } from 'lucide-solid';
+import { Eclipse, FileUp, Hamburger, LogOut, Moon, RefreshCw, Settings, Sun } from 'lucide-solid';
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
@@ -21,10 +21,12 @@ type AppToolbarProps = {
     avatarLabel?: string | undefined;
     avatarUrl?: string | undefined;
     loading: boolean;
+    localDebugImportEnabled: boolean;
     theme: AppTheme;
     onSignIn: () => void;
     onRefresh: () => void;
     onLogout: () => void;
+    onImportDebugExport: (file: File) => Promise<void>;
     onThemeChange: (theme: AppTheme) => void;
 };
 
@@ -198,6 +200,10 @@ const SettingsPopover = styled('div', {
 
 const ToolbarButton = styled('button', {
     base: {
+        display: 'inline-grid',
+        gridTemplateColumns: 'auto minmax(0, 1fr)',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
         minH: 'var(--rose-control-height)',
         px: 'var(--rose-control-padding-x)',
         border: '1px solid var(--rose-button)',
@@ -217,11 +223,21 @@ const ToolbarButton = styled('button', {
         _disabled: {
             opacity: 0.55,
             cursor: 'not-allowed'
+        },
+        '& svg': {
+            w: '1rem',
+            h: '1rem'
         }
     }
 });
 
-const AvatarButton = styled('div', {
+const HiddenFileInput = styled('input', {
+    base: {
+        display: 'none'
+    }
+});
+
+const AvatarButton = styled('button', {
     base: {
         display: 'grid',
         placeItems: 'center',
@@ -236,7 +252,19 @@ const AvatarButton = styled('div', {
         fontFamily: MONO_FONT_FAMILY,
         fontSize: '0.74rem',
         fontWeight: 700,
-        lineHeight: 1
+        lineHeight: 1,
+        cursor: 'pointer',
+        outline: 'none',
+        transition: 'border-color 120ms ease, background-color 120ms ease, transform 120ms ease',
+        _hover: {
+            borderColor: 'color-mix(in srgb, var(--rose-accent) 54%, var(--rose-border-strong))',
+            bg: 'var(--rose-surface-soft)',
+            transform: 'translateY(-1px)'
+        },
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        }
     }
 });
 
@@ -245,6 +273,102 @@ const AvatarImage = styled('img', {
         w: '100%',
         h: '100%',
         objectFit: 'cover'
+    }
+});
+
+const AccountPopover = styled('div', {
+    base: {
+        position: 'absolute',
+        top: 'calc(100% + var(--rose-space-xs))',
+        right: 0,
+        zIndex: 20,
+        display: 'grid',
+        gap: 'var(--rose-space-sm)',
+        w: 'min(16rem, calc(100vw - 2rem))',
+        p: 'var(--rose-space-sm)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-md)',
+        bg: 'var(--rose-surface)',
+        boxShadow: '0 18px 45px color-mix(in srgb, #000 34%, transparent)',
+        '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '-0.35rem',
+            right: '1rem',
+            w: '0.65rem',
+            h: '0.65rem',
+            borderLeft: '1px solid var(--rose-border)',
+            borderTop: '1px solid var(--rose-border)',
+            bg: 'var(--rose-surface)',
+            transform: 'rotate(45deg)'
+        }
+    }
+});
+
+const AccountIdentity = styled('div', {
+    base: {
+        display: 'grid',
+        gap: '0.2rem',
+        minW: 0,
+        px: 'var(--rose-space-xs)',
+        py: 'var(--rose-space-xxs)'
+    }
+});
+
+const AccountMeta = styled('span', {
+    base: {
+        color: 'var(--rose-muted)',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.66rem',
+        fontWeight: 600,
+        lineHeight: 1.2
+    }
+});
+
+const AccountName = styled('strong', {
+    base: {
+        overflow: 'hidden',
+        color: 'var(--rose-text)',
+        fontFamily: UI_FONT_FAMILY,
+        fontSize: '0.82rem',
+        fontWeight: 700,
+        lineHeight: 1.3,
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+    }
+});
+
+const AccountAction = styled('button', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: '1rem minmax(0, 1fr)',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
+        w: '100%',
+        minH: '2.25rem',
+        px: 'var(--rose-space-sm)',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-text)',
+        cursor: 'pointer',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.74rem',
+        fontWeight: 700,
+        textAlign: 'left',
+        transition: 'background-color 120ms ease, border-color 120ms ease',
+        _hover: {
+            borderColor: 'var(--rose-border-strong)',
+            bg: 'var(--rose-surface-raised)'
+        },
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        },
+        '& svg': {
+            w: '1rem',
+            h: '1rem'
+        }
     }
 });
 
@@ -289,31 +413,50 @@ function ThemeIcon(props: { theme: AppTheme }) {
 
 function ToolbarActions(props: AppToolbarProps) {
     let settingsMenuElement: HTMLDivElement | undefined;
+    let accountMenuElement: HTMLDivElement | undefined;
+    let debugExportInput: HTMLInputElement | undefined;
     const calculator = useArmorCalculator();
     const controls = calculator.controls;
     const actions = calculator.actions;
     const [settingsOpen, setSettingsOpen] = createSignal(false);
+    const [accountOpen, setAccountOpen] = createSignal(false);
     const next = () => nextTheme(props.theme);
     const label = () => `Theme: ${APP_THEME_LABELS[props.theme]}. Switch to ${APP_THEME_LABELS[next()]}.`;
     const changeTheme = (event: MouseEvent) => {
         props.onThemeChange(event.shiftKey ? 'burger' : next());
     };
+    const importDebugExport = async (event: Event & { currentTarget: HTMLInputElement }) => {
+        const input = event.currentTarget;
+        const file = input.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        try {
+            await props.onImportDebugExport(file);
+        } finally {
+            input.value = '';
+        }
+    };
 
     createEffect(() => {
-        if (!settingsOpen()) {
+        if (!settingsOpen() && !accountOpen()) {
             return;
         }
 
         const closeOnPointerDown = (event: PointerEvent) => {
-            if (settingsMenuElement?.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if ((settingsOpen() && settingsMenuElement?.contains(target)) || (accountOpen() && accountMenuElement?.contains(target))) {
                 return;
             }
 
             setSettingsOpen(false);
+            setAccountOpen(false);
         };
         const closeOnEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setSettingsOpen(false);
+                setAccountOpen(false);
             }
         };
 
@@ -327,6 +470,19 @@ function ToolbarActions(props: AppToolbarProps) {
 
     return (
         <Actions>
+            <Show when={props.localDebugImportEnabled}>
+                <HiddenFileInput ref={debugExportInput} type="file" accept=".json,application/json" onChange={importDebugExport} />
+                <ToolbarButton
+                    type="button"
+                    data-action-button
+                    disabled={props.loading}
+                    title="Import a Rose debug vault export"
+                    onClick={() => debugExportInput?.click()}
+                >
+                    <FileUp aria-hidden="true" />
+                    Import debug
+                </ToolbarButton>
+            </Show>
             <ThemeCycleButton type="button" aria-label={label()} title={label()} onClick={changeTheme}>
                 <ThemeIcon theme={props.theme} />
             </ThemeCycleButton>
@@ -336,7 +492,10 @@ function ToolbarActions(props: AppToolbarProps) {
                     aria-label="Open advanced settings"
                     aria-expanded={settingsOpen()}
                     title="Advanced settings"
-                    onClick={() => setSettingsOpen((open) => !open)}
+                    onClick={() => {
+                        setAccountOpen(false);
+                        setSettingsOpen((open) => !open);
+                    }}
                 >
                     <Settings aria-hidden="true" />
                 </ThemeCycleButton>
@@ -373,14 +532,42 @@ function ToolbarActions(props: AppToolbarProps) {
                 >
                     <RefreshCw aria-hidden="true" />
                 </ThemeCycleButton>
-                <ThemeCycleButton type="button" aria-label="Log out" title="Log out" onClick={props.onLogout}>
-                    <LogOut aria-hidden="true" />
-                </ThemeCycleButton>
-                <AvatarButton title={props.avatarLabel ?? 'Signed in'} role="img" aria-label={props.avatarLabel ?? 'Signed in'}>
-                    <Show when={props.avatarUrl} fallback={avatarInitial(props.avatarLabel)}>
-                        <AvatarImage src={props.avatarUrl} alt="" />
+                <SettingsMenu ref={accountMenuElement}>
+                    <AvatarButton
+                        type="button"
+                        aria-label={`Account: ${props.avatarLabel ?? 'Signed in'}`}
+                        aria-expanded={accountOpen()}
+                        aria-haspopup="menu"
+                        title={props.avatarLabel ?? 'Signed in'}
+                        onClick={() => {
+                            setSettingsOpen(false);
+                            setAccountOpen((open) => !open);
+                        }}
+                    >
+                        <Show when={props.avatarUrl} fallback={avatarInitial(props.avatarLabel)}>
+                            <AvatarImage src={props.avatarUrl} alt="" />
+                        </Show>
+                    </AvatarButton>
+                    <Show when={accountOpen()}>
+                        <AccountPopover role="menu" aria-label="Account menu">
+                            <AccountIdentity>
+                                <AccountMeta>Bungie account</AccountMeta>
+                                <AccountName title={props.avatarLabel ?? 'Signed in'}>{props.avatarLabel ?? 'Signed in'}</AccountName>
+                            </AccountIdentity>
+                            <AccountAction
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                    setAccountOpen(false);
+                                    props.onLogout();
+                                }}
+                            >
+                                <LogOut aria-hidden="true" />
+                                Logout
+                            </AccountAction>
+                        </AccountPopover>
                     </Show>
-                </AvatarButton>
+                </SettingsMenu>
             </Show>
         </Actions>
     );
@@ -397,10 +584,12 @@ export function AppToolbar(props: AppToolbarProps) {
                     avatarLabel={props.avatarLabel}
                     avatarUrl={props.avatarUrl}
                     loading={props.loading}
+                    localDebugImportEnabled={props.localDebugImportEnabled}
                     theme={props.theme}
                     onSignIn={props.onSignIn}
                     onRefresh={props.onRefresh}
                     onLogout={props.onLogout}
+                    onImportDebugExport={props.onImportDebugExport}
                     onThemeChange={props.onThemeChange}
                 />
             </TopBar>

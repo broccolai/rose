@@ -761,6 +761,29 @@ describe('solveArmor', () => {
         expect(caps.weapons).toBeGreaterThanOrEqual(100);
     });
 
+    test('uses reachable current targets as lower bounds without changing exact caps', () => {
+        const input = {
+            characterId: 'hunter',
+            classType: 'hunter',
+            statTargets: { melee: 25, weapons: 100 },
+            setRequirements: [],
+            armor: inventory(slots.map((slot) => item(slot, { statModOptions: createDefaultStatModOptions() })))
+        } as const;
+
+        const caps = calculateArmorStatTargetCaps(input, ['melee', 'weapons']);
+
+        expect(caps.melee).toBeGreaterThanOrEqual(25);
+        expect(caps.weapons).toBeGreaterThanOrEqual(100);
+        expect(caps).toEqual({
+            health: 0,
+            melee: calculateArmorStatTargetCap(input, 'melee'),
+            grenade: 0,
+            super: 0,
+            class: 0,
+            weapons: calculateArmorStatTargetCap(input, 'weapons')
+        });
+    });
+
     test('uses exact addon search when greedy mod and tuning choices miss a displayed cap', () => {
         const perAudaciaSet = { id: 'set:per-audacia', name: 'Per Audacia' };
         const tunedItem = (slot: ArmorSlot, name: string, itemBaseStats: StatVector, set = perAudaciaSet) =>

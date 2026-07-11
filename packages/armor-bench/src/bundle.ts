@@ -19,6 +19,20 @@ export function loadLatestBenchmarkBundle() {
     return JSON.parse(readFileSync(bundlePath, 'utf8')) as LoadedBenchmarkBundle;
 }
 
+export function loadLatestInteractiveBenchmarkBundle() {
+    const bundlePath = getLatestInteractiveBenchmarkBundlePath();
+
+    if (!bundlePath) {
+        throw new Error(`No compatible benchmark or debug export found in ${privateDataDir}.`);
+    }
+
+    return JSON.parse(readFileSync(bundlePath, 'utf8')) as LoadedBenchmarkBundle;
+}
+
+export function getLatestInteractiveBenchmarkBundlePath() {
+    return findLatestInteractiveBenchmarkBundlePath();
+}
+
 function findLatestBenchmarkBundlePath() {
     if (!existsSync(privateDataDir)) {
         return null;
@@ -30,4 +44,25 @@ function findLatestBenchmarkBundlePath() {
         .at(-1);
 
     return file ? join(privateDataDir, file) : null;
+}
+
+function findLatestInteractiveBenchmarkBundlePath() {
+    if (!existsSync(privateDataDir)) {
+        return null;
+    }
+
+    const file = readdirSync(privateDataDir)
+        .filter(
+            (candidate) =>
+                (candidate.startsWith('rose-loaded-benchmark-bundle-') || candidate.startsWith('rose-debug-vault-export-')) &&
+                candidate.endsWith('.json')
+        )
+        .sort((left, right) => exportTimestamp(left).localeCompare(exportTimestamp(right)))
+        .at(-1);
+
+    return file ? join(privateDataDir, file) : null;
+}
+
+function exportTimestamp(fileName: string) {
+    return fileName.match(/20\d{2}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z/)?.[0] ?? fileName;
 }
