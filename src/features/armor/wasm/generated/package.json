@@ -1,0 +1,15 @@
+{
+  "name": "rose-armor-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "rose_armor_wasm_bg.wasm",
+    "rose_armor_wasm.js",
+    "rose_armor_wasm.d.ts"
+  ],
+  "main": "rose_armor_wasm.js",
+  "types": "rose_armor_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

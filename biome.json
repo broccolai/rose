@@ -7,7 +7,7 @@
         "lineWidth": 140
     },
     "files": {
-        "includes": ["**", "!src/app/styles/panda.css"]
+        "includes": ["**", "!src/app/styles/panda.css", "!src/features/armor/wasm/generated"]
     },
     "javascript": {
         "formatter": {

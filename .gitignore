@@ -4,6 +4,7 @@ dist
 .vinxi
 .solid
 .panda
+target
 .env
 .env.*
 !.env.example

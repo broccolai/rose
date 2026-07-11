@@ -75,7 +75,7 @@ import {
 } from '@/features/armor/model/personal-library';
 import { filterFullyMasterworkedProfile } from '@/features/armor/model/profile-filters';
 import { setSelectionRecordsEqual } from '@/features/armor/model/set-selections';
-import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
+import { normalizeVaultExport } from '@/features/armor/normalize';
 import {
     AUTH_LOCK_DISABLED,
     armorSlotCounts,
@@ -254,7 +254,7 @@ export default function Home() {
             statTargets: targets(),
             statBonuses: selectedFragmentBonuses(),
             setRequirements: selectedSetRequirements(),
-            armor: makeArmorBySlotForClass(profile.armor, character.classType)
+            armor: profile.armorBySlot
         };
     });
 
@@ -1115,7 +1115,7 @@ export default function Home() {
             statTargets: targets(),
             statBonuses: selectedFragmentBonuses(),
             setRequirements: selectedSetRequirements(),
-            armor: makeArmorBySlotForClass(profile.armor, character.classType),
+            armor: profile.armorBySlot,
             maxResults: SOLVER_RESULT_POOL_LIMIT,
             stopWhenResultLimitReached: true
         };
