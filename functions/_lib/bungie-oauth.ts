@@ -57,6 +57,13 @@ export async function handleTokenRefresh(context: PagesFunctionContext): Promise
     });
 }
 
+export function handleTokenLogout(): Response {
+    return new Response(null, {
+        status: 204,
+        headers: clearRefreshCookieHeaders()
+    });
+}
+
 async function exchangeWithBungie(env: BungieOAuthEnv, params: Record<string, string>): Promise<Response> {
     const config = readOAuthConfig(env);
     if (!config.ok) {

@@ -20,7 +20,7 @@ import { getMembershipDataForCurrentUser, type UserMembershipData } from 'bungie
 
 import { getBungieConfig } from '@/features/bungie/config';
 import type { BungieToken } from '@/features/bungie/oauth';
-import { readJsonCache, writeJsonCache } from '@/features/storage/indexed-json';
+import { deleteJsonCache, readJsonCache, writeJsonCache } from '@/features/storage/indexed-json';
 
 const VAULT_SNAPSHOT_CACHE_KEY = 'bungie.vault-snapshot';
 const STADIA_MEMBERSHIP_TYPE = 5;
@@ -260,6 +260,10 @@ export async function readCachedVaultSnapshot() {
 
 export async function writeCachedVaultSnapshot(snapshot: Awaited<ReturnType<typeof exportVaultSnapshot>>) {
     await writeJsonCache(VAULT_SNAPSHOT_CACHE_KEY, snapshot);
+}
+
+export async function clearCachedVaultSnapshot() {
+    await deleteJsonCache(VAULT_SNAPSHOT_CACHE_KEY);
 }
 
 export function downloadJsonFile(data: unknown, filePrefix = 'rose-vault-export') {

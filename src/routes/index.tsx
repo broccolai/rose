@@ -93,9 +93,9 @@ import {
     targetsAreWithinCaps
 } from '@/features/armor/target-cap-state';
 import type { LoadedManifestDefinition, NormalizedArmorProfile, VaultExportSnapshot } from '@/features/armor/types';
-import { downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
+import { clearCachedVaultSnapshot, downloadJsonFile, exportVaultSnapshot, readCachedVaultSnapshot } from '@/features/bungie/api';
 import { getMissingConfigKeys } from '@/features/bungie/config';
-import { createAuthorizationUrl, getTokenDebugState, getValidToken } from '@/features/bungie/oauth';
+import { createAuthorizationUrl, getTokenDebugState, getValidToken, logout } from '@/features/bungie/oauth';
 
 type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
@@ -643,6 +643,22 @@ export default function Home() {
         }
 
         window.location.href = createAuthorizationUrl();
+    }
+
+    async function signOut() {
+        armorSolver.cancelPending();
+        targetCapRequestId += 1;
+        solveRequestId += 1;
+        setAuthenticated(false);
+        setStatus('idle');
+        setNormalizedProfile(null);
+        setLoadedSnapshot(null);
+        setLoadedManifestDefinitions([]);
+        setSolveResult(null);
+        setExpandedBuildKey(null);
+        setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+        setMessage('Signed out.');
+        await Promise.all([logout(), clearCachedVaultSnapshot()]);
     }
 
     async function loadCalculatorData() {
@@ -1354,6 +1370,7 @@ export default function Home() {
                         theme={appTheme()}
                         onSignIn={signIn}
                         onRefresh={loadCalculatorData}
+                        onLogout={() => void signOut()}
                         onThemeChange={setAppTheme}
                     />
                 }

@@ -4,6 +4,7 @@ const OAUTH_STATE_STORAGE_KEY = 'rose.bungie.oauth.state';
 const TOKEN_STORAGE_KEY = 'rose.bungie.oauth.token';
 const TOKEN_EXCHANGE_ENDPOINT = '/api/bungie/oauth/token';
 const TOKEN_REFRESH_ENDPOINT = '/api/bungie/oauth/refresh';
+const TOKEN_LOGOUT_ENDPOINT = '/api/bungie/oauth/logout';
 const STATE_BYTE_LENGTH = 24;
 const STATE_TTL_MS = 10 * 60 * 1000;
 const EXPIRY_SKEW_MS = 60_000;
@@ -126,6 +127,14 @@ export function storeToken(token: BungieToken) {
 
 export function clearToken() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export async function logout(): Promise<void> {
+    clearToken();
+    await fetch(TOKEN_LOGOUT_ENDPOINT, {
+        method: 'POST',
+        credentials: 'same-origin'
+    }).catch(() => undefined);
 }
 
 export async function getValidToken() {

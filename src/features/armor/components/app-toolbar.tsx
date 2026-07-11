@@ -1,5 +1,5 @@
 import { styled } from '@panda/jsx';
-import { Eclipse, Hamburger, Moon, RefreshCw, Settings, Sun } from 'lucide-solid';
+import { Eclipse, Hamburger, LogOut, Moon, RefreshCw, Settings, Sun } from 'lucide-solid';
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
@@ -24,6 +24,7 @@ type AppToolbarProps = {
     theme: AppTheme;
     onSignIn: () => void;
     onRefresh: () => void;
+    onLogout: () => void;
     onThemeChange: (theme: AppTheme) => void;
 };
 
@@ -370,6 +371,9 @@ function ToolbarActions(props: AppToolbarProps) {
                 >
                     <RefreshCw aria-hidden="true" />
                 </ThemeCycleButton>
+                <ThemeCycleButton type="button" aria-label="Log out" title="Log out" onClick={props.onLogout}>
+                    <LogOut aria-hidden="true" />
+                </ThemeCycleButton>
                 <AvatarButton title={props.avatarLabel ?? 'Signed in'} role="img" aria-label={props.avatarLabel ?? 'Signed in'}>
                     <Show when={props.avatarUrl} fallback={avatarInitial(props.avatarLabel)}>
                         <AvatarImage src={props.avatarUrl} alt="" />
@@ -394,6 +398,7 @@ export function AppToolbar(props: AppToolbarProps) {
                     theme={props.theme}
                     onSignIn={props.onSignIn}
                     onRefresh={props.onRefresh}
+                    onLogout={props.onLogout}
                     onThemeChange={props.onThemeChange}
                 />
             </TopBar>
