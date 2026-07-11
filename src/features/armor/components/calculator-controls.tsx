@@ -120,7 +120,9 @@ export function CalculatorControls() {
                                     <ExoticPicker
                                         labelText={false}
                                         availableExotics={controls.availableExotics()}
+                                        favoriteExoticItemHashes={controls.favoriteExoticItemHashes()}
                                         onExoticChange={actions.selectExotic}
+                                        onToggleFavoriteExotic={actions.toggleFavoriteExotic}
                                         selectedExoticItemHash={controls.selectedExoticItemHash()}
                                     />
                                 </FormRow>

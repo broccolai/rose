@@ -11,6 +11,8 @@ import { formatDimArmorQuery } from '@/features/armor/result-display';
 interface ResultsBuildDetailProps {
     build: ArmorBuild;
     onEquipBuild?: ((build: ArmorBuild) => Promise<void>) | undefined;
+    onToggleSavedBuild?: ((build: ArmorBuild) => void) | undefined;
+    saved?: boolean | undefined;
     showTuningResults: boolean;
 }
 
@@ -32,6 +34,7 @@ const DetailTableWrap = styled('div', {
 
 const DetailActions = styled(ButtonGroup, {
     base: {
+        gridTemplateColumns: { base: 'minmax(0, 1fr)', sm: 'repeat(3, minmax(0, 1fr))' },
         p: 'var(--rose-space-sm)',
         borderTop: '1px solid var(--rose-border)',
         bg: 'color-mix(in srgb, var(--rose-surface-soft) 36%, var(--rose-surface))'
@@ -212,6 +215,9 @@ export function ResultsBuildDetail(props: ResultsBuildDetailProps) {
                     </TonalButton>
                     <TonalButton type="button" disabled={!props.onEquipBuild || equipState() === 'equipping'} onClick={equipBuild}>
                         {equipLabel()}
+                    </TonalButton>
+                    <TonalButton type="button" disabled={!props.onToggleSavedBuild} onClick={() => props.onToggleSavedBuild?.(props.build)}>
+                        {props.saved ? 'Remove from History' : 'Save Build'}
                     </TonalButton>
                 </DetailActions>
             </DetailTableWrap>

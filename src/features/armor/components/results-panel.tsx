@@ -1,8 +1,9 @@
 import type { ArmorBuild } from '@armor-calc';
 import { styled } from '@panda/jsx';
-import { Show } from 'solid-js';
+import { createMemo, Show } from 'solid-js';
 
 import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
+import { sortArmorBuildsForDisplay } from '@/features/armor/calculator-view-model';
 import { ResultsBuildDetail } from '@/features/armor/components/results-build-detail';
 import { ResultsTable } from '@/features/armor/components/results-table';
 import { PaneScroll } from '@/features/armor/components/scroll-primitives';
@@ -65,6 +66,40 @@ const HeaderTools = styled('div', {
         flexWrap: 'wrap',
         justifyContent: { base: 'flex-start', lg: 'flex-end' },
         minW: 0
+    }
+});
+
+const ResultsTabs = styled('div', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: '2px',
+        p: '2px',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)'
+    }
+});
+
+const ResultsTab = styled('button', {
+    base: {
+        minH: '1.8rem',
+        px: 'var(--rose-space-sm)',
+        border: 0,
+        borderRadius: 'var(--rose-radius-xs)',
+        bg: 'transparent',
+        color: 'var(--rose-muted)',
+        cursor: 'pointer',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        _hover: {
+            color: 'var(--rose-text)'
+        },
+        '&[data-selected="true"]': {
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        }
     }
 });
 
@@ -163,6 +198,12 @@ export function ResultsPanel() {
     const calculator = useArmorCalculator();
     const results = calculator.results;
     const actions = calculator.actions;
+    const historyBuilds = createMemo(() =>
+        sortArmorBuildsForDisplay(
+            results.savedBuilds().map((entry) => entry.build),
+            results.sort()
+        )
+    );
 
     function toggleExpandedBuild(build: ArmorBuild) {
         const key = buildExpansionKey(build);
@@ -170,6 +211,10 @@ export function ResultsPanel() {
     }
 
     function resultCountLabel() {
+        if (results.view() === 'history') {
+            return `${results.savedBuilds().length} saved`;
+        }
+
         const result = results.result();
         if (!result?.ok) {
             return '';
@@ -183,71 +228,126 @@ export function ResultsPanel() {
             <ResultsHeader>
                 <ResultsTitle>Results</ResultsTitle>
                 <HeaderTools>
-                    <Show when={results.result()?.ok}>
+                    <ResultsTabs role="tablist" aria-label="Result views">
+                        <ResultsTab
+                            type="button"
+                            role="tab"
+                            aria-selected={results.view() === 'results'}
+                            data-selected={results.view() === 'results'}
+                            onClick={() => actions.setResultsView('results')}
+                        >
+                            Results
+                        </ResultsTab>
+                        <ResultsTab
+                            type="button"
+                            role="tab"
+                            aria-selected={results.view() === 'history'}
+                            data-selected={results.view() === 'history'}
+                            onClick={() => actions.setResultsView('history')}
+                        >
+                            History
+                        </ResultsTab>
+                    </ResultsTabs>
+                    <Show when={results.view() === 'history' || results.result()?.ok}>
                         <TinyMuted>{resultCountLabel()}</TinyMuted>
                     </Show>
                 </HeaderTools>
             </ResultsHeader>
             <ResultsBody>
-                <Show when={results.loading() && !results.result()}>
-                    <LoadingStateCard>
-                        <MutedText>{results.progress().label || 'Working'}</MutedText>
-                        <Show when={results.progress().active}>
-                            <ProgressTrack>
-                                <ProgressBar style={{ width: `${results.progress().percent}%` }} />
-                            </ProgressTrack>
-                        </Show>
-                    </LoadingStateCard>
-                </Show>
-                <Show
-                    when={results.result()}
-                    fallback={
-                        <Show when={!results.loading()}>
-                            <EmptyState>
-                                <MutedText>Awaiting solve.</MutedText>
-                            </EmptyState>
-                        </Show>
-                    }
-                >
+                <Show when={results.view() === 'history'}>
                     <Show
-                        when={!results.resultFailure()}
+                        when={historyBuilds().length > 0}
                         fallback={
-                            <StateCard>
-                                <h3>No builds matched these requirements.</h3>
-                                <MutedText>{results.resultFailure()}</MutedText>
-                                <MutedText>
-                                    Try changing the exotic, lowering target stats, or clearing the armor set requirement.
-                                </MutedText>
-                            </StateCard>
+                            <EmptyState>
+                                <MutedText>Saved builds will appear here.</MutedText>
+                            </EmptyState>
+                        }
+                    >
+                        <ResultsTable
+                            builds={historyBuilds()}
+                            armorSets={results.armorSets()}
+                            armorSetDisplayMode={results.armorSetDisplayMode()}
+                            dumpStat={results.dumpStat()}
+                            expandedBuildKey={results.expandedBuildKey()}
+                            sort={results.sort()}
+                            visibleLimit={50}
+                            onSort={actions.sortResults}
+                            onToggleBuild={toggleExpandedBuild}
+                            renderExpandedBuild={(build) => (
+                                <ResultsBuildDetail
+                                    build={build}
+                                    onEquipBuild={actions.equipBuild}
+                                    onToggleSavedBuild={actions.toggleSavedBuild}
+                                    saved={results.isBuildSaved(build)}
+                                    showTuningResults={results.showTuningResults()}
+                                />
+                            )}
+                        />
+                    </Show>
+                </Show>
+                <Show when={results.view() === 'results'}>
+                    <Show when={results.loading() && !results.result()}>
+                        <LoadingStateCard>
+                            <MutedText>{results.progress().label || 'Working'}</MutedText>
+                            <Show when={results.progress().active}>
+                                <ProgressTrack>
+                                    <ProgressBar style={{ width: `${results.progress().percent}%` }} />
+                                </ProgressTrack>
+                            </Show>
+                        </LoadingStateCard>
+                    </Show>
+                    <Show
+                        when={results.result()}
+                        fallback={
+                            <Show when={!results.loading()}>
+                                <EmptyState>
+                                    <MutedText>Awaiting solve.</MutedText>
+                                </EmptyState>
+                            </Show>
                         }
                     >
                         <Show
-                            when={results.builds().length > 0}
+                            when={!results.resultFailure()}
                             fallback={
                                 <StateCard>
-                                    <h3>No matching armor for this character.</h3>
-                                    <MutedText>Try clearing the exotic or armor set requirements.</MutedText>
+                                    <h3>No builds matched these requirements.</h3>
+                                    <MutedText>{results.resultFailure()}</MutedText>
+                                    <MutedText>
+                                        Try changing the exotic, lowering target stats, or clearing the armor set requirement.
+                                    </MutedText>
                                 </StateCard>
                             }
                         >
-                            <ResultsTable
-                                builds={results.builds()}
-                                armorSets={results.armorSets()}
-                                armorSetDisplayMode={results.armorSetDisplayMode()}
-                                dumpStat={results.dumpStat()}
-                                expandedBuildKey={results.expandedBuildKey()}
-                                sort={results.sort()}
-                                visibleLimit={results.visibleLimit()}
-                                onSort={actions.sortResults}
-                                onToggleBuild={toggleExpandedBuild}
-                                renderExpandedBuild={(build) => (
-                                    <ResultsBuildDetail
-                                        build={build}
-                                        onEquipBuild={actions.equipBuild}
-                                        showTuningResults={results.showTuningResults()}
-                                    />
-                                )}
-                            />
+                            <Show
+                                when={results.builds().length > 0}
+                                fallback={
+                                    <StateCard>
+                                        <h3>No matching armor for this character.</h3>
+                                        <MutedText>Try clearing the exotic or armor set requirements.</MutedText>
+                                    </StateCard>
+                                }
+                            >
+                                <ResultsTable
+                                    builds={results.builds()}
+                                    armorSets={results.armorSets()}
+                                    armorSetDisplayMode={results.armorSetDisplayMode()}
+                                    dumpStat={results.dumpStat()}
+                                    expandedBuildKey={results.expandedBuildKey()}
+                                    sort={results.sort()}
+                                    visibleLimit={results.visibleLimit()}
+                                    onSort={actions.sortResults}
+                                    onToggleBuild={toggleExpandedBuild}
+                                    renderExpandedBuild={(build) => (
+                                        <ResultsBuildDetail
+                                            build={build}
+                                            onEquipBuild={actions.equipBuild}
+                                            onToggleSavedBuild={actions.toggleSavedBuild}
+                                            saved={results.isBuildSaved(build)}
+                                            showTuningResults={results.showTuningResults()}
+                                        />
+                                    )}
+                                />
+                            </Show>
                         </Show>
                     </Show>
                 </Show>

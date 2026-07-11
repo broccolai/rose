@@ -4,8 +4,11 @@ import { type Accessor, createContext, type JSX, useContext } from 'solid-js';
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption, ResultSortKey } from '@/features/armor/calculator-view-model';
 import type { LoadProgress } from '@/features/armor/components/app-toolbar';
+import type { SavedArmorBuild } from '@/features/armor/model/personal-library';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
 import type { SubclassType } from '@/features/armor/subclass-fragments';
+
+export type ResultsView = 'results' | 'history';
 
 export interface ArmorCalculatorContextValue {
     controls: {
@@ -24,6 +27,7 @@ export interface ArmorCalculatorContextValue {
         targetCapsPending: Accessor<boolean>;
         setSelections: Accessor<Record<string, SetSelectionValue>>;
         availableExotics: Accessor<AvailableExotic[]>;
+        favoriteExoticItemHashes: Accessor<number[]>;
         selectableSets: Accessor<AvailableArmorSet[]>;
         canSolve: Accessor<boolean>;
         solving: Accessor<boolean>;
@@ -41,10 +45,14 @@ export interface ArmorCalculatorContextValue {
         showTuningResults: Accessor<boolean>;
         visibleLimit: Accessor<number>;
         expandedBuildKey: Accessor<string | null>;
+        savedBuilds: Accessor<SavedArmorBuild[]>;
+        view: Accessor<ResultsView>;
+        isBuildSaved: (build: ArmorBuild) => boolean;
     };
     actions: {
         selectCharacter: (characterId: string) => void;
         selectExotic: (itemHash: string) => void;
+        toggleFavoriteExotic: (itemHash: number) => void;
         setArmorSetDisplayMode: (mode: ArmorSetDisplayMode) => void;
         setSubclass: (subclass: SubclassType) => void;
         toggleFragment: (fragmentId: string) => void;
@@ -57,6 +65,8 @@ export interface ArmorCalculatorContextValue {
         solve: () => void;
         clearChoices: () => void;
         setExpandedBuildKey: (key: string | null) => void;
+        setResultsView: (view: ResultsView) => void;
+        toggleSavedBuild: (build: ArmorBuild) => void;
         equipBuild: (build: ArmorBuild) => Promise<void>;
         sortResults: (key: ResultSortKey) => void;
     };

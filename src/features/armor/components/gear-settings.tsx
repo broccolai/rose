@@ -1,4 +1,5 @@
 import { styled } from '@panda/jsx';
+import { Star } from 'lucide-solid';
 import { createSignal, For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
@@ -15,6 +16,8 @@ type GearSettingsProps = {
     availableExotics: AvailableExotic[];
     selectableSets: AvailableArmorSet[];
     onExoticChange: (itemHash: string) => void;
+    favoriteExoticItemHashes: number[];
+    onToggleFavoriteExotic: (itemHash: number) => void;
     onSetRequirementChange: (setId: string, value: string) => void;
 };
 
@@ -59,6 +62,53 @@ const ExoticBadge = styled('span', {
 const SetList = styled(DataTableFrame, {
     base: {
         '--rose-op': '#d8b15f'
+    }
+});
+
+const ExoticControlRow = styled('div', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) var(--rose-control-height)',
+        gap: 'var(--rose-space-xs)',
+        minW: 0
+    }
+});
+
+const FavoriteButton = styled('button', {
+    base: {
+        display: 'grid',
+        placeItems: 'center',
+        w: 'var(--rose-control-height)',
+        h: 'var(--rose-control-height)',
+        p: 0,
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)',
+        color: 'var(--rose-muted)',
+        cursor: 'pointer',
+        outline: 'none',
+        transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
+        _hover: {
+            borderColor: 'var(--rose-border-strong)',
+            bg: 'var(--rose-surface-raised)',
+            color: 'var(--rose-text)'
+        },
+        _focusVisible: {
+            outline: '2px solid color-mix(in srgb, var(--rose-accent) 28%, transparent)',
+            outlineOffset: '2px'
+        },
+        _disabled: {
+            cursor: 'not-allowed',
+            opacity: 0.38
+        },
+        '&[data-selected="true"]': {
+            borderColor: 'color-mix(in srgb, #d8b15f 58%, var(--rose-border))',
+            color: '#e5c36d',
+            bg: 'color-mix(in srgb, #d8b15f 10%, var(--rose-surface-soft))',
+            '& svg': {
+                fill: 'currentColor'
+            }
+        }
     }
 });
 
@@ -143,18 +193,26 @@ const SetSectionChevron = styled('span', {
 });
 
 export function ExoticPicker(
-    props: Pick<GearSettingsProps, 'availableExotics' | 'onExoticChange' | 'selectedExoticItemHash'> & { labelText?: string | false }
+    props: Pick<
+        GearSettingsProps,
+        'availableExotics' | 'favoriteExoticItemHashes' | 'onExoticChange' | 'onToggleFavoriteExotic' | 'selectedExoticItemHash'
+    > & { labelText?: string | false }
 ) {
+    const favoriteHashes = () => new Set(props.favoriteExoticItemHashes);
+    const selectedExotic = () => props.availableExotics.find((exotic) => String(exotic.itemHash) === props.selectedExoticItemHash);
+    const selectedIsFavorite = () => Boolean(selectedExotic() && favoriteHashes().has(selectedExotic()?.itemHash ?? 0));
     const options = () => [
         { value: '', label: 'None' },
-        ...props.availableExotics.map((exotic) => ({
-            value: String(exotic.itemHash),
-            label: exotic.name
-        }))
+        ...[...props.availableExotics]
+            .sort((left, right) => Number(favoriteHashes().has(right.itemHash)) - Number(favoriteHashes().has(left.itemHash)))
+            .map((exotic) => ({
+                value: String(exotic.itemHash),
+                label: favoriteHashes().has(exotic.itemHash) ? `${exotic.name} (favorite)` : exotic.name
+            }))
     ];
 
     return (
-        <Field>
+        <Field as="div">
             <Show when={props.labelText !== false}>
                 <LabelLine>
                     {props.labelText ?? 'Choose one'}
@@ -163,12 +221,29 @@ export function ExoticPicker(
                     </Show>
                 </LabelLine>
             </Show>
-            <CustomSelect
-                ariaLabel="Exotic armor"
-                value={props.selectedExoticItemHash}
-                options={options()}
-                onChange={props.onExoticChange}
-            />
+            <ExoticControlRow>
+                <CustomSelect
+                    ariaLabel="Exotic armor"
+                    value={props.selectedExoticItemHash}
+                    options={options()}
+                    onChange={props.onExoticChange}
+                />
+                <FavoriteButton
+                    type="button"
+                    disabled={!selectedExotic()}
+                    data-selected={selectedIsFavorite()}
+                    aria-label={selectedIsFavorite() ? 'Remove exotic from favorites' : 'Add exotic to favorites'}
+                    title={selectedIsFavorite() ? 'Remove from favorites' : 'Add to favorites'}
+                    onClick={() => {
+                        const exotic = selectedExotic();
+                        if (exotic) {
+                            props.onToggleFavoriteExotic(exotic.itemHash);
+                        }
+                    }}
+                >
+                    <Star size={17} strokeWidth={2} aria-hidden="true" />
+                </FavoriteButton>
+            </ExoticControlRow>
         </Field>
     );
 }

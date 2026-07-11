@@ -18,7 +18,7 @@ import { applyArmorBuild } from '@/features/armor/api/equip-build';
 import { absoluteBungieAssetUrl, readBungieUser, readSnapshotMembershipType } from '@/features/armor/api/profile-items';
 import { readEquippedSubclassImport } from '@/features/armor/api/subclass-import';
 import { type AppTheme, DEFAULT_APP_THEME, sanitizeAppTheme } from '@/features/armor/app-theme';
-import { type ArmorCalculatorContextValue, ArmorCalculatorProvider } from '@/features/armor/armor-calculator-context';
+import { type ArmorCalculatorContextValue, ArmorCalculatorProvider, type ResultsView } from '@/features/armor/armor-calculator-context';
 import {
     applySetSelectionLimit,
     type CalculatorPreferences,
@@ -63,6 +63,15 @@ import {
     markEquipProgressEquippingAll
 } from '@/features/armor/model/equip-progress';
 import { prepareLoadedCalculatorState } from '@/features/armor/model/loaded-calculator-state';
+import {
+    isArmorBuildSaved,
+    readPersonalArmorLibrary,
+    removeSavedArmorBuild,
+    type SavedArmorBuild,
+    saveArmorBuild,
+    toggleFavoriteExotic,
+    writePersonalArmorLibrary
+} from '@/features/armor/model/personal-library';
 import { filterFullyMasterworkedProfile } from '@/features/armor/model/profile-filters';
 import { setSelectionRecordsEqual } from '@/features/armor/model/set-selections';
 import { makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
@@ -135,6 +144,10 @@ export default function Home() {
     const [appTheme, setAppTheme] = createSignal<AppTheme>(DEFAULT_APP_THEME);
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
+    const [favoriteExoticItemHashes, setFavoriteExoticItemHashes] = createSignal<number[]>([]);
+    const [savedBuilds, setSavedBuilds] = createSignal<SavedArmorBuild[]>([]);
+    const [personalLibraryOwnerId, setPersonalLibraryOwnerId] = createSignal('');
+    const [resultsView, setResultsView] = createSignal<ResultsView>('results');
     const [armorSetDisplayMode, setArmorSetDisplayMode] = createSignal<ArmorSetDisplayMode>('sets');
     const [selectedSubclass, setSelectedSubclass] = createSignal<SubclassType>('Prismatic');
     const [selectedFragmentIds, setSelectedFragmentIds] = createSignal<string[]>([]);
@@ -412,6 +425,19 @@ export default function Home() {
         setResultSort(DEFAULT_RESULT_SORT);
     }
 
+    function loadPersonalLibrary(snapshot: VaultExportSnapshot | null) {
+        const ownerId = snapshot?.selectedMembership?.membershipId
+            ? String(snapshot.selectedMembership.membershipId)
+            : canLoadLocalTestData()
+              ? 'local-test'
+              : '';
+        const library = readPersonalArmorLibrary(ownerId);
+
+        setFavoriteExoticItemHashes(library.favoriteExoticItemHashes);
+        setSavedBuilds(library.savedBuilds);
+        setPersonalLibraryOwnerId(ownerId);
+    }
+
     function selectCharacter(characterId: string) {
         if (characterId === selectedCharacterId()) {
             return;
@@ -553,6 +579,18 @@ export default function Home() {
     });
 
     createEffect(() => {
+        const ownerId = personalLibraryOwnerId();
+        if (!ownerId) {
+            return;
+        }
+
+        writePersonalArmorLibrary(ownerId, {
+            favoriteExoticItemHashes: favoriteExoticItemHashes(),
+            savedBuilds: savedBuilds()
+        });
+    });
+
+    createEffect(() => {
         if (typeof document === 'undefined') {
             return;
         }
@@ -654,6 +692,10 @@ export default function Home() {
         setNormalizedProfile(null);
         setLoadedSnapshot(null);
         setLoadedManifestDefinitions([]);
+        setFavoriteExoticItemHashes([]);
+        setSavedBuilds([]);
+        setPersonalLibraryOwnerId('');
+        setResultsView('results');
         setSolveResult(null);
         setExpandedBuildKey(null);
         setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
@@ -885,6 +927,7 @@ export default function Home() {
 
         setNormalizedProfile(nextProfile);
         setLoadedSnapshot(nextSnapshot);
+        loadPersonalLibrary(nextSnapshot);
         setLoadedManifestDefinitions(manifest.getLoadedInventoryItemDefinitions());
         setSelectedCharacterId(preparedState.characterId);
         setSelectedExoticItemHash(preparedState.selectedExoticItemHash);
@@ -930,6 +973,7 @@ export default function Home() {
 
         setNormalizedProfile(nextProfile);
         setLoadedSnapshot(nextSnapshot);
+        loadPersonalLibrary(nextSnapshot);
         setLoadedManifestDefinitions(nextManifestDefinitions);
         setSelectedCharacterId(preparedState.characterId);
         setSelectedExoticItemHash(preparedState.selectedExoticItemHash);
@@ -971,7 +1015,31 @@ export default function Home() {
     }
 
     function solveCurrentBuilds() {
+        setResultsView('results');
         void runSolve();
+    }
+
+    function updateResultsView(view: ResultsView) {
+        setResultsView(view);
+        setExpandedBuildKey(null);
+    }
+
+    function toggleSavedBuild(build: ArmorBuild) {
+        setSavedBuilds((current) => {
+            if (isArmorBuildSaved(current, build)) {
+                return removeSavedArmorBuild(current, build);
+            }
+
+            const character = selectedCharacter();
+            if (!character) {
+                return current;
+            }
+
+            return saveArmorBuild(current, build, {
+                characterId: character.characterId,
+                characterClass: character.classType
+            });
+        });
     }
 
     async function runSolve() {
@@ -1305,6 +1373,7 @@ export default function Home() {
             targetCapsPending,
             setSelections,
             availableExotics,
+            favoriteExoticItemHashes,
             selectableSets,
             canSolve: () =>
                 !calculatorLocked() &&
@@ -1326,7 +1395,10 @@ export default function Home() {
             progress: loadProgress,
             showTuningResults,
             visibleLimit: () => VISIBLE_RESULT_LIMIT,
-            expandedBuildKey
+            expandedBuildKey,
+            savedBuilds,
+            view: resultsView,
+            isBuildSaved: (build) => isArmorBuildSaved(savedBuilds(), build)
         },
         actions: {
             selectCharacter,
@@ -1334,6 +1406,7 @@ export default function Home() {
                 setSelectedExoticItemHash(itemHash);
                 invalidateSolve();
             },
+            toggleFavoriteExotic: (itemHash) => setFavoriteExoticItemHashes((current) => toggleFavoriteExotic(current, itemHash)),
             setArmorSetDisplayMode,
             setSubclass: updateSubclass,
             toggleFragment,
@@ -1352,6 +1425,8 @@ export default function Home() {
             solve: solveCurrentBuilds,
             clearChoices: clearSavedCalculatorChoices,
             setExpandedBuildKey,
+            setResultsView: updateResultsView,
+            toggleSavedBuild,
             equipBuild: equipBuildItems,
             sortResults: toggleResultSort
         }
