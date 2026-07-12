@@ -1,4 +1,4 @@
-import type { ArmorBuild, StatVector } from '@armor-calc';
+import type { ArmorBuild, StatVector } from '@armor-domain';
 import type {
     DestinyInventoryItemDefinition,
     DestinyItemInstanceComponent,

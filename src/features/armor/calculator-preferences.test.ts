@@ -39,6 +39,7 @@ describe('calculator preferences', () => {
                     keep0: '0',
                     drop: '3'
                 },
+                otherSetsCollapsed: true,
                 resultSort: {
                     key: 'weapons',
                     direction: 'desc'
@@ -66,6 +67,7 @@ describe('calculator preferences', () => {
             setSelections: {
                 keep4: '4'
             },
+            otherSetsCollapsed: true,
             resultSort: {
                 key: 'weapons',
                 direction: 'desc'

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ARMOR_SLOTS, type ArmorItem, type ArmorSlot, createDefaultStatModOptions, NO_TUNING } from '../../armor-calc/src';
+import { ARMOR_SLOTS, type ArmorItem, type ArmorSlot, createDefaultStatModOptions, NO_TUNING } from '../../armor-domain/src';
 import { hasBenchmarkInputs, loadLatestBenchmarkBundle } from './bundle';
 import { runInteractiveScenarioBenchmark } from './interactive-suite';
 import { runComparisonBenchmarks } from './run';

@@ -1,6 +1,6 @@
 import { ARMOR_STATS, type ArmorItem, type StatAdjustment } from './types';
 
-export function dedupeEquivalentArmorItems(items: ArmorItem[]) {
+export const dedupeEquivalentArmorItems = (items: ArmorItem[]): ArmorItem[] => {
     const byKey = new Map<string, ArmorItem>();
 
     for (const item of items) {
@@ -28,18 +28,18 @@ export function dedupeEquivalentArmorItems(items: ArmorItem[]) {
     }
 
     return [...byKey.values()];
-}
+};
 
-function masterworkedItemInstanceIds(item: ArmorItem) {
+const masterworkedItemInstanceIds = (item: ArmorItem): string[] => {
     if (item.fullyMasterworkedItemInstanceIds) {
         return item.fullyMasterworkedItemInstanceIds;
     }
 
     return item.isCurrentMasterworked ? [item.itemInstanceId] : [];
-}
+};
 
-function equivalentArmorKey(item: ArmorItem) {
-    return [
+const equivalentArmorKey = (item: ArmorItem): string =>
+    [
         item.slot,
         item.classType,
         item.isExotic ? `exotic:${item.itemHash}` : 'legendary',
@@ -49,8 +49,6 @@ function equivalentArmorKey(item: ArmorItem) {
         ...item.statModOptions.map(adjustmentKey),
         ...item.tuningOptions.map(adjustmentKey)
     ].join('|');
-}
 
-function adjustmentKey(adjustment: StatAdjustment) {
-    return [adjustment.id, ...ARMOR_STATS.map((stat) => adjustment.deltas[stat] ?? 0)].join(':');
-}
+const adjustmentKey = (adjustment: StatAdjustment): string =>
+    [adjustment.id, ...ARMOR_STATS.map((stat) => adjustment.deltas[stat] ?? 0)].join(':');

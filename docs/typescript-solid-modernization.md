@@ -43,7 +43,7 @@ Not enabled yet:
 - optional function props passed through as present-but-undefined
 - fetch/request options including `body: undefined`
 
-`noUncheckedIndexedAccess` is still worth doing, but it is a real code-quality project. A trial run exposed many tuple and array index assumptions in the solver and benchmark code. That should be cleaned in a focused pass, starting with `packages/armor-calc` because that is where the indexing assumptions matter most.
+`noUncheckedIndexedAccess` is still worth doing, but it is a real code-quality project. A trial run exposed tuple and array index assumptions in the engine adapter and benchmark code. That should be cleaned in a focused pass, starting with the TypeScript Wasm boundary because those indexes cross a language boundary.
 
 ## Solid Style
 

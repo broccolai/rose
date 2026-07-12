@@ -163,7 +163,9 @@ export function CalculatorControls() {
                             <ArmorSetFields
                                 armorSetDisplayMode={controls.armorSetDisplayMode()}
                                 availableExotics={controls.availableExotics()}
+                                onOtherSetsCollapsedChange={actions.setOtherSetsCollapsed}
                                 onSetRequirementChange={actions.setRequirement}
+                                otherSetsCollapsed={controls.otherSetsCollapsed()}
                                 selectableSets={controls.selectableSets()}
                                 selectedExoticItemHash={controls.selectedExoticItemHash()}
                                 setSelections={controls.setSelections()}

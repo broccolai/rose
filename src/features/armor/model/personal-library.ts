@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot, type DestinyClass } from '@armor-calc';
+import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot, type DestinyClass } from '@armor-domain';
 
 import { buildExpansionKey } from '@/features/armor/result-display';
 

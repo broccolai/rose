@@ -1,6 +1,6 @@
 # Solver Contract
 
-This file is the source of truth for the Rust rewrite. A behavior is not complete until native Rust tests and TypeScript differential tests cover it.
+This file is the source of truth for the armor engine. A behavior is not complete until native Rust tests cover its rules and Wasm fixture tests cover the browser boundary.
 
 ## Scope
 
@@ -42,7 +42,7 @@ This file is the source of truth for the Rust rewrite. A behavior is not complet
 
 - Select at most one stat mod per armor piece, for at most five mods total.
 - Support the normalized choices supplied by the profile, including no mod, +5 minor mods, and +10 major mods.
-- Prefer +10 when it can satisfy a target without crossing the 200 display ceiling; use +5 where +10 would exceed 200.
+- Prefer +10. Use +5 only when +10 would cross the 200 display ceiling and +5 still reaches the requested target.
 - Never assign a mod that the selected normalized item cannot accept.
 - Cap search must account for one shared five-mod budget, not five hypothetical mods per stat.
 
@@ -77,7 +77,7 @@ This file is the source of truth for the Rust rewrite. A behavior is not complet
 - When no explicit sort is requested and interactive stop is enabled, stop after the requested result limit.
 - Otherwise count every valid build even when only a bounded result set is retained.
 - Report searched combinations, rejected combinations, result-limit state, and deterministic failure reasons.
-- Emit one optional progress snapshot after the configured number of retained valid builds.
+- The worker/client may request a small first-result solve before the full retained-pool solve to provide progressive UI feedback.
 
 ## Runtime Requirements
 
@@ -94,12 +94,12 @@ This file is the source of truth for the Rust rewrite. A behavior is not complet
 
 - No full Cartesian-product materialization.
 - No retained list of every valid build.
-- Use slot-first packed storage and small integer tuples in hot loops.
+- Use slot-first packed storage, fixed arrays, and validated domain values in hot loops.
 - Cache only bounded reusable profile/allocation data.
 - High current targets must make subsequent caps faster through branch-and-bound pruning.
 - Measure initialization separately from warm cap and solve requests.
-- Benchmark native Rust, Wasm kernel, and browser worker end-to-end.
-- Keep the TypeScript implementation available as the oracle and fallback until all acceptance scenarios match.
+- Benchmark initialization, Wasm calculations, and browser-worker behavior separately when diagnosing performance.
+- Keep Rust as the only executable solver so production, tests, and benchmarks cannot quietly choose different algorithms.
 
 ## Acceptance Scenarios
 
@@ -115,7 +115,7 @@ This file is the source of truth for the Rust rewrite. A behavior is not complet
 - Selected exotic with multiple rolls.
 - Legendary-only solve.
 - Impossible targets.
-- Exact cap parity for one stat and all stats.
+- Exact cap/solve constraint parity for one stat and all stats.
 - Stable top-N sorting and valid-build counts.
 - Progressive first-result snapshot.
 - July 6 mixed-class private fixture.

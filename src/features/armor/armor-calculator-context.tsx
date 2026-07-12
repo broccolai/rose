@@ -1,4 +1,4 @@
-import type { ArmorBuild, ArmorBuildSort, ArmorStat, SolveArmorResult, StatVector } from '@armor-calc';
+import type { ArmorBuild, ArmorBuildSort, ArmorStat, SolveArmorResult, StatVector } from '@armor-domain';
 import { type Accessor, createContext, type JSX, useContext } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
@@ -28,6 +28,7 @@ export interface ArmorCalculatorContextValue {
         targetCaps: Accessor<StatVector>;
         targetCapsPending: Accessor<boolean>;
         setSelections: Accessor<Record<string, SetSelectionValue>>;
+        otherSetsCollapsed: Accessor<boolean>;
         availableExotics: Accessor<AvailableExotic[]>;
         favoriteExoticItemHashes: Accessor<number[]>;
         selectableSets: Accessor<AvailableArmorSet[]>;
@@ -65,6 +66,7 @@ export interface ArmorCalculatorContextValue {
         setRefreshVaultOnStartup: (enabled: boolean) => void;
         setTarget: (stat: ArmorStat, value: string) => void;
         setRequirement: (setId: string, value: string) => void;
+        setOtherSetsCollapsed: (collapsed: boolean) => void;
         solve: () => void;
         clearChoices: () => void;
         setExpandedBuildKey: (key: string | null) => void;

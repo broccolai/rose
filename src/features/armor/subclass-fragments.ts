@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
+import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-domain';
 
 export const SUBCLASS_TYPES = ['Prismatic', 'Arc', 'Solar', 'Void', 'Stasis', 'Strand'] as const;
 

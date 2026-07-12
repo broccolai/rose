@@ -1,4 +1,4 @@
-import type { ArmorInventoryBySlot, ArmorItem, ArmorSlot, DestinyClass } from '@armor-calc';
+import type { ArmorInventoryBySlot, ArmorItem, ArmorSlot, DestinyClass } from '@armor-domain';
 import type {
     DestinyEquipableItemSetDefinition,
     DestinyInventoryItemDefinition,

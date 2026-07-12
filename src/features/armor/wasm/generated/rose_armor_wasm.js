@@ -12,6 +12,10 @@ export class WasmArmorEngine {
         wasm.__wbg_wasmarmorengine_free(ptr, 0);
     }
     /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
      * @param {any} request
      * @returns {any}
      */
@@ -31,6 +35,11 @@ export class WasmArmorEngine {
         }
     }
     /**
+     * Creates a persistent engine from a compact normalized profile.
+     *
+     * # Errors
+     *
+     * Returns a JavaScript error when deserialization or profile compilation fails.
      * @param {any} profile
      */
     constructor(profile) {
@@ -51,6 +60,10 @@ export class WasmArmorEngine {
         }
     }
     /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
      * @param {any} request
      * @returns {any}
      */
@@ -70,6 +83,9 @@ export class WasmArmorEngine {
         }
     }
     /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the summary cannot be serialized.
      * @returns {any}
      */
     summary() {

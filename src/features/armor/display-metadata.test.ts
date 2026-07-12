@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { ARMOR_SLOTS, ARMOR_STATS } from '@armor-calc';
+import { ARMOR_SLOTS, ARMOR_STATS } from '@armor-domain';
 
 import { COMPACT_STAT_LABELS, SLOT_LABELS, STAT_LABELS } from '@/features/armor/display-metadata';
 

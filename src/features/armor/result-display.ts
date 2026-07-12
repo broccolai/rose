@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorBuildSort } from '@armor-calc';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorBuildSort } from '@armor-domain';
 
 export { COMPACT_STAT_LABELS } from '@/features/armor/display-metadata';
 

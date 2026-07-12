@@ -13,7 +13,7 @@ import {
     type SolveArmorResult,
     type StatAdjustment,
     type StatVector
-} from '@armor-calc';
+} from '@armor-domain';
 
 import type {
     EngineAdjustmentInput,
@@ -102,7 +102,7 @@ export class ArmorEngineAdapter {
             resultLimitReached: output.resultLimitReached,
             searchedCombinations: Number(output.searchedCombinations),
             rejectedCombinations: Number(output.rejectedCombinations),
-            warnings: output.warnings
+            warnings: []
         };
         if (!output.ok) {
             return {

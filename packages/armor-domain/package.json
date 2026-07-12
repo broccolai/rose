@@ -1,5 +1,5 @@
 {
-    "name": "@rose/armor-calc",
+    "name": "@rose/armor-domain",
     "private": true,
     "type": "module",
     "exports": {

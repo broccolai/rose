@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
 import { interactiveBenchmarkScenarios } from '../../armor-bench/src/interactive-scenarios';
 import { runRustWasmBenchmark } from '../../armor-bench/src/rust-wasm-runner';
 import type { LoadedBenchmarkBundle } from '../../armor-bench/src/types';
+import { ARMOR_STATS } from '../../armor-domain/src';
 
 const privateData = join(process.cwd(), 'data/private');
 const fixtures = [
@@ -25,23 +25,29 @@ const fixtures = [
     }
 ] as const;
 
-describe('Rust/Wasm solver differential fixtures', () => {
+describe('Rust/Wasm solver fixtures', () => {
     for (const fixture of fixtures) {
         const fixturePath = join(privateData, fixture.file);
         const fixtureTest = existsSync(fixturePath) ? test : test.skip;
+
         fixtureTest(
             fixture.file,
             () => {
                 const bundle = JSON.parse(readFileSync(fixturePath, 'utf8')) as LoadedBenchmarkBundle;
+
                 for (const scenarioId of fixture.scenarios) {
                     const scenario = interactiveBenchmarkScenarios.find((candidate) => candidate.id === scenarioId);
                     expect(scenario, `Missing benchmark scenario ${scenarioId}`).toBeDefined();
+
                     if (!scenario) {
                         continue;
                     }
+
                     const result = runRustWasmBenchmark(bundle, scenario, 1);
-                    expect(result.capParity, `${scenario.name} caps`).toBe(true);
-                    expect(result.solveParity, `${scenario.name} solve`).toBe(true);
+                    expect(result.solveResult.ok, scenario.name).toBe(true);
+                    expect(result.solveResult.validBuildCount, scenario.name).toBeGreaterThan(0);
+                    expect(result.caps.samplesMs).toHaveLength(1);
+                    expect(ARMOR_STATS.every((stat) => Number.isFinite(result.capResult[stat]))).toBe(true);
                 }
             },
             30_000

@@ -6,7 +6,7 @@ import {
     type ArmorSlot,
     type StatAdjustment,
     type StatVector
-} from '@armor-calc';
+} from '@armor-domain';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 
 import { STAT_BY_HASH } from '@/features/armor/stat-hashes';

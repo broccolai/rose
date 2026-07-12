@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorStatTargetCapsInput, type SolveArmorInput } from '@armor-calc';
+import { ARMOR_SLOTS, type ArmorStatTargetCapsInput, type SolveArmorInput } from '@armor-domain';
 
 export const AUTH_LOCK_DISABLED = import.meta.env.DEV || import.meta.env.MODE === 'test';
 export const DEV_TIMING = import.meta.env.DEV;

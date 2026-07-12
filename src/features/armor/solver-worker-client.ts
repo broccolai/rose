@@ -1,15 +1,12 @@
-import {
-    type ArmorInventoryBySlot,
-    type ArmorStat,
-    type ArmorStatTargetCapsInput,
-    calculateArmorStatTargetCap,
-    calculateArmorStatTargetCaps,
-    type SolveArmorInput,
-    type SolveArmorProgress,
-    type SolveArmorResult,
-    type StatVector,
-    solveArmor
-} from '@armor-calc';
+import type {
+    ArmorInventoryBySlot,
+    ArmorStat,
+    ArmorStatTargetCapsInput,
+    SolveArmorInput,
+    SolveArmorProgress,
+    SolveArmorResult,
+    StatVector
+} from '@armor-domain';
 import type { SolverWorkerRequest, SolverWorkerResponse } from '@/features/armor/solver-worker';
 import type { EngineCapOutput, EngineProfileSummary, EngineSolveOutput } from '../../../packages/armor-engine/ts';
 import { ArmorEngineAdapter } from '../../../packages/armor-engine/ts';
@@ -234,44 +231,6 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
     }
 }
 
-class DirectSolverWorkerClient implements SolverWorkerClient {
-    async calculateStatCap(input: ArmorStatTargetCapsInput, stat: ArmorStat): Promise<number> {
-        const startedAt = performance.now();
-        try {
-            return calculateArmorStatTargetCap(input, stat);
-        } finally {
-            logSolverTiming(`direct cap:${stat}`, startedAt, 'done');
-        }
-    }
-
-    async calculateStatCaps(
-        input: ArmorStatTargetCapsInput,
-        stats: readonly ArmorStat[],
-        onStatCap?: (stat: ArmorStat, cap: number) => void
-    ): Promise<StatVector> {
-        const startedAt = performance.now();
-        const caps = calculateArmorStatTargetCaps(input, stats);
-        for (const stat of stats) {
-            onStatCap?.(stat, caps[stat]);
-        }
-        logSolverTiming('direct caps', startedAt, 'done');
-        return caps;
-    }
-
-    async solve(input: SolveArmorInput, options: SolveRequestOptions = {}): Promise<SolveArmorResult> {
-        const startedAt = performance.now();
-        try {
-            return solveArmor(input, options);
-        } finally {
-            logSolverTiming('direct solve', startedAt, 'done');
-        }
-    }
-
-    cancelPending(): void {}
-
-    dispose(): void {}
-}
-
 const asEngineCapOutput = (value: unknown): EngineCapOutput => value as EngineCapOutput;
 const asEngineSolveOutput = (value: unknown): EngineSolveOutput => value as EngineSolveOutput;
 const asEngineProfileSummary = (value: unknown): EngineProfileSummary => value as EngineProfileSummary;
@@ -289,7 +248,8 @@ const logSolverTiming = (label: string, startedAt: number, status: 'canceled' | 
 
 export const createArmorSolverClient = (): SolverWorkerClient => {
     if (typeof Worker === 'undefined') {
-        return new DirectSolverWorkerClient();
+        throw new Error('The armor solver requires Web Worker support.');
     }
+
     return new BrowserSolverWorkerClient();
 };

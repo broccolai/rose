@@ -6,7 +6,7 @@ import {
     type ArmorSlot,
     type DestinyClass,
     type SolveArmorResult
-} from '@armor-calc';
+} from '@armor-domain';
 
 import { applySetSelectionLimit, limitSetSelections, type SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { getArmorForClass, getAvailableArmorSets } from '@/features/armor/normalize';

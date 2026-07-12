@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-calc';
+import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-domain';
 
 import { type AppTheme, sanitizeAppTheme } from '@/features/armor/app-theme';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
@@ -21,6 +21,7 @@ export type CalculatorPreferences = {
     refreshVaultOnStartup?: boolean | undefined;
     targets?: Partial<StatVector> | undefined;
     setSelections?: Record<string, SetSelectionValue> | undefined;
+    otherSetsCollapsed?: boolean | undefined;
     resultSort?: ArmorBuildSort | undefined;
 };
 
@@ -105,6 +106,7 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         refreshVaultOnStartup: candidate.refreshVaultOnStartup === true,
         targets: sanitizeTargets(candidate.targets),
         setSelections: sanitizeSetSelectionRecord(candidate.setSelections),
+        otherSetsCollapsed: candidate.otherSetsCollapsed === true,
         resultSort: sanitizeResultSort(candidate.resultSort)
     };
 }

@@ -931,14 +931,6 @@
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-  .bLGPlC {
-    border-right: 1.5px solid currentColor;
-}
-
-  .bLKTTe {
-    border-bottom: 1.5px solid currentColor;
-}
-
   .lbPYEe {
     transition: transform 120ms ease;
 }
@@ -949,6 +941,14 @@
 
   .bmsXjq {
     gap: var(--rose-space-xxs);
+}
+
+  .bLGPlC {
+    border-right: 1.5px solid currentColor;
+}
+
+  .bLKTTe {
+    border-bottom: 1.5px solid currentColor;
 }
 
   .ldeytt {
@@ -1403,10 +1403,6 @@
     grid-template-columns: minmax(0, 1fr) var(--rose-control-height);
 }
 
-  .ksqSjn {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-}
-
   .jutHam {
     color: inherit;
 }
@@ -1415,32 +1411,40 @@
     letter-spacing: inherit;
 }
 
-  .jKnLOw {
-    line-height: 1.25;
-}
-
   .eWkBaV {
     text-transform: inherit;
+}
+
+  .felzJA {
+    justify-content: flex-end;
+}
+
+  .jmzEDN {
+    flex-shrink: 0;
+}
+
+  .bYPznK {
+    justify-content: center;
 }
 
   .fjPTAm {
     font-variant-numeric: tabular-nums;
 }
 
-  .FWzKW {
-    transform: rotate(45deg) translateY(-1px);
+  .dPLqsm {
+    transform: rotate(0deg);
 }
 
   .bgJxpc {
     stroke-width: 2;
 }
 
-  .izUfiN {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .kXATDT {
+    fill: currentColor;
 }
 
-  .bYPznK {
-    justify-content: center;
+  .izUfiN {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
   .iaKtRf {
@@ -1496,6 +1500,10 @@
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
+  .jKnLOw {
+    line-height: 1.25;
+}
+
   .htnqGO {
     transform: rotate(-45deg);
 }
@@ -1535,10 +1543,6 @@
 
   .krbBcV {
     white-space: normal;
-}
-
-  .felzJA {
-    justify-content: flex-end;
 }
 
   .gshFfK {
@@ -1839,12 +1843,16 @@
     min-height: 18px;
 }
 
-  .jtoBYn {
-    width: 0.48rem;
+  .fKpeDA {
+    min-height: 1rem;
 }
 
-  .jtoBYI {
-    height: 0.48rem;
+  .dSXBgr {
+    height: 1rem;
+}
+
+  .dSXBfY {
+    width: 1rem;
 }
 
   .fNDbLX {
@@ -1857,6 +1865,14 @@
 
   .bTfILW {
     min-height: 1.15rem;
+}
+
+  .jtoBYn {
+    width: 0.48rem;
+}
+
+  .jtoBYI {
+    height: 0.48rem;
 }
 
   .dilIjS {
@@ -2479,8 +2495,8 @@
     color: #e5c36d;
 }
 
-  .jxtlUf[data-collapsed="true"] {
-    transform: rotate(-45deg);
+  .eEkDXH[data-collapsed="true"] {
+    transform: rotate(-90deg);
 }
 
   .dPoENL:is(:disabled, [disabled], [data-disabled], [aria-disabled=true]) {

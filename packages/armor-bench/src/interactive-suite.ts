@@ -1,14 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import {
-    ARMOR_STATS,
-    type ArmorStat,
-    type ArmorStatTargetCapsInput,
-    calculateArmorStatTargetCap,
-    calculateArmorStatTargetCaps,
-    type SolveArmorInput,
-    type StatVector,
-    solveArmor
-} from '../../armor-calc/src';
+import { ARMOR_STATS, type ArmorStat, type ArmorStatTargetCapsInput, type SolveArmorInput, type StatVector } from '../../armor-domain/src';
 import { prepareScenario } from './armor';
 import type {
     BenchmarkRunOptions,
@@ -22,6 +13,7 @@ import type {
     SolveWorkloadResult,
     TimingDistribution
 } from './types';
+import { BenchmarkArmorEngine } from './wasm-engine';
 
 const DEFAULT_ITERATIONS = 1;
 const DEFAULT_WARMUP_ITERATIONS = 0;
@@ -55,17 +47,20 @@ export function runInteractiveScenarioBenchmark(
         itemCount: prepared.selectedArmor.length,
         rawSlotProduct: prepared.rawSlotProduct,
         tunableItemCount: prepared.tunableItemCount,
-        singleSlider: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (input) =>
-            calculateArmorStatTargetCap(input, scenario.priorityStat)
+        singleSlider: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (engine, input) =>
+            engine.calculateCap(input, scenario.priorityStat)
         ),
-        combinedSliders: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (input) => calculateArmorStatTargetCaps(input)),
-        uiSliderRefresh: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (input) =>
-            runUiSliderRefresh(input, scenario.priorityStat)
+        combinedSliders: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (engine, input) => engine.calculateCaps(input)),
+        uiSliderRefresh: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (engine, input) =>
+            runUiSliderRefresh(engine, input, scenario.priorityStat)
         ),
-        sliderSequence: measurePreparedWorkload(bundle, scenario, { ...benchmarkOptions, iterations: 0, warmupIterations: 0 }, (input) =>
-            runSliderSequence(input, scenario)
+        sliderSequence: measurePreparedWorkload(
+            bundle,
+            scenario,
+            { ...benchmarkOptions, iterations: 0, warmupIterations: 0 },
+            (engine, input) => runSliderSequence(engine, input, scenario)
         ),
-        solve: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (input) => runInteractiveSolve(input, scenario))
+        solve: measurePreparedWorkload(bundle, scenario, benchmarkOptions, (engine, input) => runInteractiveSolve(engine, input, scenario))
     };
 }
 
@@ -73,32 +68,38 @@ function measurePreparedWorkload<T>(
     bundle: LoadedBenchmarkBundle,
     scenario: InteractiveBenchmarkScenario,
     options: NormalizedBenchmarkRunOptions,
-    run: (input: ArmorStatTargetCapsInput, prepared: PreparedScenario) => T
+    run: (engine: BenchmarkArmorEngine, input: ArmorStatTargetCapsInput, prepared: PreparedScenario) => T
 ): MeasuredWorkload<T> {
     const prepared = prepareScenario(bundle, scenario);
     const input = createCapsInput(prepared);
-    const coldStartedAt = performance.now();
-    const coldValue = run(input, prepared);
-    const coldMs = performance.now() - coldStartedAt;
+    const engine = new BenchmarkArmorEngine(prepared.armorBySlot);
 
-    for (let index = 0; index < options.warmupIterations; index++) {
-        run(input, prepared);
+    try {
+        const coldStartedAt = performance.now();
+        const coldValue = run(engine, input, prepared);
+        const coldMs = performance.now() - coldStartedAt;
+
+        for (let index = 0; index < options.warmupIterations; index++) {
+            run(engine, input, prepared);
+        }
+
+        const samplesMs: number[] = [];
+        const warmValues: T[] = [];
+        for (let index = 0; index < options.iterations; index++) {
+            const startedAt = performance.now();
+            warmValues.push(run(engine, input, prepared));
+            samplesMs.push(performance.now() - startedAt);
+        }
+
+        return {
+            coldMs,
+            coldValue,
+            warm: summarizeTimings(samplesMs),
+            warmValues
+        };
+    } finally {
+        engine.dispose();
     }
-
-    const samplesMs: number[] = [];
-    const warmValues: T[] = [];
-    for (let index = 0; index < options.iterations; index++) {
-        const startedAt = performance.now();
-        warmValues.push(run(input, prepared));
-        samplesMs.push(performance.now() - startedAt);
-    }
-
-    return {
-        coldMs,
-        coldValue,
-        warm: summarizeTimings(samplesMs),
-        warmValues
-    };
 }
 
 function createCapsInput(prepared: PreparedScenario, targets: Partial<StatVector> = prepared.scenario.targets): ArmorStatTargetCapsInput {
@@ -115,8 +116,8 @@ function createCapsInput(prepared: PreparedScenario, targets: Partial<StatVector
     };
 }
 
-function runUiSliderRefresh(input: ArmorStatTargetCapsInput, priorityStat: ArmorStat): SliderRefreshResult {
-    const priorityCap = calculateArmorStatTargetCap(input, priorityStat);
+function runUiSliderRefresh(engine: BenchmarkArmorEngine, input: ArmorStatTargetCapsInput, priorityStat: ArmorStat): SliderRefreshResult {
+    const priorityCap = engine.calculateCap(input, priorityStat);
     const caps = emptyStats();
     caps[priorityStat] = priorityCap;
     const requestedTarget = input.statTargets[priorityStat] ?? 0;
@@ -125,7 +126,7 @@ function runUiSliderRefresh(input: ArmorStatTargetCapsInput, priorityStat: Armor
     }
 
     const remainingStats = ARMOR_STATS.filter((stat) => stat !== priorityStat);
-    const remainingCaps = calculateArmorStatTargetCaps(input, remainingStats);
+    const remainingCaps = engine.calculateCaps(input, remainingStats);
     for (const stat of remainingStats) {
         caps[stat] = remainingCaps[stat];
     }
@@ -133,7 +134,11 @@ function runUiSliderRefresh(input: ArmorStatTargetCapsInput, priorityStat: Armor
     return { priorityCap, caps, clamped: false };
 }
 
-function runSliderSequence(input: ArmorStatTargetCapsInput, scenario: InteractiveBenchmarkScenario): SliderSequenceResult {
+function runSliderSequence(
+    engine: BenchmarkArmorEngine,
+    input: ArmorStatTargetCapsInput,
+    scenario: InteractiveBenchmarkScenario
+): SliderSequenceResult {
     const baseTargets = {
         ...emptyStats(),
         ...input.statTargets,
@@ -147,7 +152,7 @@ function runSliderSequence(input: ArmorStatTargetCapsInput, scenario: Interactiv
         stepTargets[step.stat] = step.value;
         const stepInput = { ...input, statTargets: stepTargets };
         const startedAt = performance.now();
-        const refresh = runUiSliderRefresh(stepInput, step.stat);
+        const refresh = runUiSliderRefresh(engine, stepInput, step.stat);
         const elapsedMs = performance.now() - startedAt;
         if (refresh.clamped) {
             stepTargets[step.stat] = refresh.priorityCap;
@@ -159,22 +164,32 @@ function runSliderSequence(input: ArmorStatTargetCapsInput, scenario: Interactiv
     return { steps, finalTargets: targets };
 }
 
-function runInteractiveSolve(input: ArmorStatTargetCapsInput, scenario: InteractiveBenchmarkScenario): SolveWorkloadResult {
+function runInteractiveSolve(
+    engine: BenchmarkArmorEngine,
+    input: ArmorStatTargetCapsInput,
+    scenario: InteractiveBenchmarkScenario
+): SolveWorkloadResult {
     const startedAt = performance.now();
     let firstResultsMs: number | null = null;
-    const result = solveArmor(
-        {
+
+    const maxResults = scenario.maxResults ?? 5_000;
+    if (FIRST_RESULT_COUNT < maxResults) {
+        const progress = engine.solve({
             ...input,
-            maxResults: scenario.maxResults ?? 5_000,
+            maxResults: FIRST_RESULT_COUNT,
             stopWhenResultLimitReached: true
-        } satisfies SolveArmorInput,
-        {
-            progressBuildCount: FIRST_RESULT_COUNT,
-            onProgress: () => {
-                firstResultsMs ??= performance.now() - startedAt;
-            }
+        });
+
+        if (progress.ok) {
+            firstResultsMs = performance.now() - startedAt;
         }
-    );
+    }
+
+    const result = engine.solve({
+        ...input,
+        maxResults,
+        stopWhenResultLimitReached: true
+    } satisfies SolveArmorInput);
 
     if (firstResultsMs === null && result.ok && result.returnedBuildCount > 0) {
         firstResultsMs = performance.now() - startedAt;

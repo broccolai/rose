@@ -1,4 +1,4 @@
-import type { ArmorSlot, ArmorStat } from '@armor-calc';
+import type { ArmorSlot, ArmorStat } from '@armor-domain';
 
 export const STAT_LABELS: Record<ArmorStat, string> = {
     health: 'Health',

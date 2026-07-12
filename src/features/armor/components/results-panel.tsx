@@ -1,4 +1,4 @@
-import type { ArmorBuild } from '@armor-calc';
+import type { ArmorBuild } from '@armor-domain';
 import { styled } from '@panda/jsx';
 import { createMemo, Show } from 'solid-js';
 

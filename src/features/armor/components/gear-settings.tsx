@@ -1,6 +1,6 @@
 import { styled } from '@panda/jsx';
-import { Star } from 'lucide-solid';
-import { createSignal, For, Show } from 'solid-js';
+import { ChevronDown, Star } from 'lucide-solid';
+import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { type AvailableArmorSet, type AvailableExotic, getArmorSetRequirementAvailability } from '@/features/armor/calculator-view-model';
@@ -13,12 +13,14 @@ type GearSettingsProps = {
     selectedExoticItemHash: string;
     armorSetDisplayMode: ArmorSetDisplayMode;
     setSelections: Record<string, SetSelectionValue>;
+    otherSetsCollapsed: boolean;
     availableExotics: AvailableExotic[];
     selectableSets: AvailableArmorSet[];
     onExoticChange: (itemHash: string) => void;
     favoriteExoticItemHashes: number[];
     onToggleFavoriteExotic: (itemHash: number) => void;
     onSetRequirementChange: (setId: string, value: string) => void;
+    onOtherSetsCollapsedChange: (collapsed: boolean) => void;
 };
 
 const Field = styled('label', {
@@ -145,18 +147,19 @@ const MutedText = styled('p', {
 
 const SetSectionToggle = styled('button', {
     base: {
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+        display: 'flex',
         alignItems: 'center',
-        gap: 'var(--rose-space-xs)',
+        justifyContent: 'space-between',
+        gap: 'var(--rose-space-sm)',
         w: '100%',
+        minH: '1rem',
         p: 0,
         border: 0,
         bg: 'transparent',
         color: 'inherit',
         font: 'inherit',
         letterSpacing: 'inherit',
-        lineHeight: 1.25,
+        lineHeight: 1,
         textAlign: 'left',
         textTransform: 'inherit',
         cursor: 'pointer',
@@ -168,26 +171,42 @@ const SetSectionToggle = styled('button', {
     }
 });
 
+const SetSectionMeta = styled('span', {
+    base: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 'var(--rose-space-xs)',
+        h: '1rem',
+        flexShrink: 0
+    }
+});
+
 const SetSectionCount = styled('span', {
     base: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        h: '1rem',
         color: 'var(--rose-muted)',
         fontVariantNumeric: 'tabular-nums',
         letterSpacing: 0,
+        lineHeight: 1,
         textTransform: 'none'
     }
 });
 
 const SetSectionChevron = styled('span', {
     base: {
-        display: 'block',
-        w: '0.48rem',
-        h: '0.48rem',
-        borderRight: '1.5px solid currentColor',
-        borderBottom: '1.5px solid currentColor',
-        transform: 'rotate(45deg) translateY(-1px)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        w: '1rem',
+        h: '1rem',
+        transform: 'rotate(0deg)',
         transition: 'transform 120ms ease',
         '&[data-collapsed="true"]': {
-            transform: 'rotate(-45deg)'
+            transform: 'rotate(-90deg)'
         }
     }
 });
@@ -207,7 +226,10 @@ export function ExoticPicker(
             .sort((left, right) => Number(favoriteHashes().has(right.itemHash)) - Number(favoriteHashes().has(left.itemHash)))
             .map((exotic) => ({
                 value: String(exotic.itemHash),
-                label: favoriteHashes().has(exotic.itemHash) ? `${exotic.name} (favorite)` : exotic.name
+                label: exotic.name,
+                trailingContent: favoriteHashes().has(exotic.itemHash)
+                    ? () => <Star size={14} strokeWidth={2} fill="currentColor" aria-hidden="true" />
+                    : undefined
             }))
     ];
 
@@ -266,13 +288,13 @@ export function ArmorSetFields(
         | 'armorSetDisplayMode'
         | 'availableExotics'
         | 'onSetRequirementChange'
+        | 'onOtherSetsCollapsedChange'
+        | 'otherSetsCollapsed'
         | 'selectableSets'
         | 'selectedExoticItemHash'
         | 'setSelections'
     >
 ) {
-    const [otherSetsCollapsed, setOtherSetsCollapsed] = createSignal(false);
-
     function nextRequirement(current: SetSelectionValue, value: SetSelectionValue) {
         return current === value ? '0' : value;
     }
@@ -370,16 +392,20 @@ export function ArmorSetFields(
                                 <td colSpan={3}>
                                     <SetSectionToggle
                                         type="button"
-                                        aria-expanded={!otherSetsCollapsed()}
-                                        onClick={() => setOtherSetsCollapsed((collapsed) => !collapsed)}
+                                        aria-expanded={!props.otherSetsCollapsed}
+                                        onClick={() => props.onOtherSetsCollapsedChange(!props.otherSetsCollapsed)}
                                     >
                                         <span>Other sets</span>
-                                        <SetSectionCount>{regularSets().length}</SetSectionCount>
-                                        <SetSectionChevron data-collapsed={otherSetsCollapsed()} aria-hidden="true" />
+                                        <SetSectionMeta>
+                                            <SetSectionCount>{regularSets().length}</SetSectionCount>
+                                            <SetSectionChevron data-collapsed={props.otherSetsCollapsed} aria-hidden="true">
+                                                <ChevronDown size={13} strokeWidth={2} />
+                                            </SetSectionChevron>
+                                        </SetSectionMeta>
                                     </SetSectionToggle>
                                 </td>
                             </DataTableSectionRow>
-                            <Show when={!otherSetsCollapsed()}>
+                            <Show when={!props.otherSetsCollapsed}>
                                 <For each={regularSets()}>{(set) => renderSetRow(set)}</For>
                             </Show>
                         </Show>

@@ -1,4 +1,4 @@
-use rose_armor_engine::ArmorEngine;
+use rose_armor_engine::{ArmorEngine, CapRequest, EngineError, ProfileInput, SolveRequest};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -9,31 +9,56 @@ pub struct WasmArmorEngine {
 
 #[wasm_bindgen]
 impl WasmArmorEngine {
+    /// Creates a persistent engine from a compact normalized profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns a JavaScript error when deserialization or profile compilation fails.
     #[wasm_bindgen(constructor)]
     pub fn new(profile: JsValue) -> Result<Self, JsValue> {
-        let profile = from_value(profile, "profile")?;
-        let inner = ArmorEngine::new(profile).map_err(engine_error)?;
+        let profile: ProfileInput = deserialize(profile, "profile")?;
+        let inner = ArmorEngine::new(profile).map_err(|error| to_js_error(&error))?;
+
         Ok(Self { inner })
     }
 
+    /// # Errors
+    ///
+    /// Returns a JavaScript error when the summary cannot be serialized.
     pub fn summary(&self) -> Result<JsValue, JsValue> {
-        to_value(&self.inner.summary())
+        serialize(&self.inner.summary())
     }
 
+    /// # Errors
+    ///
+    /// Returns a JavaScript error when the request is invalid or the result
+    /// cannot be serialized.
     pub fn calculate_caps(&mut self, request: JsValue) -> Result<JsValue, JsValue> {
-        let request = from_value(request, "cap request")?;
-        let result = self.inner.calculate_caps(request).map_err(engine_error)?;
-        to_value(&result)
+        let request: CapRequest = deserialize(request, "cap request")?;
+        let result = self
+            .inner
+            .calculate_caps(request)
+            .map_err(|error| to_js_error(&error))?;
+
+        serialize(&result)
     }
 
+    /// # Errors
+    ///
+    /// Returns a JavaScript error when the request is invalid or the result
+    /// cannot be serialized.
     pub fn solve(&mut self, request: JsValue) -> Result<JsValue, JsValue> {
-        let request = from_value(request, "solve request")?;
-        let result = self.inner.solve(request).map_err(engine_error)?;
-        to_value(&result)
+        let request: SolveRequest = deserialize(request, "solve request")?;
+        let result = self
+            .inner
+            .solve(request)
+            .map_err(|error| to_js_error(&error))?;
+
+        serialize(&result)
     }
 }
 
-fn from_value<T>(value: JsValue, label: &str) -> Result<T, JsValue>
+fn deserialize<T>(value: JsValue, label: &str) -> Result<T, JsValue>
 where
     T: serde::de::DeserializeOwned,
 {
@@ -41,11 +66,11 @@ where
         .map_err(|error| JsValue::from_str(&format!("Invalid {label}: {error}")))
 }
 
-fn to_value<T: Serialize>(value: &T) -> Result<JsValue, JsValue> {
+fn serialize<T: Serialize>(value: &T) -> Result<JsValue, JsValue> {
     serde_wasm_bindgen::to_value(value)
         .map_err(|error| JsValue::from_str(&format!("Could not serialize armor result: {error}")))
 }
 
-fn engine_error(error: impl std::fmt::Display) -> JsValue {
+fn to_js_error(error: &EngineError) -> JsValue {
     JsValue::from_str(&error.to_string())
 }

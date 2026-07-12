@@ -8,7 +8,7 @@ import {
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector
-} from '@armor-calc';
+} from '@armor-domain';
 import { createEventListener } from '@solid-primitives/event-listener';
 import { debounce } from '@solid-primitives/scheduled';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
@@ -181,6 +181,7 @@ export default function Home() {
     const [nextTargetCapRefreshBackground, setNextTargetCapRefreshBackground] = createSignal(false);
     const [importingFragments, setImportingFragments] = createSignal(false);
     const [setSelections, setSetSelections] = createSignal<Record<string, SetSelectionValue>>({});
+    const [otherSetsCollapsed, setOtherSetsCollapsed] = createSignal(false);
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
     const [expandedBuildKey, setExpandedBuildKey] = createSignal<string | null>(null);
@@ -441,6 +442,7 @@ export default function Home() {
         setTargetCapPriorityStat(null);
         setNextTargetCapRefreshBackground(false);
         setSetSelections({});
+        setOtherSetsCollapsed(false);
         setResultSort(DEFAULT_RESULT_SORT);
     }
 
@@ -590,6 +592,7 @@ export default function Home() {
             refreshVaultOnStartup: refreshVaultOnStartup(),
             targets: targets(),
             setSelections: setSelections(),
+            otherSetsCollapsed: otherSetsCollapsed(),
             resultSort: resultSort()
         };
 
@@ -1491,6 +1494,7 @@ export default function Home() {
         setRefreshVaultOnStartup(preferences.refreshVaultOnStartup === true);
         setTargets(nextTargets);
         setSetSelections(preferences.setSelections ?? {});
+        setOtherSetsCollapsed(preferences.otherSetsCollapsed === true);
         setResultSort(preferences.resultSort ?? DEFAULT_RESULT_SORT);
     }
 
@@ -1520,6 +1524,7 @@ export default function Home() {
             targetCaps,
             targetCapsPending,
             setSelections,
+            otherSetsCollapsed,
             availableExotics,
             favoriteExoticItemHashes,
             selectableSets,
@@ -1571,6 +1576,7 @@ export default function Home() {
             setRefreshVaultOnStartup,
             setTarget: updateTarget,
             setRequirement: updateSetRequirement,
+            setOtherSetsCollapsed,
             solve: solveCurrentBuilds,
             clearChoices: clearSavedCalculatorChoices,
             setExpandedBuildKey,

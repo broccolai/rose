@@ -6,7 +6,7 @@ import type {
     ArmorStat,
     DestinyClass,
     StatVector
-} from '../../armor-calc/src';
+} from '../../armor-domain/src';
 
 export type LoadedBenchmarkBundle = {
     normalizedProfile?: {

@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } from '@armor-calc';
+import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } from '@armor-domain';
 import { styled } from '@panda/jsx';
 import { For, type JSX, Show } from 'solid-js';
 

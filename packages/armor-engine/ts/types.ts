@@ -1,4 +1,4 @@
-import type { StatVector } from '@armor-calc';
+import type { StatVector } from '@armor-domain';
 
 export type EngineStats = [number, number, number, number, number, number];
 
@@ -67,7 +67,6 @@ export interface EngineSolveOutput {
     resultLimitReached: boolean;
     searchedCombinations: number;
     rejectedCombinations: number;
-    warnings: string[];
 }
 
 export interface EngineCapOutput {
@@ -79,7 +78,6 @@ export interface EngineCapOutput {
 export interface EngineProfileSummary {
     itemCount: number;
     slotCounts: [number, number, number, number, number];
-    warnings: string[];
 }
 
 export interface MaterializedCaps {

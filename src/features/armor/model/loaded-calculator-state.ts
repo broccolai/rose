@@ -1,4 +1,4 @@
-import type { DestinyClass } from '@armor-calc';
+import type { DestinyClass } from '@armor-domain';
 
 import type { CalculatorPreferences, SetSelectionValue } from '@/features/armor/calculator-preferences';
 import { reconcileSelectedExotic, reconcileSetSelections } from '@/features/armor/calculator-view-model';

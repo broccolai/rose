@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-calc';
+import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-domain';
 import { styled } from '@panda/jsx';
 import { createEffect, createSignal, For, Show } from 'solid-js';
 
@@ -581,7 +581,7 @@ function StatTargetSlider(props: StatTargetSliderProps) {
                     onInput={updateTypedValue}
                     onKeyDown={handleTypedValueKeyDown}
                 />
-                <StatCap>/ {props.pending ? 'checking' : maxValue()}</StatCap>
+                <StatCap>/ {maxValue()}</StatCap>
             </StatValue>
         </StatSliderRow>
     );

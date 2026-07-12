@@ -130,6 +130,9 @@ const CustomSelectTrigger = styled('button', customSelectTriggerRecipe);
 
 const CustomSelectValue = styled('span', {
     base: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
         minW: 0,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -176,7 +179,9 @@ const CustomSelectList = styled('div', {
 const CustomSelectOptionButton = styled('button', {
     base: {
         display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr)',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: 'var(--rose-space-xs)',
         w: '100%',
         minH: '2rem',
         px: 'var(--rose-space-sm)',
@@ -218,6 +223,7 @@ const CustomSelectOptionButton = styled('button', {
 export interface CustomSelectOption {
     value: string;
     label: string;
+    trailingContent?: (() => JSX.Element) | undefined;
     disabled?: boolean | undefined;
 }
 
@@ -341,7 +347,10 @@ export function CustomSelect(props: CustomSelectProps) {
                 onClick={() => (open() ? closeMenu() : openMenu())}
                 onKeyDown={handleTriggerKeyDown}
             >
-                <CustomSelectValue>{visibleLabel()}</CustomSelectValue>
+                <CustomSelectValue>
+                    {visibleLabel()}
+                    {selectedOption()?.trailingContent?.()}
+                </CustomSelectValue>
                 <CustomSelectChevron aria-hidden="true" />
             </CustomSelectTrigger>
             <Show when={open()}>
@@ -358,7 +367,8 @@ export function CustomSelect(props: CustomSelectProps) {
                                 onPointerEnter={() => setHighlightedIndex(index())}
                                 onClick={() => chooseOption(option)}
                             >
-                                {option.label}
+                                <span>{option.label}</span>
+                                {option.trailingContent?.()}
                             </CustomSelectOptionButton>
                         )}
                     </For>

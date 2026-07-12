@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorSlot } from '@armor-calc';
+import { ARMOR_SLOTS, type ArmorSlot } from '@armor-domain';
 import { styled } from '@panda/jsx';
 import { For, Show } from 'solid-js';
 

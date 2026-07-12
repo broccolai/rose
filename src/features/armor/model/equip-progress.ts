@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot } from '@armor-calc';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot } from '@armor-domain';
 
 import type { EquipPieceStatus, EquipProgressState } from '@/features/armor/components/equip-progress-overlay';
 

@@ -24,13 +24,5 @@ for (const scenario of scenarios) {
     console.log(
         `  memory    ${result.wasmMemoryMiB.toFixed(2)} MiB Wasm · ${(result.compactProfileBytes / 1024).toFixed(1)} KiB profile · ${result.requestBytes} B request`
     );
-    console.log(`  parity    caps ${result.capParity ? 'yes' : 'NO'} · solve ${result.solveParity ? 'yes' : 'NO'}`);
-    if (!result.capParity) {
-        console.log('  TypeScript', result.typescriptCaps);
-        console.log('  Rust      ', result.rustCaps);
-    }
-    if (!result.solveParity) {
-        console.log('  TypeScript', result.typescriptSolve);
-        console.log('  Rust      ', result.rustSolve);
-    }
+    console.log(`  result    caps ${JSON.stringify(result.capResult)} · valid builds ${result.solveResult.validBuildCount}`);
 }

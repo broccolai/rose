@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { ARMOR_STATS, solveArmor } from '@armor-calc';
+import { ARMOR_STATS } from '@armor-domain';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 import { getAvailableArmorSets, makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { ARMOR_STAT_HASHES } from '@/features/armor/stat-hashes';
 import type { ManifestResolver, VaultExportSnapshot } from '@/features/armor/types';
+import { BenchmarkArmorEngine } from '../../../packages/armor-bench/src/wasm-engine';
 
 const privateBundlePath = 'data/private/rose-loaded-benchmark-bundle-2026-07-04T14-56-53-877Z.json';
 
@@ -498,16 +499,22 @@ describe('loaded benchmark bundle input', () => {
             armor
         };
 
-        const result = solveArmor({
-            ...input,
-            statTargets: { melee: 130, weapons: 185 },
-            maxResults: 1,
-            stopWhenResultLimitReached: true
-        });
+        const engine = new BenchmarkArmorEngine(armor);
 
-        expect(result.ok).toBe(true);
-        expect(result.ok && result.builds[0]?.stats.melee).toBeGreaterThanOrEqual(130);
-        expect(result.ok && result.builds[0]?.stats.weapons).toBeGreaterThanOrEqual(185);
+        try {
+            const result = engine.solve({
+                ...input,
+                statTargets: { melee: 130, weapons: 185 },
+                maxResults: 1,
+                stopWhenResultLimitReached: true
+            });
+
+            expect(result.ok).toBe(true);
+            expect(result.ok && result.builds[0]?.stats.melee).toBeGreaterThanOrEqual(130);
+            expect(result.ok && result.builds[0]?.stats.weapons).toBeGreaterThanOrEqual(185);
+        } finally {
+            engine.dispose();
+        }
     });
 });
 

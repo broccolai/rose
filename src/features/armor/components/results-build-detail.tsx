@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@armor-calc';
+import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@armor-domain';
 import { styled } from '@panda/jsx';
 import { debounce } from '@solid-primitives/scheduled';
 import { Shield } from 'lucide-solid';

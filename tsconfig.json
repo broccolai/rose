@@ -20,7 +20,7 @@
         "types": ["@solidjs/start/env", "vite/client", "node"],
         "paths": {
             "@/*": ["./src/*"],
-            "@armor-calc": ["./packages/armor-calc/src/index.ts"],
+            "@armor-domain": ["./packages/armor-domain/src/index.ts"],
             "@panda/*": ["./.panda/*"]
         }
     },

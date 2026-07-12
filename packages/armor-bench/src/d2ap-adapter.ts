@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import type { ArmorItem, ArmorSlot } from '../../armor-calc/src';
+import type { ArmorItem, ArmorSlot } from '../../armor-domain/src';
 import { d2apSourceMapPath } from './bundle';
 import type { BenchmarkScenario, D2APBenchmarkResult } from './types';
 import { d2apStatOrder as statOrder } from './types';

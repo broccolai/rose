@@ -4,7 +4,8 @@ This is a codebase-wide map of focused libraries that fit rose without turning t
 
 ## Current Shape
 
-- `packages/armor-calc` is clean and should stay dependency-light. It is the pure algorithm boundary.
+- `packages/armor-domain` is the dependency-free TypeScript vocabulary shared by normalization, UI, adapters, and benchmarks.
+- `packages/armor-engine/crates/core` is the only solver implementation and remains independent of browser and Wasm concerns.
 - `packages/armor-bench` is isolated and can take benchmark-only dependencies if useful, but should not leak D2AP compatibility into the solver.
 - `src/routes/index.tsx` is the biggest orchestration pressure point: auth, cache loading, manifest loading, profile normalization, target caps, solve, equip flow, debug export, fragments, persistence, and status all meet there.
 - `src/features/storage/indexed-json.ts` is hand-written IndexedDB boilerplate.
@@ -256,7 +257,7 @@ For now, skip both.
 
 ## Solver And Performance
 
-Do not add a performance library to `packages/armor-calc` yet.
+Do not add performance machinery to `packages/armor-domain`; solver optimization belongs in the Rust engine.
 
 Better wins are internal data layout and pruning:
 
@@ -266,7 +267,7 @@ Better wins are internal data layout and pruning:
 - reuse candidate indexes between target cap checks and final solve where the constraints match
 - keep solver output capped and deterministic
 
-WASM is not the next step. The current problems are search shape, pruning, cache reuse, and UI scheduling. A Rust/WASM solver could be cool later, but only after the TypeScript solver has a stable indexed model to port.
+Rose now uses a persistent Rust/Wasm engine. Performance work should continue to focus on search shape, pruning, bounded cache reuse, and worker scheduling rather than treating the language boundary itself as the optimization.
 
 ## Suggested Adoption Order
 
@@ -285,4 +286,4 @@ WASM is not the next step. The current problems are search shape, pruning, cache
 - General utility libraries like Lodash: native JS/TS is enough here.
 - Date libraries: rose only formats timestamps right now.
 - Form libraries: current controls are domain widgets, not ordinary forms.
-- WASM solver: not until the indexed TypeScript solver design is exhausted and benchmarked.
+- A second solver implementation in TypeScript: it would recreate correctness and maintenance drift without helping the production path.

@@ -73,7 +73,7 @@ export default defineConfig({
         resolve: {
             alias: {
                 '@': fileURLToPath(new URL('./src', import.meta.url)),
-                '@armor-calc': fileURLToPath(new URL('./packages/armor-calc/src/index.ts', import.meta.url)),
+                '@armor-domain': fileURLToPath(new URL('./packages/armor-domain/src/index.ts', import.meta.url)),
                 '@panda': fileURLToPath(new URL('./.panda', import.meta.url))
             }
         },

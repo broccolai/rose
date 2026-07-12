@@ -4,9 +4,33 @@
 export class WasmArmorEngine {
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     */
     calculate_caps(request: any): any;
+    /**
+     * Creates a persistent engine from a compact normalized profile.
+     *
+     * # Errors
+     *
+     * Returns a JavaScript error when deserialization or profile compilation fails.
+     */
     constructor(profile: any);
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     */
     solve(request: any): any;
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the summary cannot be serialized.
+     */
     summary(): any;
 }
 
