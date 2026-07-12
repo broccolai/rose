@@ -16,6 +16,7 @@ import {
 } from '@armor-domain';
 import { createEventListener } from '@solid-primitives/event-listener';
 import { debounce } from '@solid-primitives/scheduled';
+import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 import { batch, createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
 import { applyArmorBuild } from '@/features/armor/api/equip-build';
@@ -73,11 +74,6 @@ import {
     markEquipProgressEquippingAll
 } from '@/features/armor/model/equip-progress';
 import { prepareLoadedCalculatorState } from '@/features/armor/model/loaded-calculator-state';
-import {
-    hydrateExoticClassItemRolls,
-    type LocalTestArmorBundle,
-    readLocalTestManifestDefinitions
-} from '@/features/armor/model/local-test-data';
 import {
     isArmorBuildSaved,
     readPersonalArmorLibrary,
@@ -139,6 +135,15 @@ const BALANCED_TUNING_ENABLED = true;
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
 
 type ActiveTargetCapInput = { mode: 'owned'; input: ArmorStatTargetCapsInput } | { mode: 'planning'; input: ArmorPlanStatCapsInput };
+
+type LoadedBenchmarkBundle = {
+    vaultSnapshot?: VaultExportSnapshot;
+    normalizedProfile?: NormalizedArmorProfile;
+    loadedManifestDefinitions?: LoadedManifestDefinition[];
+    manifest?: {
+        inventoryItemDefinitions?: Record<string, DestinyInventoryItemDefinition>;
+    };
+};
 
 const resolveManifestFragmentDescriptions = (manifest: LoadedManifestResolver): Promise<FragmentDescriptionMap> =>
     resolveFragmentDescriptions({
@@ -942,15 +947,21 @@ export default function Home() {
                 throw new Error(`Local test data request failed (${response.status})`);
             }
 
-            const bundle = (await response.json()) as LocalTestArmorBundle;
+            const bundle = (await response.json()) as LoadedBenchmarkBundle;
             if (!bundle.normalizedProfile) {
                 throw new Error('Local test data bundle does not contain a normalized profile.');
             }
 
-            const loadedDefinitions = readLocalTestManifestDefinitions(bundle);
-            const profile = await hydrateExoticClassItemRolls(bundle.normalizedProfile, bundle.vaultSnapshot ?? null, loadedDefinitions);
-
-            applyLoadedNormalizedCalculatorData(profile, bundle.vaultSnapshot ?? null, loadedDefinitions, 'local test data');
+            applyLoadedNormalizedCalculatorData(
+                bundle.normalizedProfile,
+                bundle.vaultSnapshot ?? null,
+                bundle.loadedManifestDefinitions ??
+                    Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => ({
+                        hash: Number(hash),
+                        definition
+                    })),
+                'local test data'
+            );
             if (Object.keys(fragmentDescriptions()).length === 0) {
                 try {
                     const manifest = await createBungieManifestResolver();
@@ -995,11 +1006,6 @@ export default function Home() {
             const importedPreferences = imported.calculatorPreferences;
             const currentTheme = appTheme();
             const currentRefreshPreference = refreshVaultOnStartup();
-            const importedProfile = await hydrateExoticClassItemRolls(
-                imported.normalizedProfile,
-                imported.vaultSnapshot,
-                imported.loadedManifestDefinitions
-            );
 
             batch(() => {
                 setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
@@ -1017,7 +1023,7 @@ export default function Home() {
                 }
 
                 applyLoadedNormalizedCalculatorData(
-                    importedProfile,
+                    imported.normalizedProfile,
                     imported.vaultSnapshot,
                     imported.loadedManifestDefinitions,
                     `debug export ${file.name}`
