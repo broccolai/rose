@@ -43,6 +43,7 @@ const equivalentArmorKey = (item: ArmorItem): string =>
         item.slot,
         item.classType,
         item.isExotic ? `exotic:${item.itemHash}` : 'legendary',
+        item.exoticClassItemPerkKey ?? 'no-exotic-perks',
         item.set?.id ?? 'no-set',
         item.tier ?? 'no-tier',
         ...ARMOR_STATS.map((stat) => item.baseStats[stat]),

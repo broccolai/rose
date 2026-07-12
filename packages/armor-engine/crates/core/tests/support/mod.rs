@@ -29,6 +29,7 @@ pub fn solve_request(targets: Stats) -> SolveRequest {
         constraints: ConstraintsInput {
             class_type: TITAN,
             selected_exotic_item_hash: None,
+            selected_exotic_variant_id: None,
             dump_stat: None,
             allow_balanced_tuning: false,
             targets,
@@ -49,6 +50,7 @@ pub fn item(source_index: u32, slot: u8, base_stats: Stats) -> ItemInput {
         slot,
         class_type: TITAN,
         is_exotic: false,
+        exotic_variant_id: None,
         set_id: None,
         base_stats,
         stat_mods: standard_mods(),

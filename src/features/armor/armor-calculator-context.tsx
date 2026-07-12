@@ -12,7 +12,13 @@ import type {
 import { type Accessor, createContext, type JSX, useContext } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
-import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption, ResultSortKey } from '@/features/armor/calculator-view-model';
+import type {
+    AvailableArmorSet,
+    AvailableExotic,
+    AvailableExoticClassItemRoll,
+    CharacterButtonOption,
+    ResultSortKey
+} from '@/features/armor/calculator-view-model';
 import type { LoadProgress } from '@/features/armor/components/app-toolbar';
 import type { PlanningSlotRequirement } from '@/features/armor/model/armor-planning';
 import type { SavedArmorBuild } from '@/features/armor/model/personal-library';
@@ -27,6 +33,7 @@ export interface ArmorCalculatorContextValue {
         characterOptions: Accessor<CharacterButtonOption[]>;
         selectedCharacterId: Accessor<string>;
         selectedExoticItemHash: Accessor<string>;
+        selectedExoticClassItemPerkKey: Accessor<string>;
         armorSetDisplayMode: Accessor<ArmorSetDisplayMode>;
         selectedSubclass: Accessor<SubclassType>;
         selectedFragmentIds: Accessor<string[]>;
@@ -42,6 +49,7 @@ export interface ArmorCalculatorContextValue {
         setSelections: Accessor<Record<string, SetSelectionValue>>;
         otherSetsCollapsed: Accessor<boolean>;
         availableExotics: Accessor<AvailableExotic[]>;
+        availableExoticClassItemRolls: Accessor<AvailableExoticClassItemRoll[]>;
         favoriteExoticItemHashes: Accessor<number[]>;
         selectableSets: Accessor<AvailableArmorSet[]>;
         canSolve: Accessor<boolean>;
@@ -72,6 +80,7 @@ export interface ArmorCalculatorContextValue {
         setMode: (mode: ArmorCalculatorMode) => void;
         selectCharacter: (characterId: string) => void;
         selectExotic: (itemHash: string) => void;
+        selectExoticClassItemRoll: (perkKey: string) => void;
         toggleFavoriteExotic: (itemHash: number) => void;
         setArmorSetDisplayMode: (mode: ArmorSetDisplayMode) => void;
         setSubclass: (subclass: SubclassType) => void;

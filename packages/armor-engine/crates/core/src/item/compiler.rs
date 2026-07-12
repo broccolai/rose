@@ -31,6 +31,7 @@ impl TryFrom<ItemInput> for Item {
             slot: identity.slot,
             class: identity.class,
             is_exotic: input.is_exotic,
+            exotic_variant_id: input.exotic_variant_id,
             set_id: input.set_id,
             base_stats: input.base_stats.into(),
             stat_mods,

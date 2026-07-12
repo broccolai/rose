@@ -3,7 +3,12 @@ import { ChevronDown, Star } from 'lucide-solid';
 import { For, Show } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
-import { type AvailableArmorSet, type AvailableExotic, getArmorSetRequirementAvailability } from '@/features/armor/calculator-view-model';
+import {
+    type AvailableArmorSet,
+    type AvailableExotic,
+    type AvailableExoticClassItemRoll,
+    getArmorSetRequirementAvailability
+} from '@/features/armor/calculator-view-model';
 import { CompactChoiceButton, CustomSelect } from '@/features/armor/components/calculator-control-primitives';
 import { DataTable, DataTableFrame, DataTableSectionRow } from '@/features/armor/components/data-table';
 import { MONO_FONT_FAMILY } from '@/features/armor/components/ui-styles';
@@ -11,13 +16,16 @@ import { type ArmorSetDisplayMode, getArmorSetDisplayName } from '@/features/arm
 
 type GearSettingsProps = {
     selectedExoticItemHash: string;
+    selectedExoticClassItemPerkKey: string;
     armorSetDisplayMode: ArmorSetDisplayMode;
     setSelections: Record<string, SetSelectionValue>;
     otherSetsCollapsed: boolean;
     availableExotics: AvailableExotic[];
+    availableExoticClassItemRolls: AvailableExoticClassItemRoll[];
     selectableSets: AvailableArmorSet[];
     planningMode: boolean;
     onExoticChange: (itemHash: string) => void;
+    onExoticClassItemRollChange: (perkKey: string) => void;
     favoriteExoticItemHashes: number[];
     onToggleFavoriteExotic: (itemHash: number) => void;
     onSetRequirementChange: (setId: string, value: string) => void;
@@ -72,6 +80,14 @@ const ExoticControlRow = styled('div', {
     base: {
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) var(--rose-control-height)',
+        gap: 'var(--rose-space-xs)',
+        minW: 0
+    }
+});
+
+const ExoticControls = styled('div', {
+    base: {
+        display: 'grid',
         gap: 'var(--rose-space-xs)',
         minW: 0
     }
@@ -215,7 +231,14 @@ const SetSectionChevron = styled('span', {
 export function ExoticPicker(
     props: Pick<
         GearSettingsProps,
-        'availableExotics' | 'favoriteExoticItemHashes' | 'onExoticChange' | 'onToggleFavoriteExotic' | 'selectedExoticItemHash'
+        | 'availableExoticClassItemRolls'
+        | 'availableExotics'
+        | 'favoriteExoticItemHashes'
+        | 'onExoticChange'
+        | 'onExoticClassItemRollChange'
+        | 'onToggleFavoriteExotic'
+        | 'selectedExoticClassItemPerkKey'
+        | 'selectedExoticItemHash'
     > & { labelText?: string | false }
 ) {
     const favoriteHashes = () => new Set(props.favoriteExoticItemHashes);
@@ -233,6 +256,11 @@ export function ExoticPicker(
                     : undefined
             }))
     ];
+    const classItemRollOptions = () =>
+        props.availableExoticClassItemRolls.map((roll) => ({
+            value: roll.key,
+            label: roll.label
+        }));
 
     return (
         <Field as="div">
@@ -244,29 +272,40 @@ export function ExoticPicker(
                     </Show>
                 </LabelLine>
             </Show>
-            <ExoticControlRow>
-                <CustomSelect
-                    ariaLabel="Exotic armor"
-                    value={props.selectedExoticItemHash}
-                    options={options()}
-                    onChange={props.onExoticChange}
-                />
-                <FavoriteButton
-                    type="button"
-                    disabled={!selectedExotic()}
-                    data-selected={selectedIsFavorite()}
-                    aria-label={selectedIsFavorite() ? 'Remove exotic from favorites' : 'Add exotic to favorites'}
-                    title={selectedIsFavorite() ? 'Remove from favorites' : 'Add to favorites'}
-                    onClick={() => {
-                        const exotic = selectedExotic();
-                        if (exotic) {
-                            props.onToggleFavoriteExotic(exotic.itemHash);
-                        }
-                    }}
-                >
-                    <Star size={17} strokeWidth={2} aria-hidden="true" />
-                </FavoriteButton>
-            </ExoticControlRow>
+            <ExoticControls>
+                <ExoticControlRow>
+                    <CustomSelect
+                        ariaLabel="Exotic armor"
+                        value={props.selectedExoticItemHash}
+                        options={options()}
+                        onChange={props.onExoticChange}
+                    />
+                    <FavoriteButton
+                        type="button"
+                        disabled={!selectedExotic()}
+                        data-selected={selectedIsFavorite()}
+                        aria-label={selectedIsFavorite() ? 'Remove exotic from favorites' : 'Add exotic to favorites'}
+                        title={selectedIsFavorite() ? 'Remove from favorites' : 'Add to favorites'}
+                        onClick={() => {
+                            const exotic = selectedExotic();
+                            if (exotic) {
+                                props.onToggleFavoriteExotic(exotic.itemHash);
+                            }
+                        }}
+                    >
+                        <Star size={17} strokeWidth={2} aria-hidden="true" />
+                    </FavoriteButton>
+                </ExoticControlRow>
+                <Show when={props.availableExoticClassItemRolls.length > 0}>
+                    <CustomSelect
+                        ariaLabel="Exotic class item perk roll"
+                        value={props.selectedExoticClassItemPerkKey}
+                        options={classItemRollOptions()}
+                        placeholder="Choose perk roll"
+                        onChange={props.onExoticClassItemRollChange}
+                    />
+                </Show>
+            </ExoticControls>
         </Field>
     );
 }

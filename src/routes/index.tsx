@@ -16,7 +16,6 @@ import {
 } from '@armor-domain';
 import { createEventListener } from '@solid-primitives/event-listener';
 import { debounce } from '@solid-primitives/scheduled';
-import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 import { batch, createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
 
 import { applyArmorBuild } from '@/features/armor/api/equip-build';
@@ -41,6 +40,7 @@ import {
     writeCalculatorPreferences
 } from '@/features/armor/calculator-preferences';
 import {
+    getAvailableExoticClassItemRolls,
     getAvailableExoticOptions,
     getAvailablePlanningExoticOptions,
     getCharacterButtonOptions,
@@ -50,6 +50,7 @@ import {
     getSelectedSetRequirements,
     type ResultSortKey,
     reconcileSelectedExotic,
+    reconcileSelectedExoticClassItemRoll,
     reconcileSetSelections,
     sortArmorBuildsForDisplay,
     toggleArmorBuildSort
@@ -72,6 +73,11 @@ import {
     markEquipProgressEquippingAll
 } from '@/features/armor/model/equip-progress';
 import { prepareLoadedCalculatorState } from '@/features/armor/model/loaded-calculator-state';
+import {
+    hydrateExoticClassItemRolls,
+    type LocalTestArmorBundle,
+    readLocalTestManifestDefinitions
+} from '@/features/armor/model/local-test-data';
 import {
     isArmorBuildSaved,
     readPersonalArmorLibrary,
@@ -134,15 +140,6 @@ const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
 
 type ActiveTargetCapInput = { mode: 'owned'; input: ArmorStatTargetCapsInput } | { mode: 'planning'; input: ArmorPlanStatCapsInput };
 
-type LoadedBenchmarkBundle = {
-    vaultSnapshot?: VaultExportSnapshot;
-    normalizedProfile?: NormalizedArmorProfile;
-    loadedManifestDefinitions?: LoadedManifestDefinition[];
-    manifest?: {
-        inventoryItemDefinitions?: Record<string, DestinyInventoryItemDefinition>;
-    };
-};
-
 const resolveManifestFragmentDescriptions = (manifest: LoadedManifestResolver): Promise<FragmentDescriptionMap> =>
     resolveFragmentDescriptions({
         getDefinition: manifest.getInventoryItem,
@@ -173,6 +170,7 @@ export default function Home() {
     const [calculatorMode, setCalculatorMode] = createSignal<ArmorCalculatorMode>('owned');
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
+    const [selectedExoticClassItemPerkKey, setSelectedExoticClassItemPerkKey] = createSignal('');
     const [favoriteExoticItemHashes, setFavoriteExoticItemHashes] = createSignal<number[]>([]);
     const [savedBuilds, setSavedBuilds] = createSignal<SavedArmorBuild[]>([]);
     const [personalLibraryOwnerId, setPersonalLibraryOwnerId] = createSignal('');
@@ -213,6 +211,11 @@ export default function Home() {
         calculatorMode() === 'planning'
             ? getAvailablePlanningExoticOptions(calculatorProfile(), selectedCharacter())
             : getAvailableExoticOptions(calculatorProfile(), selectedCharacter())
+    );
+    const availableExoticClassItemRolls = createMemo(() =>
+        calculatorMode() === 'owned'
+            ? getAvailableExoticClassItemRolls(calculatorProfile(), selectedCharacter(), selectedExoticItemHash())
+            : []
     );
     const selectableSets = createMemo(() => getSelectableArmorSets(calculatorProfile(), selectedCharacter()));
     const selectedExoticBlockedSlots = createMemo(() => {
@@ -307,6 +310,7 @@ export default function Home() {
                 characterId: character.characterId,
                 classType: character.classType,
                 selectedExoticItemHash: selectedExoticItemHash() ? Number(selectedExoticItemHash()) : undefined,
+                selectedExoticClassItemPerkKey: selectedExoticClassItemPerkKey() || undefined,
                 dumpStat: dumpStat() || undefined,
                 allowBalancedTuning: effectiveAllowBalancedTuning(),
                 statTargets: targets(),
@@ -498,6 +502,7 @@ export default function Home() {
 
     function resetBuildChoices() {
         setSelectedExoticItemHash('');
+        setSelectedExoticClassItemPerkKey('');
         setArmorSetDisplayMode('sets');
         setSelectedSubclass('Prismatic');
         setSelectedFragmentIds([]);
@@ -584,6 +589,7 @@ export default function Home() {
                     selectedCharacterId: selectedCharacterId(),
                     selectedCharacter: selectedCharacter(),
                     selectedExoticItemHash: selectedExoticItemHash(),
+                    selectedExoticClassItemPerkKey: selectedExoticClassItemPerkKey(),
                     armorSetDisplayMode: armorSetDisplayMode(),
                     selectedSubclass: selectedSubclass(),
                     selectedFragmentIds: selectedFragmentIds(),
@@ -667,6 +673,7 @@ export default function Home() {
             calculatorMode: calculatorMode(),
             selectedCharacterId: selectedCharacterId(),
             selectedExoticItemHash: selectedExoticItemHash(),
+            selectedExoticClassItemPerkKey: selectedExoticClassItemPerkKey(),
             armorSetDisplayMode: armorSetDisplayMode(),
             selectedSubclass: selectedSubclass(),
             selectedFragmentIds: selectedFragmentIds(),
@@ -741,6 +748,12 @@ export default function Home() {
         const nextExotic = availableExotics().some((exotic) => String(exotic.itemHash) === reconciledExotic) ? reconciledExotic : '';
         if (nextExotic !== selectedExoticItemHash()) {
             setSelectedExoticItemHash(nextExotic);
+            invalidateSolve();
+        }
+
+        const nextPerkKey = reconcileSelectedExoticClassItemRoll(availableExoticClassItemRolls(), selectedExoticClassItemPerkKey());
+        if (nextPerkKey !== selectedExoticClassItemPerkKey()) {
+            setSelectedExoticClassItemPerkKey(nextPerkKey);
             invalidateSolve();
         }
 
@@ -929,21 +942,15 @@ export default function Home() {
                 throw new Error(`Local test data request failed (${response.status})`);
             }
 
-            const bundle = (await response.json()) as LoadedBenchmarkBundle;
+            const bundle = (await response.json()) as LocalTestArmorBundle;
             if (!bundle.normalizedProfile) {
                 throw new Error('Local test data bundle does not contain a normalized profile.');
             }
 
-            applyLoadedNormalizedCalculatorData(
-                bundle.normalizedProfile,
-                bundle.vaultSnapshot ?? null,
-                bundle.loadedManifestDefinitions ??
-                    Object.entries(bundle.manifest?.inventoryItemDefinitions ?? {}).map(([hash, definition]) => ({
-                        hash: Number(hash),
-                        definition
-                    })),
-                'local test data'
-            );
+            const loadedDefinitions = readLocalTestManifestDefinitions(bundle);
+            const profile = await hydrateExoticClassItemRolls(bundle.normalizedProfile, bundle.vaultSnapshot ?? null, loadedDefinitions);
+
+            applyLoadedNormalizedCalculatorData(profile, bundle.vaultSnapshot ?? null, loadedDefinitions, 'local test data');
             if (Object.keys(fragmentDescriptions()).length === 0) {
                 try {
                     const manifest = await createBungieManifestResolver();
@@ -988,6 +995,11 @@ export default function Home() {
             const importedPreferences = imported.calculatorPreferences;
             const currentTheme = appTheme();
             const currentRefreshPreference = refreshVaultOnStartup();
+            const importedProfile = await hydrateExoticClassItemRolls(
+                imported.normalizedProfile,
+                imported.vaultSnapshot,
+                imported.loadedManifestDefinitions
+            );
 
             batch(() => {
                 setTargetCaps({ ...MAX_STAT_TARGET_CAPS });
@@ -1005,7 +1017,7 @@ export default function Home() {
                 }
 
                 applyLoadedNormalizedCalculatorData(
-                    imported.normalizedProfile,
+                    importedProfile,
                     imported.vaultSnapshot,
                     imported.loadedManifestDefinitions,
                     `debug export ${file.name}`
@@ -1200,6 +1212,7 @@ export default function Home() {
             characterId: character.characterId,
             classType: character.classType,
             selectedExoticItemHash: selectedExoticItemHash() ? Number(selectedExoticItemHash()) : undefined,
+            selectedExoticClassItemPerkKey: selectedExoticClassItemPerkKey() || undefined,
             dumpStat: dumpStat() || undefined,
             allowBalancedTuning: effectiveAllowBalancedTuning(),
             statTargets: targets(),
@@ -1356,6 +1369,12 @@ export default function Home() {
             setStatus('error');
             setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
             setMessage('Load calculator data before solving.');
+            return;
+        }
+
+        if (selectedExotic()?.slot === 'classItem' && availableExoticClassItemRolls().length > 0 && !selectedExoticClassItemPerkKey()) {
+            setStatus('error');
+            setMessage('Choose an exotic class item perk roll before solving.');
             return;
         }
 
@@ -1682,6 +1701,7 @@ export default function Home() {
         setCalculatorMode(sanitizeCalculatorMode(preferences.calculatorMode));
         setSelectedCharacterId(preferences.selectedCharacterId ?? '');
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
+        setSelectedExoticClassItemPerkKey(preferences.selectedExoticClassItemPerkKey ?? '');
         setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
         setSelectedSubclass(nextSubclass);
         setSelectedFragmentIds(sanitizeFragmentIds(preferences.selectedFragmentIds, nextSubclass));
@@ -1709,6 +1729,7 @@ export default function Home() {
             characterOptions: characterButtons,
             selectedCharacterId: () => selectedCharacter()?.characterId ?? '',
             selectedExoticItemHash,
+            selectedExoticClassItemPerkKey,
             armorSetDisplayMode,
             selectedSubclass,
             selectedFragmentIds,
@@ -1724,6 +1745,7 @@ export default function Home() {
             setSelections,
             otherSetsCollapsed,
             availableExotics,
+            availableExoticClassItemRolls,
             favoriteExoticItemHashes,
             selectableSets,
             canSolve: () =>
@@ -1731,7 +1753,12 @@ export default function Home() {
                 Boolean(normalizedProfile()) &&
                 status() !== 'loading' &&
                 status() !== 'solving' &&
-                !targetCapsPending(),
+                !targetCapsPending() &&
+                !(
+                    selectedExotic()?.slot === 'classItem' &&
+                    availableExoticClassItemRolls().length > 0 &&
+                    !selectedExoticClassItemPerkKey()
+                ),
             solving: () => status() === 'loading' || status() === 'solving'
         },
         results: {
@@ -1759,7 +1786,14 @@ export default function Home() {
             setMode: updateCalculatorMode,
             selectCharacter,
             selectExotic: (itemHash) => {
+                if (itemHash !== selectedExoticItemHash()) {
+                    setSelectedExoticClassItemPerkKey('');
+                }
                 setSelectedExoticItemHash(itemHash);
+                invalidateSolve();
+            },
+            selectExoticClassItemRoll: (perkKey) => {
+                setSelectedExoticClassItemPerkKey(perkKey);
                 invalidateSolve();
             },
             toggleFavoriteExotic: (itemHash) => setFavoriteExoticItemHashes((current) => toggleFavoriteExotic(current, itemHash)),

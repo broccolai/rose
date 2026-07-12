@@ -3,6 +3,7 @@ import {
     ARMOR_STATS,
     type ArmorInventoryBySlot,
     type ArmorItem,
+    type ArmorPerkInfo,
     type ArmorSetInfo,
     type ArmorSlot,
     createDefaultStatModOptions,
@@ -41,6 +42,7 @@ const MASTERWORK_PLUG_CATEGORY_PREFIX = 'v460.plugs.armor.masterworks';
 const BUNGIE_ORIGIN = 'https://www.bungie.net';
 const ASSUMED_MASTERWORK_STAT_BONUS = 5;
 const TIER_FIVE_MASTERWORKED_MIN_TOTAL = 88;
+const EXOTIC_CLASS_ITEM_PERK_SOCKET_TYPES = [4039767041, 2771980068] as const;
 
 const BUCKET_SLOT_BY_HASH: Record<number, ArmorSlot> = {
     3448274439: 'helmet',
@@ -197,6 +199,9 @@ async function normalizeArmorItem(
     const tier = gearTier ?? (hasTuningSocket ? 5 : inferArmorTier(definition));
     const set = inferArmorSet(definition, definition.displayProperties?.name);
     const statModOptions = createDefaultStatModOptions();
+    const isExotic = definition.inventory?.tierType === EXOTIC_TIER_TYPE || definition.inventory?.tierTypeName === 'Exotic';
+    const exoticClassItemPerks =
+        isExotic && slot === 'classItem' ? await readExoticClassItemPerks(definition, sockets, manifest) : undefined;
     const normalizedItem: ArmorItem = {
         itemInstanceId,
         itemHash: item.itemHash,
@@ -204,7 +209,9 @@ async function normalizeArmorItem(
         iconUrl: absoluteBungieAssetUrl(definition.displayProperties?.icon),
         slot,
         classType: normalizeClass(definition.classType),
-        isExotic: definition.inventory?.tierType === EXOTIC_TIER_TYPE || definition.inventory?.tierTypeName === 'Exotic',
+        isExotic,
+        exoticClassItemPerks,
+        exoticClassItemPerkKey: exoticClassItemPerks?.map((perk) => perk.hash).join(':'),
         set,
         tier,
         isCurrentMasterworked,
@@ -224,6 +231,37 @@ async function normalizeArmorItem(
     }
 
     return normalizedItem;
+}
+
+async function readExoticClassItemPerks(
+    definition: DestinyInventoryItemDefinition,
+    sockets: DestinyItemSocketState[],
+    manifest: ManifestResolver
+): Promise<ArmorPerkInfo[] | undefined> {
+    const socketEntries = definition.sockets?.socketEntries ?? [];
+    const perks: ArmorPerkInfo[] = [];
+
+    for (const socketTypeHash of EXOTIC_CLASS_ITEM_PERK_SOCKET_TYPES) {
+        const socketIndex = socketEntries.findIndex((entry) => entry.socketTypeHash === socketTypeHash);
+        const plugHash = socketIndex >= 0 ? sockets[socketIndex]?.plugHash : undefined;
+        if (!plugHash) {
+            return undefined;
+        }
+
+        const plugDefinition = await manifest.getInventoryItem(plugHash);
+        if (!plugDefinition) {
+            return undefined;
+        }
+
+        perks.push({
+            hash: plugHash,
+            name: plugDefinition.displayProperties?.name || `Perk ${plugHash}`,
+            description: plugDefinition.displayProperties?.description,
+            iconUrl: absoluteBungieAssetUrl(plugDefinition.displayProperties?.icon)
+        });
+    }
+
+    return perks;
 }
 
 function absoluteBungieAssetUrl(path?: string) {

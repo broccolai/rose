@@ -35,6 +35,7 @@ pub struct ItemInput {
     pub slot: u8,
     pub class_type: u8,
     pub is_exotic: bool,
+    pub exotic_variant_id: Option<u32>,
     pub set_id: Option<u32>,
     pub base_stats: Stats,
     pub stat_mods: Vec<AdjustmentInput>,
@@ -53,6 +54,7 @@ pub struct AdjustmentInput {
 pub struct ConstraintsInput {
     pub class_type: u8,
     pub selected_exotic_item_hash: Option<u32>,
+    pub selected_exotic_variant_id: Option<u32>,
     pub dump_stat: Option<u8>,
     pub allow_balanced_tuning: bool,
     pub targets: Stats,

@@ -4,6 +4,7 @@ import { ARMOR_SLOTS, type ArmorBuild, type ArmorItem, type ArmorStat, type Stat
 
 import {
     getArmorSetRequirementAvailability,
+    getAvailableExoticClassItemRolls,
     getAvailableExoticOptions,
     getAvailablePlanningExoticOptions,
     getCharacterButtonOptions,
@@ -12,6 +13,7 @@ import {
     getSelectedCharacter,
     getSelectedSetRequirements,
     reconcileSelectedExotic,
+    reconcileSelectedExoticClassItemRoll,
     reconcileSetSelections,
     sortArmorBuildsForDisplay,
     toggleArmorBuildSort
@@ -83,6 +85,55 @@ describe('calculator view model', () => {
             'Solipsism'
         ]);
         expect(getAvailablePlanningExoticOptions(profile, profile.characters[0]).map((exotic) => exotic.name)).toEqual(["Nezarec's Sin"]);
+    });
+
+    test('groups exotic class items by their two-perk roll', () => {
+        const profile = profileWithArmor([
+            armor({
+                itemInstanceId: 'caliban-liar-a',
+                itemHash: 20,
+                name: 'Solipsism',
+                slot: 'classItem',
+                isExotic: true,
+                exoticClassItemPerkKey: '1:2',
+                exoticClassItemPerks: [
+                    { hash: 1, name: 'Spirit of Caliban' },
+                    { hash: 2, name: 'Spirit of the Liar' }
+                ]
+            }),
+            armor({
+                itemInstanceId: 'caliban-liar-b',
+                itemHash: 20,
+                name: 'Solipsism',
+                slot: 'classItem',
+                isExotic: true,
+                exoticClassItemPerkKey: '1:2',
+                exoticClassItemPerks: [
+                    { hash: 1, name: 'Spirit of Caliban' },
+                    { hash: 2, name: 'Spirit of the Liar' }
+                ]
+            }),
+            armor({
+                itemInstanceId: 'assassin-coyote',
+                itemHash: 20,
+                name: 'Solipsism',
+                slot: 'classItem',
+                isExotic: true,
+                exoticClassItemPerkKey: '3:4',
+                exoticClassItemPerks: [
+                    { hash: 3, name: 'Spirit of the Assassin' },
+                    { hash: 4, name: 'Spirit of the Coyote' }
+                ]
+            })
+        ]);
+        const rolls = getAvailableExoticClassItemRolls(profile, profile.characters[0], '20');
+
+        expect(rolls.map(({ key, label, count }) => ({ key, label, count }))).toEqual([
+            { key: '1:2', label: 'Spirit of Caliban + Spirit of the Liar', count: 2 },
+            { key: '3:4', label: 'Spirit of the Assassin + Spirit of the Coyote', count: 1 }
+        ]);
+        expect(reconcileSelectedExoticClassItemRoll(rolls, '1:2')).toBe('1:2');
+        expect(reconcileSelectedExoticClassItemRoll(rolls, 'missing')).toBe('');
     });
 
     test('shows catalog armor sets with owned counts and converts possible choices to requirements', () => {

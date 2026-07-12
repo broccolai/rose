@@ -16,6 +16,7 @@ pub(crate) struct SetRequirement {
 pub(crate) struct Constraints {
     pub class: CharacterClass,
     pub selected_exotic_item_hash: Option<u32>,
+    pub selected_exotic_variant_id: Option<u32>,
     pub dump_stat: Option<Stat>,
     pub allow_balanced_tuning: bool,
     pub targets: StatValues,
@@ -43,6 +44,7 @@ impl TryFrom<ConstraintsInput> for Constraints {
         Ok(Self {
             class,
             selected_exotic_item_hash: input.selected_exotic_item_hash,
+            selected_exotic_variant_id: input.selected_exotic_variant_id,
             dump_stat,
             allow_balanced_tuning: input.allow_balanced_tuning,
             targets: StatValues::from(input.targets).clamped(),

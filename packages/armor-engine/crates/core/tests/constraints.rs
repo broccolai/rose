@@ -85,6 +85,39 @@ fn selected_exotic_hash_tries_every_roll_and_is_required_exactly_once() -> Resul
 }
 
 #[test]
+fn selected_exotic_variant_tries_only_matching_perk_rolls() -> Result<(), EngineError> {
+    let mut items = legendary_armor_set([0; 6]);
+    let mut wrong_perks = item(10, LEGS, [0; 6]);
+    wrong_perks.item_hash = 999;
+    wrong_perks.is_exotic = true;
+    wrong_perks.exotic_variant_id = Some(1);
+    wrong_perks.base_stats[usize::from(WEAPONS)] = 50;
+
+    let mut matching_weak = item(11, LEGS, [0; 6]);
+    matching_weak.item_hash = 999;
+    matching_weak.is_exotic = true;
+    matching_weak.exotic_variant_id = Some(2);
+
+    let mut matching_strong = item(12, LEGS, [0; 6]);
+    matching_strong.item_hash = 999;
+    matching_strong.is_exotic = true;
+    matching_strong.exotic_variant_id = Some(2);
+    matching_strong.base_stats[usize::from(WEAPONS)] = 40;
+
+    items.extend([wrong_perks, matching_weak, matching_strong]);
+    let mut engine = engine_with_items(items)?;
+    let mut request = solve_request([0; 6]);
+    request.constraints.selected_exotic_item_hash = Some(999);
+    request.constraints.selected_exotic_variant_id = Some(2);
+    request.constraints.targets[usize::from(WEAPONS)] = 90;
+    let result = engine.solve(request)?;
+
+    assert!(result.ok);
+    assert_eq!(result.builds[0].item_indices[usize::from(LEGS)], 12);
+    Ok(())
+}
+
+#[test]
 fn cap_and_solve_use_the_same_constraints() -> Result<(), EngineError> {
     let mut items = legendary_armor_set([0; 6]);
     for armor in &mut items {

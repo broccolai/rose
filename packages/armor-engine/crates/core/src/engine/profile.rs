@@ -47,6 +47,7 @@ fn planning_roll_item(roll: PlanningRollInput) -> ItemInput {
         slot: 0,
         class_type: 3,
         is_exotic: false,
+        exotic_variant_id: None,
         set_id: None,
         base_stats: roll.base_stats,
         stat_mods: roll.stat_mods,

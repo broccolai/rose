@@ -2,6 +2,7 @@ import {
     ARMOR_SLOTS,
     type ArmorBuild,
     type ArmorBuildSort,
+    type ArmorPerkInfo,
     type ArmorSetRequirement,
     type ArmorSlot,
     type DestinyClass,
@@ -26,6 +27,13 @@ export type AvailableExotic = {
     name: string;
     iconUrl?: string | undefined;
     slot: ArmorSlot;
+    count: number;
+};
+
+export type AvailableExoticClassItemRoll = {
+    key: string;
+    label: string;
+    perks: ArmorPerkInfo[];
     count: number;
 };
 
@@ -95,6 +103,41 @@ export function getAvailablePlanningExoticOptions(
     character: NormalizedCharacter | null
 ): AvailableExotic[] {
     return getAvailableExoticOptions(profile, character).filter((exotic) => exotic.slot !== 'classItem');
+}
+
+export function getAvailableExoticClassItemRolls(
+    profile: NormalizedArmorProfile | null,
+    character: NormalizedCharacter | null,
+    selectedItemHash: string
+): AvailableExoticClassItemRoll[] {
+    if (!profile || !character || !selectedItemHash) {
+        return [];
+    }
+
+    const itemHash = Number(selectedItemHash);
+    const rolls = new Map<string, AvailableExoticClassItemRoll>();
+
+    for (const item of getArmorForClass(profile.armor, character.classType)) {
+        if (
+            !item.isExotic ||
+            item.slot !== 'classItem' ||
+            item.itemHash !== itemHash ||
+            !item.exoticClassItemPerkKey ||
+            !item.exoticClassItemPerks?.length
+        ) {
+            continue;
+        }
+
+        const current = rolls.get(item.exoticClassItemPerkKey);
+        rolls.set(item.exoticClassItemPerkKey, {
+            key: item.exoticClassItemPerkKey,
+            label: item.exoticClassItemPerks.map((perk) => perk.name).join(' + '),
+            perks: item.exoticClassItemPerks,
+            count: (current?.count ?? 0) + (item.equivalentItemInstanceIds?.length ?? 1)
+        });
+    }
+
+    return [...rolls.values()].sort((left, right) => left.label.localeCompare(right.label));
 }
 
 export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, character: NormalizedCharacter | null): AvailableArmorSet[] {
@@ -218,6 +261,10 @@ export function reconcileSelectedExotic(profile: NormalizedArmorProfile, classTy
     const hasCompatibleExotic = getArmorForClass(profile.armor, classType).some((item) => item.isExotic && item.itemHash === selectedHash);
 
     return hasCompatibleExotic ? selectedItemHash : '';
+}
+
+export function reconcileSelectedExoticClassItemRoll(rolls: readonly AvailableExoticClassItemRoll[], selectedPerkKey: string): string {
+    return selectedPerkKey && rolls.some((roll) => roll.key === selectedPerkKey) ? selectedPerkKey : '';
 }
 
 export function reconcileSetSelections(

@@ -19,6 +19,13 @@ export interface ArmorSetInfo {
     equipableItemSetHash?: number | undefined;
 }
 
+export interface ArmorPerkInfo {
+    hash: number;
+    name: string;
+    description?: string | undefined;
+    iconUrl?: string | undefined;
+}
+
 export interface ArmorItem {
     itemInstanceId: string;
     equivalentItemInstanceIds?: string[] | undefined;
@@ -28,6 +35,8 @@ export interface ArmorItem {
     slot: ArmorSlot;
     classType: DestinyClass;
     isExotic: boolean;
+    exoticClassItemPerks?: ArmorPerkInfo[] | undefined;
+    exoticClassItemPerkKey?: string | undefined;
     set?: ArmorSetInfo | undefined;
     tier?: 1 | 2 | 3 | 4 | 5 | undefined;
     isCurrentMasterworked?: boolean | undefined;
@@ -57,6 +66,7 @@ export interface SolveArmorInput {
     characterId: string;
     classType: DestinyClass;
     selectedExoticItemHash?: number | undefined;
+    selectedExoticClassItemPerkKey?: string | undefined;
     dumpStat?: ArmorStat | undefined;
     allowBalancedTuning?: boolean | undefined;
     statTargets: Partial<StatVector>;

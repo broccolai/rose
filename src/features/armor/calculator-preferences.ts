@@ -13,6 +13,7 @@ export type CalculatorPreferences = {
     calculatorMode?: ArmorCalculatorMode | undefined;
     selectedCharacterId?: string | undefined;
     selectedExoticItemHash?: string | undefined;
+    selectedExoticClassItemPerkKey?: string | undefined;
     armorSetDisplayMode?: ArmorSetDisplayMode | undefined;
     selectedSubclass?: SubclassType | undefined;
     selectedFragmentIds?: string[] | undefined;
@@ -84,7 +85,8 @@ export function mergeCalculatorPreferencesForStorage(
     return {
         ...current,
         selectedCharacterId: current.selectedCharacterId || previous?.selectedCharacterId,
-        selectedExoticItemHash: current.selectedExoticItemHash || previous?.selectedExoticItemHash
+        selectedExoticItemHash: current.selectedExoticItemHash || previous?.selectedExoticItemHash,
+        selectedExoticClassItemPerkKey: current.selectedExoticClassItemPerkKey || previous?.selectedExoticClassItemPerkKey
     };
 }
 
@@ -99,6 +101,8 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         calculatorMode: sanitizeCalculatorMode(candidate.calculatorMode),
         selectedCharacterId: typeof candidate.selectedCharacterId === 'string' ? candidate.selectedCharacterId : undefined,
         selectedExoticItemHash: typeof candidate.selectedExoticItemHash === 'string' ? candidate.selectedExoticItemHash : undefined,
+        selectedExoticClassItemPerkKey:
+            typeof candidate.selectedExoticClassItemPerkKey === 'string' ? candidate.selectedExoticClassItemPerkKey : undefined,
         armorSetDisplayMode: sanitizeArmorSetDisplayMode(candidate.armorSetDisplayMode),
         selectedSubclass: sanitizeSubclassType(candidate.selectedSubclass),
         selectedFragmentIds: sanitizeFragmentIds(candidate.selectedFragmentIds, sanitizeSubclassType(candidate.selectedSubclass)),

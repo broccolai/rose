@@ -92,6 +92,7 @@ export class ArmorPlanningAdapter {
         return {
             classType: 0,
             selectedExoticItemHash: null,
+            selectedExoticVariantId: null,
             dumpStat: input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : null,
             allowBalancedTuning: input.allowBalancedTuning === true,
             targets: statsToTuple(input.statTargets),

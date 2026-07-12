@@ -115,7 +115,12 @@ fn replace_with_exotic_rolls(
             .copied()
             .filter(|index| {
                 let item = &profile.items[*index];
-                item.compatible_with(constraints.class) && item.is_exotic && item.hash == item_hash
+                item.compatible_with(constraints.class)
+                    && item.is_exotic
+                    && item.hash == item_hash
+                    && constraints
+                        .selected_exotic_variant_id
+                        .is_none_or(|variant_id| item.exotic_variant_id == Some(variant_id))
             })
             .collect::<Vec<_>>();
 

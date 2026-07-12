@@ -47,6 +47,7 @@ export class ArmorEngineAdapter {
     readonly armor: ArmorInventoryBySlot;
     private readonly sourceItems: ArmorItem[];
     private readonly setIndexes = new Map<string, number>();
+    private readonly exoticVariantIndexes = new Map<string, number>();
 
     constructor(armor: ArmorInventoryBySlot) {
         this.armor = armor;
@@ -56,6 +57,9 @@ export class ArmorEngineAdapter {
         for (const item of this.sourceItems) {
             if (item.set && !this.setIndexes.has(item.set.id)) {
                 this.setIndexes.set(item.set.id, this.setIndexes.size + 1);
+            }
+            if (item.exoticClassItemPerkKey && !this.exoticVariantIndexes.has(item.exoticClassItemPerkKey)) {
+                this.exoticVariantIndexes.set(item.exoticClassItemPerkKey, this.exoticVariantIndexes.size + 1);
             }
         }
         this.profile = {
@@ -120,6 +124,9 @@ export class ArmorEngineAdapter {
         return {
             classType: CLASS_INDEX[input.classType],
             selectedExoticItemHash: input.selectedExoticItemHash ?? null,
+            selectedExoticVariantId: input.selectedExoticClassItemPerkKey
+                ? (this.exoticVariantIndexes.get(input.selectedExoticClassItemPerkKey) ?? this.exoticVariantIndexes.size + 1)
+                : null,
             dumpStat: input.dumpStat ? ARMOR_STATS.indexOf(input.dumpStat) : null,
             allowBalancedTuning: input.allowBalancedTuning === true,
             targets: statsToTuple(input.statTargets),
@@ -136,6 +143,7 @@ export class ArmorEngineAdapter {
             slot: ARMOR_SLOTS.indexOf(item.slot),
             classType: CLASS_INDEX[item.classType],
             isExotic: item.isExotic,
+            exoticVariantId: item.exoticClassItemPerkKey ? (this.exoticVariantIndexes.get(item.exoticClassItemPerkKey) ?? null) : null,
             setId: item.set ? (this.setIndexes.get(item.set.id) ?? null) : null,
             baseStats: statsToTuple(item.baseStats),
             statMods: compactAdjustments(item.statModOptions),

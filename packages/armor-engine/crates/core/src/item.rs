@@ -134,6 +134,7 @@ pub(crate) struct Item {
     pub slot: ArmorSlot,
     pub class: ClassCompatibility,
     pub is_exotic: bool,
+    pub exotic_variant_id: Option<u32>,
     pub set_id: Option<u32>,
     pub base_stats: StatValues,
     pub stat_mods: StatModOptions,

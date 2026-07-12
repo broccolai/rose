@@ -17,6 +17,7 @@ describe('calculator preferences', () => {
             sanitizeCalculatorPreferences({
                 selectedCharacterId: 'character-1',
                 selectedExoticItemHash: '123',
+                selectedExoticClassItemPerkKey: '111:222',
                 calculatorMode: 'planning',
                 appTheme: 'dim',
                 armorSetDisplayMode: 'sources',
@@ -49,6 +50,7 @@ describe('calculator preferences', () => {
         ).toEqual({
             selectedCharacterId: 'character-1',
             selectedExoticItemHash: '123',
+            selectedExoticClassItemPerkKey: '111:222',
             calculatorMode: 'planning',
             appTheme: 'dim',
             armorSetDisplayMode: 'sources',
@@ -149,7 +151,8 @@ describe('calculator preferences', () => {
             mergeCalculatorPreferencesForStorage(
                 {
                     selectedCharacterId: 'warlock',
-                    selectedExoticItemHash: '999'
+                    selectedExoticItemHash: '999',
+                    selectedExoticClassItemPerkKey: '111:222'
                 },
                 {
                     dumpStat: 'health'
@@ -159,6 +162,7 @@ describe('calculator preferences', () => {
         ).toMatchObject({
             selectedCharacterId: 'warlock',
             selectedExoticItemHash: '999',
+            selectedExoticClassItemPerkKey: '111:222',
             dumpStat: 'health'
         });
     });

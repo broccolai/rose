@@ -14,6 +14,7 @@ export interface EngineItemInput {
     slot: number;
     classType: number;
     isExotic: boolean;
+    exoticVariantId: number | null;
     setId: number | null;
     baseStats: EngineStats;
     statMods: EngineAdjustmentInput[];
@@ -44,6 +45,7 @@ export interface EngineSetRequirement {
 export interface EngineRequest {
     classType: number;
     selectedExoticItemHash: number | null;
+    selectedExoticVariantId: number | null;
     dumpStat: number | null;
     allowBalancedTuning: boolean;
     targets: EngineStats;
