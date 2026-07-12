@@ -16,6 +16,7 @@ type GearSettingsProps = {
     otherSetsCollapsed: boolean;
     availableExotics: AvailableExotic[];
     selectableSets: AvailableArmorSet[];
+    planningMode: boolean;
     onExoticChange: (itemHash: string) => void;
     favoriteExoticItemHashes: number[];
     onToggleFavoriteExotic: (itemHash: number) => void;
@@ -270,9 +271,15 @@ export function ExoticPicker(
     );
 }
 
-function setBonusTooltip(set: AvailableArmorSet, requiredPieces: 2 | 4, usableSlotCount: number, canSelect: boolean) {
+function setBonusTooltip(
+    set: AvailableArmorSet,
+    requiredPieces: 2 | 4,
+    usableSlotCount: number,
+    canSelect: boolean,
+    planningMode: boolean
+) {
     const bonus = set.bonuses.find((setBonus) => setBonus.requiredPieces === requiredPieces);
-    const ownership = `Usable slots ${Math.min(usableSlotCount, requiredPieces)} / ${requiredPieces}.`;
+    const ownership = `${planningMode ? 'Available' : 'Owned'} slots ${Math.min(usableSlotCount, requiredPieces)} / ${requiredPieces}.`;
     const availability = canSelect ? 'Slot-compatible with current choices.' : 'Not slot-compatible with current choices.';
 
     if (!bonus) {
@@ -290,6 +297,7 @@ export function ArmorSetFields(
         | 'onSetRequirementChange'
         | 'onOtherSetsCollapsedChange'
         | 'otherSetsCollapsed'
+        | 'planningMode'
         | 'selectableSets'
         | 'selectedExoticItemHash'
         | 'setSelections'
@@ -313,7 +321,14 @@ export function ArmorSetFields(
         const selected = () => props.setSelections[set.id] ?? '0';
         const displayName = () => getArmorSetDisplayName(set, props.armorSetDisplayMode);
         const availability = (requiredPieces: 2 | 4) =>
-            getArmorSetRequirementAvailability(props.selectableSets, props.setSelections, set.id, requiredPieces, blockedSlots());
+            getArmorSetRequirementAvailability(
+                props.selectableSets,
+                props.setSelections,
+                set.id,
+                requiredPieces,
+                blockedSlots(),
+                props.planningMode ? 'catalog' : 'owned'
+            );
         const canRequire = (requiredPieces: 2 | 4) => availability(requiredPieces).canSelect;
         const rowSelected = () => selected() === '2' || selected() === '4';
         const rowUnavailable = () => !canRequire(2) && !canRequire(4) && !rowSelected();
@@ -334,7 +349,7 @@ export function ArmorSetFields(
                 <td data-action>
                     <CompactChoiceButton
                         type="button"
-                        title={setBonusTooltip(set, 2, availability(2).usableSlotCount, canRequire(2))}
+                        title={setBonusTooltip(set, 2, availability(2).usableSlotCount, canRequire(2), props.planningMode)}
                         disabled={!canRequire(2)}
                         aria-disabled={!canRequire(2)}
                         data-disabled={!canRequire(2)}
@@ -348,7 +363,7 @@ export function ArmorSetFields(
                 <td data-action>
                     <CompactChoiceButton
                         type="button"
-                        title={setBonusTooltip(set, 4, availability(4).usableSlotCount, canRequire(4))}
+                        title={setBonusTooltip(set, 4, availability(4).usableSlotCount, canRequire(4), props.planningMode)}
                         disabled={!canRequire(4)}
                         aria-disabled={!canRequire(4)}
                         data-disabled={!canRequire(4)}

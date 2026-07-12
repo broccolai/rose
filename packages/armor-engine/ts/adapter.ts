@@ -10,13 +10,10 @@ import {
     type ArmorStat,
     type DestinyClass,
     type SolveArmorInput,
-    type SolveArmorResult,
-    type StatAdjustment,
-    type StatVector
+    type SolveArmorResult
 } from '@armor-domain';
 
 import type {
-    EngineAdjustmentInput,
     EngineBuildOutput,
     EngineCapOutput,
     EngineCapRequest,
@@ -24,9 +21,9 @@ import type {
     EngineRequest,
     EngineSolveOutput,
     EngineSolveRequest,
-    EngineStats,
     MaterializedCaps
 } from './types';
+import { adjustmentAt, compactAdjustments, statsToTuple, tupleToStats } from './wire';
 
 const CLASS_INDEX: Record<DestinyClass, number> = {
     titan: 0,
@@ -191,21 +188,6 @@ export class ArmorEngineAdapter {
         };
     }
 }
-
-const compactAdjustments = (adjustments: StatAdjustment[]): EngineAdjustmentInput[] =>
-    adjustments.map((adjustment, sourceIndex) => ({
-        sourceIndex,
-        deltas: statsToTuple(adjustment.deltas)
-    }));
-
-const adjustmentAt = (adjustments: StatAdjustment[], sourceIndex: number): StatAdjustment | undefined =>
-    sourceIndex < 0 ? undefined : adjustments[sourceIndex];
-
-const statsToTuple = (stats: Partial<StatVector> | undefined): EngineStats =>
-    ARMOR_STATS.map((stat) => Math.trunc(stats?.[stat] ?? 0)) as EngineStats;
-
-const tupleToStats = (stats: EngineStats): StatVector =>
-    Object.fromEntries(ARMOR_STATS.map((stat, index) => [stat, stats[index]])) as StatVector;
 
 const activeSetBonuses = (items: ArmorItem[]): ActiveArmorSetBonus[] => {
     const counts = new Map<string, { name: string; pieces: number }>();

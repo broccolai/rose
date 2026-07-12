@@ -105,6 +105,112 @@ export class WasmArmorEngine {
     }
 }
 if (Symbol.dispose) WasmArmorEngine.prototype[Symbol.dispose] = WasmArmorEngine.prototype.free;
+
+export class WasmArmorPlanner {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmArmorPlannerFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmarmorplanner_free(ptr, 0);
+    }
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     * @param {any} request
+     * @returns {any}
+     */
+    calculate_caps(request) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmarmorplanner_calculate_caps(retptr, this.__wbg_ptr, addHeapObject(request));
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Creates a persistent planner from legal normalized Tier 5 roll profiles.
+     *
+     * # Errors
+     *
+     * Returns a JavaScript error when deserialization or profile compilation fails.
+     * @param {any} profile
+     */
+    constructor(profile) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmarmorplanner_new(retptr, addHeapObject(profile));
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            this.__wbg_ptr = r0;
+            WasmArmorPlannerFinalization.register(this, this.__wbg_ptr, this);
+            return this;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     * @param {any} request
+     * @returns {any}
+     */
+    solve(request) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmarmorplanner_solve(retptr, this.__wbg_ptr, addHeapObject(request));
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the summary cannot be serialized.
+     * @returns {any}
+     */
+    summary() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmarmorplanner_summary(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+}
+if (Symbol.dispose) WasmArmorPlanner.prototype[Symbol.dispose] = WasmArmorPlanner.prototype.free;
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -335,6 +441,9 @@ function __wbg_get_imports() {
 const WasmArmorEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmarmorengine_free(ptr, 1));
+const WasmArmorPlannerFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmarmorplanner_free(ptr, 1));
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);

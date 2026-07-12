@@ -17,6 +17,7 @@ describe('calculator preferences', () => {
             sanitizeCalculatorPreferences({
                 selectedCharacterId: 'character-1',
                 selectedExoticItemHash: '123',
+                calculatorMode: 'planning',
                 appTheme: 'dim',
                 armorSetDisplayMode: 'sources',
                 selectedSubclass: 'Solar',
@@ -48,6 +49,7 @@ describe('calculator preferences', () => {
         ).toEqual({
             selectedCharacterId: 'character-1',
             selectedExoticItemHash: '123',
+            calculatorMode: 'planning',
             appTheme: 'dim',
             armorSetDisplayMode: 'sources',
             selectedSubclass: 'Solar',
@@ -119,6 +121,7 @@ describe('calculator preferences', () => {
         expect(
             sanitizeCalculatorPreferences({
                 dumpStat: 'mobility',
+                calculatorMode: 'invalid',
                 armorSetDisplayMode: 'invalid',
                 selectedSubclass: 'invalid',
                 selectedFragmentIds: 'nope',
@@ -129,6 +132,7 @@ describe('calculator preferences', () => {
             })
         ).toMatchObject({
             appTheme: 'void',
+            calculatorMode: 'owned',
             armorSetDisplayMode: 'sets',
             selectedSubclass: 'Prismatic',
             selectedFragmentIds: [],

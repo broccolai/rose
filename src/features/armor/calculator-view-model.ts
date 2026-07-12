@@ -34,9 +34,12 @@ export type AvailableArmorSet = {
     name: string;
     count: number;
     slotCounts: Record<ArmorSlot, number>;
+    catalogSlots: ArmorSlot[];
     bonuses: ArmorSetBonusInfo[];
     opBonuses: OpArmorSetBonus[];
 };
+
+export type ArmorSetAvailabilitySource = 'catalog' | 'owned';
 
 export const CHARACTER_BUTTON_CLASSES: CharacterButtonClass[] = ['hunter', 'warlock', 'titan'];
 const ARMOR_SLOT_SORT_ORDER = new Map<ArmorSlot, number>(ARMOR_SLOTS.map((slot, index) => [slot, index]));
@@ -87,6 +90,13 @@ export function getAvailableExoticOptions(
     );
 }
 
+export function getAvailablePlanningExoticOptions(
+    profile: NormalizedArmorProfile | null,
+    character: NormalizedCharacter | null
+): AvailableExotic[] {
+    return getAvailableExoticOptions(profile, character).filter((exotic) => exotic.slot !== 'classItem');
+}
+
 export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, character: NormalizedCharacter | null): AvailableArmorSet[] {
     if (!profile || !character) {
         return [];
@@ -105,6 +115,7 @@ export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, c
             name: catalogSet.name,
             count: owned?.count ?? 0,
             slotCounts: owned?.slotCounts ?? emptySlotCounts(),
+            catalogSlots: catalogSet.slots,
             bonuses,
             opBonuses: getOpArmorSetBonuses({ name: catalogSet.name, bonuses })
         });
@@ -114,6 +125,7 @@ export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, c
         if (!sets.has(owned.id)) {
             sets.set(owned.id, {
                 ...owned,
+                catalogSlots: ARMOR_SLOTS.filter((slot) => owned.slotCounts[slot] > 0),
                 bonuses: [],
                 opBonuses: getOpArmorSetBonuses({ name: owned.name, bonuses: [] })
             });
@@ -126,12 +138,13 @@ export function getSelectableArmorSets(profile: NormalizedArmorProfile | null, c
 export function getSelectedSetRequirements(
     selectableSets: AvailableArmorSet[],
     setSelections: Record<string, SetSelectionValue>,
-    blockedSlots: readonly ArmorSlot[] = []
+    blockedSlots: readonly ArmorSlot[] = [],
+    availabilitySource: ArmorSetAvailabilitySource = 'owned'
 ): ArmorSetRequirement[] {
     const limitedSelections = limitSetSelections(setSelections);
-    const requirements = setRequirementsFromSelections(selectableSets, limitedSelections);
+    const requirements = setRequirementsFromSelections(selectableSets, limitedSelections, availabilitySource);
 
-    return areArmorSetRequirementsSlotCompatible(selectableSets, requirements, blockedSlots) ? requirements : [];
+    return areArmorSetRequirementsSlotCompatible(selectableSets, requirements, blockedSlots, availabilitySource) ? requirements : [];
 }
 
 export function getArmorSetRequirementAvailability(
@@ -139,10 +152,11 @@ export function getArmorSetRequirementAvailability(
     setSelections: Record<string, SetSelectionValue>,
     setId: string,
     requiredPieces: 2 | 4,
-    blockedSlots: readonly ArmorSlot[] = []
+    blockedSlots: readonly ArmorSlot[] = [],
+    availabilitySource: ArmorSetAvailabilitySource = 'owned'
 ): ArmorSetRequirementAvailability {
     const set = selectableSets.find((candidate) => candidate.id === setId);
-    const usableSlotCount = set ? countUsableArmorSetSlots(set, blockedSlots) : 0;
+    const usableSlotCount = set ? countUsableArmorSetSlots(set, blockedSlots, availabilitySource) : 0;
     const selectedValue = setSelections[setId] ?? '0';
 
     if (!set) {
@@ -165,8 +179,9 @@ export function getArmorSetRequirementAvailability(
     return {
         canSelect: areArmorSetRequirementsSlotCompatible(
             selectableSets,
-            setRequirementsFromSelections(selectableSets, previewSelections),
-            blockedSlots
+            setRequirementsFromSelections(selectableSets, previewSelections, availabilitySource),
+            blockedSlots,
+            availabilitySource
         ),
         usableSlotCount
     };
@@ -276,7 +291,8 @@ function isCatalogSetCompatibleWithClass(classTypes: DestinyClass[], classType: 
 
 function setRequirementsFromSelections(
     selectableSets: AvailableArmorSet[],
-    selections: Record<string, SetSelectionValue>
+    selections: Record<string, SetSelectionValue>,
+    availabilitySource: ArmorSetAvailabilitySource = 'owned'
 ): ArmorSetRequirement[] {
     const setsById = new Map(selectableSets.map((set) => [set.id, set]));
 
@@ -287,8 +303,8 @@ function setRequirementsFromSelections(
         if (
             !set ||
             (requiredPieces !== 2 && requiredPieces !== 4) ||
-            set.count < requiredPieces ||
-            countUsableArmorSetSlots(set) < requiredPieces
+            (availabilitySource === 'owned' && set.count < requiredPieces) ||
+            countUsableArmorSetSlots(set, [], availabilitySource) < requiredPieces
         ) {
             return [];
         }
@@ -300,38 +316,72 @@ function setRequirementsFromSelections(
 function areArmorSetRequirementsSlotCompatible(
     selectableSets: AvailableArmorSet[],
     requirements: readonly ArmorSetRequirement[],
-    blockedSlots: readonly ArmorSlot[] = []
+    blockedSlots: readonly ArmorSlot[] = [],
+    availabilitySource: ArmorSetAvailabilitySource = 'owned'
 ) {
+    return findArmorSetSlotAllocation(selectableSets, requirements, blockedSlots, availabilitySource) !== null;
+}
+
+export function getPlanningSetSlotAssignments(
+    selectableSets: AvailableArmorSet[],
+    requirements: readonly ArmorSetRequirement[],
+    blockedSlots: readonly ArmorSlot[] = []
+): Partial<Record<ArmorSlot, string>> | null {
+    return findArmorSetSlotAllocation(selectableSets, requirements, blockedSlots, 'catalog');
+}
+
+function findArmorSetSlotAllocation(
+    selectableSets: AvailableArmorSet[],
+    requirements: readonly ArmorSetRequirement[],
+    blockedSlots: readonly ArmorSlot[],
+    availabilitySource: ArmorSetAvailabilitySource
+): Partial<Record<ArmorSlot, string>> | null {
     const setsById = new Map(selectableSets.map((set) => [set.id, set]));
     const blockedMask = slotsToMask(blockedSlots);
     const sortedRequirements = [...requirements].sort((left, right) => right.requiredPieces - left.requiredPieces);
 
-    const canAllocate = (requirementIndex: number, usedMask: number): boolean => {
+    const allocate = (requirementIndex: number, usedMask: number): Partial<Record<ArmorSlot, string>> | null => {
         const requirement = sortedRequirements[requirementIndex];
         if (!requirement) {
-            return true;
+            return {};
         }
 
         const set = setsById.get(requirement.setId);
         if (!set) {
-            return false;
+            return null;
         }
 
         const availableSlots = ARMOR_SLOTS.filter((slot) => {
             const bit = ARMOR_SLOT_BITS.get(slot) ?? 0;
-            return set.slotCounts[slot] > 0 && (usedMask & bit) === 0;
+            return armorSetHasSlot(set, slot, availabilitySource) && (usedMask & bit) === 0;
         });
 
         if (availableSlots.length < requirement.requiredPieces) {
-            return false;
+            return null;
         }
 
-        return chooseRequiredSlots(availableSlots, requirement.requiredPieces, 0, 0, (choiceMask) =>
-            canAllocate(requirementIndex + 1, usedMask | choiceMask)
-        );
+        let allocation: Partial<Record<ArmorSlot, string>> | null = null;
+        chooseRequiredSlots(availableSlots, requirement.requiredPieces, 0, 0, (choiceMask) => {
+            const remaining = allocate(requirementIndex + 1, usedMask | choiceMask);
+            if (!remaining) {
+                return false;
+            }
+
+            allocation = { ...remaining };
+            for (const slot of availableSlots) {
+                const bit = ARMOR_SLOT_BITS.get(slot) ?? 0;
+                if ((choiceMask & bit) !== 0) {
+                    allocation[slot] = requirement.setId;
+                }
+            }
+
+            return true;
+        });
+
+        return allocation;
     };
 
-    return canAllocate(0, blockedMask);
+    return allocate(0, blockedMask);
 }
 
 function chooseRequiredSlots(
@@ -357,9 +407,17 @@ function chooseRequiredSlots(
     return false;
 }
 
-function countUsableArmorSetSlots(set: AvailableArmorSet, blockedSlots: readonly ArmorSlot[] = []) {
+function countUsableArmorSetSlots(
+    set: AvailableArmorSet,
+    blockedSlots: readonly ArmorSlot[] = [],
+    availabilitySource: ArmorSetAvailabilitySource = 'owned'
+) {
     const blocked = new Set(blockedSlots);
-    return ARMOR_SLOTS.filter((slot) => set.slotCounts[slot] > 0 && !blocked.has(slot)).length;
+    return ARMOR_SLOTS.filter((slot) => armorSetHasSlot(set, slot, availabilitySource) && !blocked.has(slot)).length;
+}
+
+function armorSetHasSlot(set: AvailableArmorSet, slot: ArmorSlot, availabilitySource: ArmorSetAvailabilitySource) {
+    return availabilitySource === 'catalog' ? set.catalogSlots.includes(slot) : set.slotCounts[slot] > 0;
 }
 
 function slotsToMask(slots: readonly ArmorSlot[]) {

@@ -4,8 +4,8 @@
 )]
 
 use rose_armor_engine::{
-    AdjustmentInput, ArmorEngine, ConstraintsInput, EngineError, ItemInput, ProfileInput,
-    SolveRequest, Stats,
+    AdjustmentInput, ArmorEngine, ArmorPlanner, ConstraintsInput, EngineError, ItemInput,
+    PlanningProfileInput, PlanningRollInput, ProfileInput, SolveRequest, Stats,
 };
 
 pub const TITAN: u8 = 0;
@@ -18,6 +18,10 @@ pub const LEGS: u8 = 3;
 
 pub fn engine_with_items(items: Vec<ItemInput>) -> Result<ArmorEngine, EngineError> {
     ArmorEngine::new(ProfileInput { items })
+}
+
+pub fn planner_with_rolls(rolls: Vec<PlanningRollInput>) -> Result<ArmorPlanner, EngineError> {
+    ArmorPlanner::new(PlanningProfileInput { rolls })
 }
 
 pub fn solve_request(targets: Stats) -> SolveRequest {
@@ -46,6 +50,16 @@ pub fn item(source_index: u32, slot: u8, base_stats: Stats) -> ItemInput {
         class_type: TITAN,
         is_exotic: false,
         set_id: None,
+        base_stats,
+        stat_mods: standard_mods(),
+        tunings: vec![no_adjustment(0)],
+    }
+}
+
+pub fn planning_roll(source_index: u32, base_stats: Stats) -> PlanningRollInput {
+    PlanningRollInput {
+        source_index,
+        stable_id: format!("roll-{source_index}"),
         base_stats,
         stat_mods: standard_mods(),
         tunings: vec![no_adjustment(0)],

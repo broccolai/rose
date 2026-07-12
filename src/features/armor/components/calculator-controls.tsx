@@ -88,6 +88,49 @@ const PanelTitle = styled('h2', {
     }
 });
 
+const PanelHeading = styled('div', {
+    base: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--rose-space-sm)'
+    }
+});
+
+const ModeSwitch = styled('div', {
+    base: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(4.5rem, 1fr))',
+        gap: '2px',
+        p: '2px',
+        border: '1px solid var(--rose-border)',
+        borderRadius: 'var(--rose-radius-sm)',
+        bg: 'var(--rose-surface-soft)'
+    }
+});
+
+const ModeButton = styled('button', {
+    base: {
+        minH: '1.8rem',
+        px: 'var(--rose-space-sm)',
+        border: 0,
+        borderRadius: 'var(--rose-radius-xs)',
+        bg: 'transparent',
+        color: 'var(--rose-muted)',
+        cursor: 'pointer',
+        fontFamily: MONO_FONT_FAMILY,
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        _hover: {
+            color: 'var(--rose-text)'
+        },
+        '&[data-selected="true"]': {
+            bg: 'var(--rose-accent)',
+            color: '#fff'
+        }
+    }
+});
+
 export function CalculatorControls() {
     const calculator = useArmorCalculator();
     const controls = calculator.controls;
@@ -96,7 +139,31 @@ export function CalculatorControls() {
     return (
         <ControlGrid>
             <SettingsPanel>
-                <PanelTitle>Build Inputs</PanelTitle>
+                <PanelHeading>
+                    <PanelTitle>Build Inputs</PanelTitle>
+                    <ModeSwitch role="tablist" aria-label="Armor calculation mode">
+                        <ModeButton
+                            type="button"
+                            role="tab"
+                            title="Find builds using armor currently in your vault"
+                            aria-selected={controls.mode() === 'owned'}
+                            data-selected={controls.mode() === 'owned'}
+                            onClick={() => actions.setMode('owned')}
+                        >
+                            Vault
+                        </ModeButton>
+                        <ModeButton
+                            type="button"
+                            role="tab"
+                            title="Plan the Tier 5 rolls needed for a future build"
+                            aria-selected={controls.mode() === 'planning'}
+                            data-selected={controls.mode() === 'planning'}
+                            onClick={() => actions.setMode('planning')}
+                        >
+                            Plan
+                        </ModeButton>
+                    </ModeSwitch>
+                </PanelHeading>
                 <SettingsScroll>
                     <SettingsColumn>
                         <CollapsibleSection title="Gear">
@@ -169,6 +236,7 @@ export function CalculatorControls() {
                                 selectableSets={controls.selectableSets()}
                                 selectedExoticItemHash={controls.selectedExoticItemHash()}
                                 setSelections={controls.setSelections()}
+                                planningMode={controls.mode() === 'planning'}
                             />
                         </CollapsibleSection>
                     </SettingsColumn>
@@ -178,6 +246,7 @@ export function CalculatorControls() {
                     canSolve={controls.canSolve()}
                     onClearChoices={actions.clearChoices}
                     onSolve={actions.solve}
+                    primaryLabel={controls.mode() === 'planning' ? 'Find Required Rolls' : 'Solve Builds'}
                     solving={controls.solving()}
                 />
             </SettingsPanel>

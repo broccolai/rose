@@ -34,15 +34,53 @@ export class WasmArmorEngine {
     summary(): any;
 }
 
+export class WasmArmorPlanner {
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     */
+    calculate_caps(request: any): any;
+    /**
+     * Creates a persistent planner from legal normalized Tier 5 roll profiles.
+     *
+     * # Errors
+     *
+     * Returns a JavaScript error when deserialization or profile compilation fails.
+     */
+    constructor(profile: any);
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the request is invalid or the result
+     * cannot be serialized.
+     */
+    solve(request: any): any;
+    /**
+     * # Errors
+     *
+     * Returns a JavaScript error when the summary cannot be serialized.
+     */
+    summary(): any;
+}
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_wasmarmorengine_free: (a: number, b: number) => void;
+    readonly __wbg_wasmarmorplanner_free: (a: number, b: number) => void;
     readonly wasmarmorengine_calculate_caps: (a: number, b: number, c: number) => void;
     readonly wasmarmorengine_new: (a: number, b: number) => void;
     readonly wasmarmorengine_solve: (a: number, b: number, c: number) => void;
     readonly wasmarmorengine_summary: (a: number, b: number) => void;
+    readonly wasmarmorplanner_calculate_caps: (a: number, b: number, c: number) => void;
+    readonly wasmarmorplanner_new: (a: number, b: number) => void;
+    readonly wasmarmorplanner_solve: (a: number, b: number, c: number) => void;
+    readonly wasmarmorplanner_summary: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

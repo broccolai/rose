@@ -5,6 +5,7 @@ import { ButtonGroup, PrimaryButton, SecondaryButton } from '@/features/armor/co
 interface ActionControlsProps {
     canSolve: boolean;
     solving: boolean;
+    primaryLabel?: string | undefined;
     onSolve: () => void;
     onClearChoices: () => void;
 }
@@ -21,7 +22,7 @@ export function ActionControls(props: ActionControlsProps) {
     return (
         <ActionStack>
             <PrimaryButton type="button" onClick={props.onSolve} disabled={!props.canSolve || props.solving}>
-                Solve Builds
+                {props.primaryLabel ?? 'Solve Builds'}
             </PrimaryButton>
             <SecondaryButton type="button" onClick={props.onClearChoices}>
                 Clear Choices

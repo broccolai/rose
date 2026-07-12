@@ -4,7 +4,9 @@ use rustc_hash::FxHashSet;
 
 use crate::error::EngineError;
 use crate::item::Item;
-use crate::model::{ItemInput, ProfileInput, ProfileSummary, SLOT_COUNT};
+use crate::model::{
+    ItemInput, PlanningProfileInput, PlanningRollInput, ProfileInput, ProfileSummary, SLOT_COUNT,
+};
 
 pub(super) struct CompiledProfile {
     pub items: Box<[Item]>,
@@ -28,6 +30,27 @@ impl TryFrom<ProfileInput> for CompiledProfile {
         let by_slot = index_items_by_slot(&items);
 
         Ok(Self { items, by_slot })
+    }
+}
+
+pub(super) fn compile_planning_rolls(
+    profile: PlanningProfileInput,
+) -> Result<Box<[Item]>, EngineError> {
+    compile_items(profile.rolls.into_iter().map(planning_roll_item).collect())
+}
+
+fn planning_roll_item(roll: PlanningRollInput) -> ItemInput {
+    ItemInput {
+        source_index: roll.source_index,
+        stable_id: roll.stable_id,
+        item_hash: roll.source_index,
+        slot: 0,
+        class_type: 3,
+        is_exotic: false,
+        set_id: None,
+        base_stats: roll.base_stats,
+        stat_mods: roll.stat_mods,
+        tunings: roll.tunings,
     }
 }
 

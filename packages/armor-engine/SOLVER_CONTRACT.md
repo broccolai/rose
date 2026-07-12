@@ -19,6 +19,16 @@ This file is the source of truth for the armor engine. A behavior is not complet
 - All hot data is stored in packed slot-oriented arrays. Strings exist only for deterministic ties and boundary diagnostics.
 - Reinitialization happens only when normalized armor changes. Targets and UI selections must not retransmit the profile.
 
+## Acquisition Planning
+
+- Planning uses the fixed catalog of legal, fully masterworked Tier 5 roll profiles instead of the player's owned item profile.
+- Each legal roll has one archetype-selected primary stat at 30, one secondary stat at 25, one of the remaining four tertiary stats at 20, and 5 in each other stat.
+- Search combinations with replacement because multiple slots may need the same roll profile.
+- Search each unordered five-roll multiset exactly once. Slot permutations of the same roll recipe are not distinct plans.
+- Reuse the owned solver's exact fragment, mod, tuning, display-cap, target, and ranking rules.
+- Keep set identity and non-class-item Exotic identity outside the Rust stat search. The web layer assigns those identities to compatible slots after validating that selected set requirements can occupy disjoint slots.
+- Do not claim a gameplay effect from an armor set; set choices remain acquisition constraints only.
+
 ## Candidate Rules
 
 - An item is compatible when its class is either the selected class or `Any`.
@@ -121,3 +131,7 @@ This file is the source of truth for the armor engine. A behavior is not complet
 - July 6 mixed-class private fixture.
 - July 11 Hunter, St0mp-EE5, Health dump, 180 Weapons fixture.
 - July 11 two-high-target variant with 180 Weapons and 150 Super.
+- Exact future-roll recipe using one legal profile five times.
+- Future-roll cap with one shared five-mod budget.
+- Unique multiset traversal without duplicate slot permutations.
+- Two disjoint planned two-piece sets around a selected Exotic slot.

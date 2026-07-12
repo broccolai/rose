@@ -1,15 +1,24 @@
 import type {
     ArmorInventoryBySlot,
+    ArmorPlanStatCapsInput,
     ArmorStat,
     ArmorStatTargetCapsInput,
+    PlanArmorInput,
+    PlanArmorProgress,
+    PlanArmorResult,
     SolveArmorInput,
     SolveArmorProgress,
     SolveArmorResult,
     StatVector
 } from '@armor-domain';
 import type { SolverWorkerRequest, SolverWorkerResponse } from '@/features/armor/solver-worker';
-import type { EngineCapOutput, EngineProfileSummary, EngineSolveOutput } from '../../../packages/armor-engine/ts';
-import { ArmorEngineAdapter } from '../../../packages/armor-engine/ts';
+import type {
+    EngineCapOutput,
+    EnginePlanningProfileSummary,
+    EngineProfileSummary,
+    EngineSolveOutput
+} from '../../../packages/armor-engine/ts';
+import { ArmorEngineAdapter, ArmorPlanningAdapter } from '../../../packages/armor-engine/ts';
 
 const DEV_SOLVER_TIMING = Boolean(import.meta.env.DEV);
 
@@ -27,6 +36,11 @@ interface SolveRequestOptions {
     onProgress?: ((progress: SolveArmorProgress) => void) | undefined;
 }
 
+interface PlanRequestOptions {
+    progressPlanCount?: number | undefined;
+    onProgress?: ((progress: PlanArmorProgress) => void) | undefined;
+}
+
 interface SolverWorkerClient {
     calculateStatCap(input: ArmorStatTargetCapsInput, stat: ArmorStat): Promise<number>;
     calculateStatCaps(
@@ -34,7 +48,14 @@ interface SolverWorkerClient {
         stats: readonly ArmorStat[],
         onStatCap?: (stat: ArmorStat, cap: number) => void
     ): Promise<StatVector>;
+    calculatePlanningStatCap(input: ArmorPlanStatCapsInput, stat: ArmorStat): Promise<number>;
+    calculatePlanningStatCaps(
+        input: ArmorPlanStatCapsInput,
+        stats: readonly ArmorStat[],
+        onStatCap?: (stat: ArmorStat, cap: number) => void
+    ): Promise<StatVector>;
     solve(input: SolveArmorInput, options?: SolveRequestOptions): Promise<SolveArmorResult>;
+    plan(input: PlanArmorInput, options?: PlanRequestOptions): Promise<PlanArmorResult>;
     cancelPending(): void;
     dispose(): void;
 }
@@ -44,8 +65,11 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
     private worker: Worker;
     private currentArmor: ArmorInventoryBySlot | null = null;
     private adapter: ArmorEngineAdapter | null = null;
+    private readonly planningAdapter = new ArmorPlanningAdapter();
     private initialized = false;
     private initialization: Promise<void> | null = null;
+    private plannerInitialized = false;
+    private plannerInitialization: Promise<void> | null = null;
     private readonly pending = new Map<number, PendingRequest>();
 
     constructor() {
@@ -104,6 +128,62 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         );
     }
 
+    async calculatePlanningStatCap(input: ArmorPlanStatCapsInput, stat: ArmorStat): Promise<number> {
+        const adapter = await this.ensurePlannerInitialized();
+        const output = await this.request(
+            {
+                id: 0,
+                type: 'calculate-planning-stat-caps',
+                request: adapter.createCapRequest(input, [stat])
+            },
+            `planning-cap:${stat}`,
+            asEngineCapOutput
+        );
+
+        return adapter.materializeCaps(output).caps[stat];
+    }
+
+    async calculatePlanningStatCaps(
+        input: ArmorPlanStatCapsInput,
+        stats: readonly ArmorStat[],
+        onStatCap?: (stat: ArmorStat, cap: number) => void
+    ): Promise<StatVector> {
+        const adapter = await this.ensurePlannerInitialized();
+        const output = await this.request(
+            {
+                id: 0,
+                type: 'calculate-planning-stat-caps',
+                request: adapter.createCapRequest(input, stats)
+            },
+            `planning-caps:${stats.join(',')}`,
+            asEngineCapOutput
+        );
+        const caps = adapter.materializeCaps(output).caps;
+
+        for (const stat of stats) {
+            onStatCap?.(stat, caps[stat]);
+        }
+
+        return caps;
+    }
+
+    async plan(input: PlanArmorInput, options: PlanRequestOptions = {}): Promise<PlanArmorResult> {
+        const adapter = await this.ensurePlannerInitialized();
+        const decode = (value: unknown): PlanArmorResult => adapter.materializePlans(asEngineSolveOutput(value));
+
+        return this.request(
+            {
+                id: 0,
+                type: 'plan',
+                request: adapter.createSolveRequest(input),
+                progressBuildCount: options.progressPlanCount
+            },
+            'plan',
+            decode,
+            options.onProgress ? (value) => options.onProgress?.(decode(value) as PlanArmorProgress) : undefined
+        );
+    }
+
     cancelPending(): void {
         if (this.pending.size === 0) {
             return;
@@ -118,6 +198,8 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         this.currentArmor = null;
         this.initialization = null;
         this.initialized = false;
+        this.plannerInitialization = null;
+        this.plannerInitialized = false;
     }
 
     private async ensureInitialized(armor: ArmorInventoryBySlot): Promise<ArmorEngineAdapter> {
@@ -149,6 +231,25 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
             await this.initialization;
         }
         return adapter;
+    }
+
+    private async ensurePlannerInitialized(): Promise<ArmorPlanningAdapter> {
+        if (!this.plannerInitialized) {
+            this.plannerInitialization ??= this.request(
+                {
+                    id: 0,
+                    type: 'initialize-planner',
+                    profile: this.planningAdapter.profile
+                },
+                `initialize-planner:${this.planningAdapter.profile.rolls.length}`,
+                asEnginePlanningProfileSummary
+            ).then(() => {
+                this.plannerInitialized = true;
+            });
+            await this.plannerInitialization;
+        }
+
+        return this.planningAdapter;
     }
 
     private createWorker(): Worker {
@@ -196,6 +297,8 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
         this.worker = this.createWorker();
         this.initialized = false;
         this.initialization = null;
+        this.plannerInitialized = false;
+        this.plannerInitialization = null;
     }
 
     private rejectPending(reason: string, error?: unknown): void {
@@ -234,6 +337,7 @@ class BrowserSolverWorkerClient implements SolverWorkerClient {
 const asEngineCapOutput = (value: unknown): EngineCapOutput => value as EngineCapOutput;
 const asEngineSolveOutput = (value: unknown): EngineSolveOutput => value as EngineSolveOutput;
 const asEngineProfileSummary = (value: unknown): EngineProfileSummary => value as EngineProfileSummary;
+const asEnginePlanningProfileSummary = (value: unknown): EnginePlanningProfileSummary => value as EnginePlanningProfileSummary;
 
 const logSolverTiming = (label: string, startedAt: number, status: 'canceled' | 'done' | 'error'): void => {
     if (!DEV_SOLVER_TIMING) {

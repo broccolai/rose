@@ -17,7 +17,7 @@ bun run armor:wasm
 bun run bench:rust
 ```
 
-The browser binding uses `serde-wasm-bindgen` only at initialization and for compact request/results. The worker constructs one engine per loaded normalized profile and retains its packed armor, indexes, and allocation caches across slider and solve requests.
+The browser binding uses `serde-wasm-bindgen` only at initialization and for compact request/results. The worker constructs one owned-armor engine per loaded normalized profile and one acquisition planner from the fixed legal Tier 5 roll catalog. Both retain their packed data and allocation caches across slider and solve requests.
 
 The generated JS and Wasm are checked in as deployable runtime assets because Cloudflare Pages' standard build image does not include Rust. Regenerate them with the repository's `armor:wasm` script after changing either crate.
 
@@ -34,6 +34,8 @@ The core intentionally has three stages:
 1. Boundary DTOs are converted once into validated domain values and compact items.
 2. `engine` builds one request-specific, slot-oriented candidate plan and walks it with the same depth-first search for caps and builds.
 3. `adjustments` solves the shared five-mod budget and exact tuning assignment only for armor combinations that survive the cheap bounds.
+
+Acquisition planning shares the same request validation, cap sessions, solve sessions, and adjustment allocator. Its only alternate stage is `engine/planning.rs`, which walks unique five-roll multisets instead of slot-specific owned items. Set and exotic identities are assigned to compatible slots by the TypeScript feature layer because they do not change a legal Tier 5 roll's stats.
 
 The search does not materialize armor permutations or valid builds. Its suffix stat bounds, set-feasibility check, target-first candidate order, bounded retained-result list, and restricted-tuning allocation cache all skip or avoid measurable combinatorial work. Keep those structures unless a benchmark demonstrates a simpler replacement. The cap/build traversal and basic stat arithmetic are shared so their rules cannot quietly diverge.
 
@@ -52,6 +54,8 @@ matches the work:
 4. `engine/candidates.rs` prepares five request-specific slot lists.
 5. `engine/search.rs` walks those lists once.
 6. `engine/cap.rs` or `engine/solve.rs` decides what to do at a surviving leaf.
+
+For future-roll planning, `engine/planning.rs` replaces steps 4 and 5 with an unordered multiset traversal. It sorts rolls for the active targets, uses suffix potential bounds, and never revisits the same five-roll recipe as a different slot permutation.
 
 The supporting engine files each answer one narrower question:
 
@@ -95,6 +99,7 @@ Only continue into these files when changing the exact tuning search:
 - `tests/constraints.rs`: sets, exotic rolls, and cap/solve parity.
 - `tests/results.rs`: bounded retention, sorting, and stable failures.
 - `tests/validation.rs`: malformed profile and request rejection.
+- `tests/planning.rs`: legal-roll recipes, multiset traversal, and shared mod-budget caps.
 - `tests/support`: small synthetic armor builders shared by those suites.
 
 References: [wasm-bindgen deployment](https://wasm-bindgen.github.io/wasm-bindgen/reference/deployment.html), [wasm-pack build](https://drager.github.io/wasm-pack/book/commands/build.html), and [`serde-wasm-bindgen`](https://docs.rs/serde-wasm-bindgen/latest/serde_wasm_bindgen/).

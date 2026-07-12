@@ -10,7 +10,9 @@ pub const NO_CHOICE: i16 = -1;
 pub type Stats = [i16; STAT_COUNT];
 
 pub use input::{
-    AdjustmentInput, CapRequest, ConstraintsInput, ItemInput, ProfileInput, SetRequirementInput,
-    SolveRequest, SortInput,
+    AdjustmentInput, CapRequest, ConstraintsInput, ItemInput, PlanningProfileInput,
+    PlanningRollInput, ProfileInput, SetRequirementInput, SolveRequest, SortInput,
 };
-pub use output::{BuildOutput, CapOutput, ProfileSummary, SearchMetrics, SolveOutput};
+pub use output::{
+    BuildOutput, CapOutput, PlanningProfileSummary, ProfileSummary, SearchMetrics, SolveOutput,
+};

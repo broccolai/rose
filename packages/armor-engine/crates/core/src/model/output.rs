@@ -11,6 +11,12 @@ pub struct ProfileSummary {
     pub slot_counts: [usize; SLOT_COUNT],
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningProfileSummary {
+    pub roll_count: usize,
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchMetrics {

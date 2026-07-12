@@ -136,6 +136,7 @@ fn sort_value(build: &BuildOutput, key: SortKey) -> i16 {
 #[derive(Clone, Copy, Debug)]
 pub(super) enum SolveFailure {
     MissingArmorSlot,
+    MissingPlanningRolls,
     NoMatchingBuild,
 }
 
@@ -143,6 +144,7 @@ impl SolveFailure {
     const fn message(self) -> &'static str {
         match self {
             Self::MissingArmorSlot => "No compatible armor found for every armor slot.",
+            Self::MissingPlanningRolls => "No legal armor roll profiles are available.",
             Self::NoMatchingBuild => "No build matched the selected targets and constraints.",
         }
     }

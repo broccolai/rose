@@ -1,9 +1,20 @@
-import type { ArmorBuild, ArmorBuildSort, ArmorStat, SolveArmorResult, StatVector } from '@armor-domain';
+import type {
+    ArmorBuild,
+    ArmorBuildSort,
+    ArmorCalculatorMode,
+    ArmorPlan,
+    ArmorSlot,
+    ArmorStat,
+    PlanArmorResult,
+    SolveArmorResult,
+    StatVector
+} from '@armor-domain';
 import { type Accessor, createContext, type JSX, useContext } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';
 import type { AvailableArmorSet, AvailableExotic, CharacterButtonOption, ResultSortKey } from '@/features/armor/calculator-view-model';
 import type { LoadProgress } from '@/features/armor/components/app-toolbar';
+import type { PlanningSlotRequirement } from '@/features/armor/model/armor-planning';
 import type { SavedArmorBuild } from '@/features/armor/model/personal-library';
 import type { ArmorSetDisplayMode } from '@/features/armor/result-display';
 import type { FragmentDescriptionMap, SubclassType } from '@/features/armor/subclass-fragments';
@@ -12,6 +23,7 @@ export type ResultsView = 'results' | 'history';
 
 export interface ArmorCalculatorContextValue {
     controls: {
+        mode: Accessor<ArmorCalculatorMode>;
         characterOptions: Accessor<CharacterButtonOption[]>;
         selectedCharacterId: Accessor<string>;
         selectedExoticItemHash: Accessor<string>;
@@ -36,8 +48,12 @@ export interface ArmorCalculatorContextValue {
         solving: Accessor<boolean>;
     };
     results: {
+        mode: Accessor<ArmorCalculatorMode>;
         result: Accessor<SolveArmorResult | null>;
         builds: Accessor<ArmorBuild[]>;
+        planResult: Accessor<PlanArmorResult | null>;
+        plans: Accessor<ArmorPlan[]>;
+        planningSlots: Accessor<Record<ArmorSlot, PlanningSlotRequirement> | null>;
         armorSets: Accessor<AvailableArmorSet[]>;
         armorSetDisplayMode: Accessor<ArmorSetDisplayMode>;
         resultFailure: Accessor<string | null>;
@@ -53,6 +69,7 @@ export interface ArmorCalculatorContextValue {
         isBuildSaved: (build: ArmorBuild) => boolean;
     };
     actions: {
+        setMode: (mode: ArmorCalculatorMode) => void;
         selectCharacter: (characterId: string) => void;
         selectExotic: (itemHash: string) => void;
         toggleFavoriteExotic: (itemHash: number) => void;

@@ -1,16 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { initSync, WasmArmorEngine } from '../../../src/features/armor/wasm/generated/rose_armor_wasm.js';
+import { initSync, WasmArmorEngine, WasmArmorPlanner } from '../../../src/features/armor/wasm/generated/rose_armor_wasm.js';
 import {
     ARMOR_STATS,
     type ArmorInventoryBySlot,
+    type ArmorPlanStatCapsInput,
     type ArmorStat,
     type ArmorStatTargetCapsInput,
+    type PlanArmorInput,
+    type PlanArmorResult,
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector
 } from '../../armor-domain/src';
-import { ArmorEngineAdapter, type EngineProfileSummary } from '../../armor-engine/ts';
+import {
+    ArmorEngineAdapter,
+    ArmorPlanningAdapter,
+    type EnginePlanningProfileSummary,
+    type EngineProfileSummary
+} from '../../armor-engine/ts';
 
 const wasmPath = fileURLToPath(new URL('../../../src/features/armor/wasm/generated/rose_armor_wasm_bg.wasm', import.meta.url));
 
@@ -20,6 +28,12 @@ export interface WasmEngineMeasurements {
     initializationMs: number;
     compactProfileBytes: number;
     summary: EngineProfileSummary;
+}
+
+export interface WasmPlannerMeasurements {
+    initializationMs: number;
+    compactProfileBytes: number;
+    summary: EnginePlanningProfileSummary;
 }
 
 export class BenchmarkArmorEngine {
@@ -67,6 +81,46 @@ export class BenchmarkArmorEngine {
 
     dispose(): void {
         this.engine.free();
+    }
+}
+
+export class BenchmarkArmorPlanner {
+    readonly measurements: WasmPlannerMeasurements;
+
+    private readonly adapter: ArmorPlanningAdapter;
+    private readonly planner: WasmArmorPlanner;
+
+    constructor() {
+        initializeWasm();
+        this.adapter = new ArmorPlanningAdapter();
+
+        const startedAt = performance.now();
+        this.planner = new WasmArmorPlanner(this.adapter.profile);
+        const initializationMs = performance.now() - startedAt;
+
+        this.measurements = {
+            initializationMs,
+            compactProfileBytes: JSON.stringify(this.adapter.profile).length,
+            summary: this.planner.summary() as EnginePlanningProfileSummary
+        };
+    }
+
+    calculateCap(input: ArmorPlanStatCapsInput, stat: ArmorStat): number {
+        return this.calculateCaps(input, [stat])[stat];
+    }
+
+    calculateCaps(input: ArmorPlanStatCapsInput, stats: readonly ArmorStat[] = ARMOR_STATS): StatVector {
+        const output = this.planner.calculate_caps(this.adapter.createCapRequest(input, stats));
+        return this.adapter.materializeCaps(output).caps;
+    }
+
+    plan(input: PlanArmorInput): PlanArmorResult {
+        const output = this.planner.solve(this.adapter.createSolveRequest(input));
+        return this.adapter.materializePlans(output);
+    }
+
+    dispose(): void {
+        this.planner.free();
     }
 }
 

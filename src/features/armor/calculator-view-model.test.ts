@@ -5,7 +5,9 @@ import { ARMOR_SLOTS, type ArmorBuild, type ArmorItem, type ArmorStat, type Stat
 import {
     getArmorSetRequirementAvailability,
     getAvailableExoticOptions,
+    getAvailablePlanningExoticOptions,
     getCharacterButtonOptions,
+    getPlanningSetSlotAssignments,
     getSelectableArmorSets,
     getSelectedCharacter,
     getSelectedSetRequirements,
@@ -70,6 +72,19 @@ describe('calculator view model', () => {
         ]);
     });
 
+    test('excludes fixed-roll exotic class items from future-roll planning', () => {
+        const profile = profileWithArmor([
+            armor({ itemInstanceId: 'helmet', itemHash: 10, name: "Nezarec's Sin", slot: 'helmet', isExotic: true }),
+            armor({ itemInstanceId: 'class-item', itemHash: 20, name: 'Solipsism', slot: 'classItem', isExotic: true })
+        ]);
+
+        expect(getAvailableExoticOptions(profile, profile.characters[0]).map((exotic) => exotic.name)).toEqual([
+            "Nezarec's Sin",
+            'Solipsism'
+        ]);
+        expect(getAvailablePlanningExoticOptions(profile, profile.characters[0]).map((exotic) => exotic.name)).toEqual(["Nezarec's Sin"]);
+    });
+
     test('shows catalog armor sets with owned counts and converts possible choices to requirements', () => {
         const profile = profileWithArmor([
             armor({ itemInstanceId: 'set-a-1', setId: 'set:a' }),
@@ -95,6 +110,7 @@ describe('calculator view model', () => {
                 name: 'set:a',
                 count: 2,
                 slotCounts: { helmet: 1, arms: 1, chest: 0, legs: 0, classItem: 0 },
+                catalogSlots: ['helmet', 'arms'],
                 bonuses: [],
                 opBonuses: []
             },
@@ -103,6 +119,7 @@ describe('calculator view model', () => {
                 name: 'set:b',
                 count: 1,
                 slotCounts: { helmet: 1, arms: 0, chest: 0, legs: 0, classItem: 0 },
+                catalogSlots: ['helmet'],
                 bonuses: [],
                 opBonuses: []
             },
@@ -111,6 +128,7 @@ describe('calculator view model', () => {
                 name: 'Catalog Set',
                 count: 0,
                 slotCounts: { helmet: 0, arms: 0, chest: 0, legs: 0, classItem: 0 },
+                catalogSlots: ['helmet'],
                 bonuses: [{ requiredPieces: 2, name: 'Catalog 2pc' }],
                 opBonuses: []
             }
@@ -119,6 +137,43 @@ describe('calculator view model', () => {
         expect(getSelectedSetRequirements(sets, { 'set:b': '2', 'set:c': '2' })).toEqual([]);
         expect(getSelectedSetRequirements(sets, { 'set:a': '0' })).toEqual([]);
         expect(getSelectedSetRequirements(sets, { 'set:a': '2', 'set:c': '4' })).toEqual([]);
+    });
+
+    test('plans unowned catalog sets across disjoint slots around an exotic', () => {
+        const profile = profileWithArmor([]);
+        profile.armorSetCatalog = [
+            {
+                id: 'set:a',
+                name: 'First Set',
+                equipableItemSetHash: 10,
+                itemHashes: [],
+                classTypes: ['warlock'],
+                slots: ['helmet', 'arms', 'chest'],
+                bonuses: [{ requiredPieces: 2, name: 'First Bonus' }]
+            },
+            {
+                id: 'set:b',
+                name: 'Second Set',
+                equipableItemSetHash: 20,
+                itemHashes: [],
+                classTypes: ['warlock'],
+                slots: ['chest', 'legs', 'classItem'],
+                bonuses: [{ requiredPieces: 2, name: 'Second Bonus' }]
+            }
+        ];
+        const sets = getSelectableArmorSets(profile, profile.characters[0]);
+        const requirements = getSelectedSetRequirements(sets, { 'set:a': '2', 'set:b': '2' }, ['helmet'], 'catalog');
+
+        expect(requirements).toEqual([
+            { setId: 'set:a', requiredPieces: 2 },
+            { setId: 'set:b', requiredPieces: 2 }
+        ]);
+        expect(getPlanningSetSlotAssignments(sets, requirements, ['helmet'])).toEqual({
+            arms: 'set:a',
+            chest: 'set:a',
+            legs: 'set:b',
+            classItem: 'set:b'
+        });
     });
 
     test('checks armor set choices against usable slots instead of raw owned count', () => {

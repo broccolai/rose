@@ -142,7 +142,7 @@ fn sort_by_request_priority(
     }
 }
 
-fn target_priority(item: &Item, constraints: &Constraints) -> i32 {
+pub(super) fn target_priority(item: &Item, constraints: &Constraints) -> i32 {
     let mut score = 0;
 
     for stat in Stat::ALL {

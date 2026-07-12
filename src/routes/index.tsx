@@ -2,9 +2,14 @@ import {
     ARMOR_STATS,
     type ArmorBuild,
     type ArmorBuildSort,
+    type ArmorCalculatorMode,
+    type ArmorPlan,
+    type ArmorPlanStatCapsInput,
     type ArmorSlot,
     type ArmorStat,
     type ArmorStatTargetCapsInput,
+    type PlanArmorInput,
+    type PlanArmorResult,
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector
@@ -30,12 +35,14 @@ import {
     readCalculatorPreferences,
     type SetSelectionValue,
     sanitizeArmorSetDisplayMode,
+    sanitizeCalculatorMode,
     sanitizeSubclassType,
     sanitizeTargets,
     writeCalculatorPreferences
 } from '@/features/armor/calculator-preferences';
 import {
     getAvailableExoticOptions,
+    getAvailablePlanningExoticOptions,
     getCharacterButtonOptions,
     getResultFailure,
     getSelectableArmorSets,
@@ -54,6 +61,7 @@ import { EquipProgressOverlay, type EquipProgressState } from '@/features/armor/
 import { ResultsPanel } from '@/features/armor/components/results-panel';
 import { createDebugArmorReport, createDebugExpandedResultReport } from '@/features/armor/debug/armor-debug-report';
 import { createBungieManifestResolver } from '@/features/armor/manifest';
+import { createPlanningSlotRequirements } from '@/features/armor/model/armor-planning';
 import { parseDebugExport } from '@/features/armor/model/debug-export-import';
 import {
     applyEquipProgressUpdate,
@@ -120,8 +128,11 @@ type Status = 'idle' | 'loading' | 'solving' | 'exporting' | 'error' | 'done';
 
 const SOLVER_RESULT_POOL_LIMIT = 5_000;
 const VISIBLE_RESULT_LIMIT = 25;
+const PLANNING_PROGRESS_LIMIT = 8;
 const BALANCED_TUNING_ENABLED = true;
 const TEST_DATA_ENDPOINT = '/__rose-test-data__/loaded-benchmark-bundle';
+
+type ActiveTargetCapInput = { mode: 'owned'; input: ArmorStatTargetCapsInput } | { mode: 'planning'; input: ArmorPlanStatCapsInput };
 
 type LoadedBenchmarkBundle = {
     vaultSnapshot?: VaultExportSnapshot;
@@ -159,6 +170,7 @@ export default function Home() {
     const [loadedSnapshot, setLoadedSnapshot] = createSignal<VaultExportSnapshot | null>(null);
     const [loadedManifestDefinitions, setLoadedManifestDefinitions] = createSignal<LoadedManifestDefinition[]>([]);
     const [appTheme, setAppTheme] = createSignal<AppTheme>(DEFAULT_APP_THEME);
+    const [calculatorMode, setCalculatorMode] = createSignal<ArmorCalculatorMode>('owned');
     const [selectedCharacterId, setSelectedCharacterId] = createSignal('');
     const [selectedExoticItemHash, setSelectedExoticItemHash] = createSignal('');
     const [favoriteExoticItemHashes, setFavoriteExoticItemHashes] = createSignal<number[]>([]);
@@ -184,6 +196,7 @@ export default function Home() {
     const [otherSetsCollapsed, setOtherSetsCollapsed] = createSignal(false);
     const [resultSort, setResultSort] = createSignal<ArmorBuildSort>(DEFAULT_RESULT_SORT);
     const [solveResult, setSolveResult] = createSignal<SolveArmorResult | null>(null);
+    const [planResult, setPlanResult] = createSignal<PlanArmorResult | null>(null);
     const [expandedBuildKey, setExpandedBuildKey] = createSignal<string | null>(null);
     const [equipProgress, setEquipProgress] = createSignal<EquipProgressState | null>(null);
     const [equipOperationActive, setEquipOperationActive] = createSignal(false);
@@ -191,16 +204,26 @@ export default function Home() {
     const dismissCompletedEquipProgress = debounce(() => {
         setEquipProgress((current) => (current?.detail === 'Build applied' ? null : current));
     }, 1400);
-    const calculatorProfile = createMemo(() => filterFullyMasterworkedProfile(normalizedProfile(), onlyFullyMasterworkedGear()));
+    const calculatorProfile = createMemo(() =>
+        filterFullyMasterworkedProfile(normalizedProfile(), calculatorMode() === 'owned' && onlyFullyMasterworkedGear())
+    );
     const selectedCharacter = createMemo(() => getSelectedCharacter(calculatorProfile(), selectedCharacterId()));
     const characterButtons = createMemo(() => getCharacterButtonOptions(normalizedProfile()));
-    const availableExotics = createMemo(() => getAvailableExoticOptions(calculatorProfile(), selectedCharacter()));
+    const availableExotics = createMemo(() =>
+        calculatorMode() === 'planning'
+            ? getAvailablePlanningExoticOptions(calculatorProfile(), selectedCharacter())
+            : getAvailableExoticOptions(calculatorProfile(), selectedCharacter())
+    );
     const selectableSets = createMemo(() => getSelectableArmorSets(calculatorProfile(), selectedCharacter()));
     const selectedExoticBlockedSlots = createMemo(() => {
         const selectedHash = selectedExoticItemHash();
         const selectedExotic = selectedHash ? availableExotics().find((exotic) => String(exotic.itemHash) === selectedHash) : undefined;
 
         return selectedExotic ? [selectedExotic.slot] : [];
+    });
+    const selectedExotic = createMemo(() => {
+        const selectedHash = selectedExoticItemHash();
+        return selectedHash ? availableExotics().find((exotic) => String(exotic.itemHash) === selectedHash) : undefined;
     });
     const resultBuilds = createMemo(() => {
         const result = solveResult();
@@ -211,6 +234,14 @@ export default function Home() {
         return sortArmorBuildsForDisplay(result.builds, resultSort());
     });
     const resultFailure = createMemo(() => getResultFailure(solveResult()));
+    const planResults = createMemo<ArmorPlan[]>(() => {
+        const result = planResult();
+        return result?.ok ? result.plans : [];
+    });
+    const planFailure = createMemo(() => {
+        const result = planResult();
+        return result && !result.ok ? result.reason : null;
+    });
     const showTuningResults = createMemo(() => true);
     const calculatorLocked = createMemo(() => !AUTH_LOCK_DISABLED && !isLocalDevHost() && !authenticated());
     const bungieUser = createMemo(() => readBungieUser(loadedSnapshot()));
@@ -220,7 +251,19 @@ export default function Home() {
     );
 
     const selectedSetRequirements = createMemo(() =>
-        getSelectedSetRequirements(selectableSets(), setSelections(), selectedExoticBlockedSlots())
+        getSelectedSetRequirements(
+            selectableSets(),
+            setSelections(),
+            selectedExoticBlockedSlots(),
+            calculatorMode() === 'planning' ? 'catalog' : 'owned'
+        )
+    );
+    const planningSlots = createMemo(() =>
+        createPlanningSlotRequirements({
+            armorSets: selectableSets(),
+            setRequirements: selectedSetRequirements(),
+            selectedExotic: selectedExotic()
+        })
     );
     const effectiveAllowBalancedTuning = createMemo(() => BALANCED_TUNING_ENABLED && allowBalancedTuning());
     const selectedFragmentBonuses = createMemo(() => sumFragmentBonuses(selectedFragmentIds()));
@@ -238,7 +281,7 @@ export default function Home() {
                 label: formatFragmentBonus(fragment)
             }));
     });
-    const targetCapInput = createMemo(() => {
+    const targetCapInput = createMemo<ActiveTargetCapInput | null>(() => {
         const profile = calculatorProfile();
         const character = selectedCharacter();
 
@@ -246,16 +289,31 @@ export default function Home() {
             return null;
         }
 
+        if (calculatorMode() === 'planning') {
+            return {
+                mode: 'planning',
+                input: {
+                    dumpStat: dumpStat() || undefined,
+                    allowBalancedTuning: effectiveAllowBalancedTuning(),
+                    statTargets: targets(),
+                    statBonuses: selectedFragmentBonuses()
+                }
+            };
+        }
+
         return {
-            characterId: character.characterId,
-            classType: character.classType,
-            selectedExoticItemHash: selectedExoticItemHash() ? Number(selectedExoticItemHash()) : undefined,
-            dumpStat: dumpStat() || undefined,
-            allowBalancedTuning: effectiveAllowBalancedTuning(),
-            statTargets: targets(),
-            statBonuses: selectedFragmentBonuses(),
-            setRequirements: selectedSetRequirements(),
-            armor: profile.armorBySlot
+            mode: 'owned',
+            input: {
+                characterId: character.characterId,
+                classType: character.classType,
+                selectedExoticItemHash: selectedExoticItemHash() ? Number(selectedExoticItemHash()) : undefined,
+                dumpStat: dumpStat() || undefined,
+                allowBalancedTuning: effectiveAllowBalancedTuning(),
+                statTargets: targets(),
+                statBonuses: selectedFragmentBonuses(),
+                setRequirements: selectedSetRequirements(),
+                armor: profile.armorBySlot
+            }
         };
     });
 
@@ -278,11 +336,12 @@ export default function Home() {
     }
 
     async function calculateTargetCapsIncrementally(
-        input: ArmorStatTargetCapsInput,
+        activeInput: ActiveTargetCapInput,
         requestId: number,
         initialCaps: StatVector,
         priorityStat: ArmorStat | null
     ) {
+        const input = activeInput.input;
         const nextCaps = { ...initialCaps };
         const startedAt = performance.now();
         logDevTiming('cap batch started', {
@@ -290,12 +349,16 @@ export default function Home() {
             priorityStat,
             targets: input.statTargets,
             initialCaps,
-            setRequirements: input.setRequirements.length,
-            armorCounts: armorSlotCounts(input)
+            mode: activeInput.mode,
+            setRequirements: activeInput.mode === 'owned' ? activeInput.input.setRequirements.length : 0,
+            armorCounts: activeInput.mode === 'owned' ? armorSlotCounts(activeInput.input) : undefined
         });
         try {
             if (priorityStat) {
-                const cap = await armorSolver.calculateStatCap(input, priorityStat);
+                const cap =
+                    activeInput.mode === 'planning'
+                        ? await armorSolver.calculatePlanningStatCap(activeInput.input, priorityStat)
+                        : await armorSolver.calculateStatCap(activeInput.input, priorityStat);
                 if (requestId !== targetCapRequestId) {
                     logDevTiming('priority cap ignored after supersede', {
                         requestId,
@@ -331,7 +394,7 @@ export default function Home() {
             }
 
             const remainingStats = priorityStat ? ARMOR_STATS.filter((stat) => stat !== priorityStat) : ARMOR_STATS;
-            await armorSolver.calculateStatCaps(input, remainingStats, (stat, cap) => {
+            const onStatCap = (stat: ArmorStat, cap: number) => {
                 if (requestId !== targetCapRequestId) {
                     logDevTiming('cap stat ignored after supersede', {
                         requestId,
@@ -345,7 +408,12 @@ export default function Home() {
                 const verifiedCaps = applyVerifiedTargetCap(nextCaps, stat, cap, dumpStat());
                 nextCaps[stat] = verifiedCaps[stat];
                 setTargetCaps(verifiedCaps);
-            });
+            };
+            if (activeInput.mode === 'planning') {
+                await armorSolver.calculatePlanningStatCaps(activeInput.input, remainingStats, onStatCap);
+            } else {
+                await armorSolver.calculateStatCaps(activeInput.input, remainingStats, onStatCap);
+            }
             if (requestId === targetCapRequestId) {
                 setTargetCapsPending(false);
                 setTargetCapCalculationActive(false);
@@ -401,6 +469,7 @@ export default function Home() {
 
         solveRequestId += 1;
         setSolveResult(null);
+        setPlanResult(null);
         setExpandedBuildKey(null);
         if (status() === 'solving') {
             setStatus('idle');
@@ -469,6 +538,18 @@ export default function Home() {
         invalidateSolve();
     }
 
+    function updateCalculatorMode(mode: ArmorCalculatorMode) {
+        if (mode === calculatorMode()) {
+            return;
+        }
+
+        cancelTargetCapRefresh();
+        setCalculatorMode(mode);
+        setResultsView('results');
+        setTargetCapPriorityStat(null);
+        invalidateSolve();
+    }
+
     function refreshAuthState() {
         const debugState = getTokenDebugState();
         setAuthenticated(debugState.authenticated);
@@ -499,6 +580,7 @@ export default function Home() {
                 },
                 calculator: {
                     status: status(),
+                    mode: calculatorMode(),
                     selectedCharacterId: selectedCharacterId(),
                     selectedCharacter: selectedCharacter(),
                     selectedExoticItemHash: selectedExoticItemHash(),
@@ -530,7 +612,8 @@ export default function Home() {
                     maximizedResult: createDebugExpandedResultReport(resultBuilds(), expandedBuildKey()),
                     armor: createDebugArmorReport(loadedSnapshot(), normalizedProfile(), loadedManifestDefinitions())
                 },
-                solveResult: solveResult()
+                solveResult: solveResult(),
+                planResult: planResult()
             },
             'rose-debug-vault-export'
         );
@@ -581,6 +664,7 @@ export default function Home() {
 
         const currentPreferences = {
             appTheme: appTheme(),
+            calculatorMode: calculatorMode(),
             selectedCharacterId: selectedCharacterId(),
             selectedExoticItemHash: selectedExoticItemHash(),
             armorSetDisplayMode: armorSetDisplayMode(),
@@ -653,16 +737,19 @@ export default function Home() {
             return;
         }
 
-        const nextExotic = reconcileSelectedExotic(profile, character.classType, selectedExoticItemHash());
+        const reconciledExotic = reconcileSelectedExotic(profile, character.classType, selectedExoticItemHash());
+        const nextExotic = availableExotics().some((exotic) => String(exotic.itemHash) === reconciledExotic) ? reconciledExotic : '';
         if (nextExotic !== selectedExoticItemHash()) {
             setSelectedExoticItemHash(nextExotic);
             invalidateSolve();
         }
 
-        const nextSelections = reconcileSetSelections(profile, character.classType, setSelections(), selectedExoticBlockedSlots());
-        if (!setSelectionRecordsEqual(setSelections(), nextSelections)) {
-            setSetSelections(nextSelections);
-            invalidateSolve();
+        if (calculatorMode() === 'owned') {
+            const nextSelections = reconcileSetSelections(profile, character.classType, setSelections(), selectedExoticBlockedSlots());
+            if (!setSelectionRecordsEqual(setSelections(), nextSelections)) {
+                setSetSelections(nextSelections);
+                invalidateSolve();
+            }
         }
     });
 
@@ -1124,8 +1211,23 @@ export default function Home() {
         };
     }
 
+    function createPlanInput(): PlanArmorInput {
+        return {
+            dumpStat: dumpStat() || undefined,
+            allowBalancedTuning: effectiveAllowBalancedTuning(),
+            statTargets: targets(),
+            statBonuses: selectedFragmentBonuses(),
+            maxResults: VISIBLE_RESULT_LIMIT
+        };
+    }
+
     function solveCurrentBuilds() {
         setResultsView('results');
+        if (calculatorMode() === 'planning') {
+            void runPlanningSolve();
+            return;
+        }
+
         void runSolve();
     }
 
@@ -1149,6 +1251,100 @@ export default function Home() {
                 characterId: character.characterId,
                 characterClass: character.classType
             });
+        });
+    }
+
+    async function runPlanningSolve() {
+        const profile = calculatorProfile();
+        const character = selectedCharacter();
+        const slotRequirements = planningSlots();
+
+        if (!profile || !character || !slotRequirements) {
+            setStatus('error');
+            setMessage('Load calculator data and choose slot-compatible armor sets before planning.');
+            return;
+        }
+
+        if (targetCapsPending()) {
+            setMessage('Finish checking stat limits before planning.');
+            return;
+        }
+
+        cancelTargetCapRefresh();
+
+        if (!targetsAreWithinCaps(targets(), targetCaps(), dumpStat(), effectiveAllowBalancedTuning())) {
+            setTargets((current) => clampTargetsToCaps(current, targetCaps(), dumpStat(), effectiveAllowBalancedTuning()));
+            invalidateSolve();
+            return;
+        }
+
+        const requestId = solveRequestId + 1;
+        solveRequestId = requestId;
+        const startedAt = performance.now();
+        const planInput = createPlanInput();
+        logDevTiming('planning solve started', {
+            requestId,
+            targets: targets(),
+            caps: targetCaps(),
+            setRequirements: selectedSetRequirements().length
+        });
+        setStatus('solving');
+        setLoadProgress({
+            active: true,
+            label: 'Planning rolls',
+            current: 0,
+            total: VISIBLE_RESULT_LIMIT,
+            percent: 45
+        });
+
+        let result: PlanArmorResult;
+        try {
+            result = await armorSolver.plan(planInput, {
+                progressPlanCount: PLANNING_PROGRESS_LIMIT,
+                onProgress: (progress) => {
+                    if (requestId !== solveRequestId) {
+                        return;
+                    }
+
+                    setPlanResult(progress);
+                    setLoadProgress({
+                        active: true,
+                        label: 'Calculating more...',
+                        current: progress.returnedPlanCount,
+                        total: VISIBLE_RESULT_LIMIT,
+                        percent: 68
+                    });
+                }
+            });
+        } catch (error) {
+            if (requestId !== solveRequestId) {
+                return;
+            }
+
+            setStatus('error');
+            setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+            setMessage(error instanceof Error ? error.message : 'Unknown armor planning failure.');
+            return;
+        }
+
+        if (requestId !== solveRequestId) {
+            return;
+        }
+
+        setPlanResult(result);
+        setStatus(result.ok ? 'done' : 'error');
+        setLoadProgress({ active: false, label: '', current: 0, total: 0, percent: 0 });
+        setMessage(
+            result.ok
+                ? `Prepared ${result.returnedPlanCount} valid roll plans from ${result.searchedRollCombinations} unique combinations.`
+                : `${result.reason}\nSearched ${result.searchedRollCombinations} unique roll combinations.`
+        );
+        logDevTiming('planning solve completed', {
+            requestId,
+            ms: elapsedMs(startedAt),
+            ok: result.ok,
+            returnedPlanCount: result.ok ? result.returnedPlanCount : 0,
+            searchedRollCombinations: result.searchedRollCombinations
         });
     }
 
@@ -1483,6 +1679,7 @@ export default function Home() {
         }
 
         setAppTheme(sanitizeAppTheme(preferences.appTheme));
+        setCalculatorMode(sanitizeCalculatorMode(preferences.calculatorMode));
         setSelectedCharacterId(preferences.selectedCharacterId ?? '');
         setSelectedExoticItemHash(preferences.selectedExoticItemHash ?? '');
         setArmorSetDisplayMode(sanitizeArmorSetDisplayMode(preferences.armorSetDisplayMode));
@@ -1508,6 +1705,7 @@ export default function Home() {
 
     const calculatorContext = {
         controls: {
+            mode: calculatorMode,
             characterOptions: characterButtons,
             selectedCharacterId: () => selectedCharacter()?.characterId ?? '',
             selectedExoticItemHash,
@@ -1537,11 +1735,15 @@ export default function Home() {
             solving: () => status() === 'loading' || status() === 'solving'
         },
         results: {
+            mode: calculatorMode,
             result: solveResult,
             builds: resultBuilds,
+            planResult,
+            plans: planResults,
+            planningSlots,
             armorSets: selectableSets,
             armorSetDisplayMode,
-            resultFailure,
+            resultFailure: () => (calculatorMode() === 'planning' ? planFailure() : resultFailure()),
             sort: resultSort,
             dumpStat,
             loading: () => status() === 'loading' || status() === 'solving',
@@ -1554,6 +1756,7 @@ export default function Home() {
             isBuildSaved: (build) => isArmorBuildSaved(savedBuilds(), build)
         },
         actions: {
+            setMode: updateCalculatorMode,
             selectCharacter,
             selectExotic: (itemHash) => {
                 setSelectedExoticItemHash(itemHash);

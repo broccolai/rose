@@ -12,6 +12,22 @@ pub struct ProfileInput {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct PlanningProfileInput {
+    pub rolls: Vec<PlanningRollInput>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningRollInput {
+    pub source_index: u32,
+    pub stable_id: String,
+    pub base_stats: Stats,
+    pub stat_mods: Vec<AdjustmentInput>,
+    pub tunings: Vec<AdjustmentInput>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ItemInput {
     pub source_index: u32,
     pub stable_id: String,

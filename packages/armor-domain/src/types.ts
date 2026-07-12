@@ -4,6 +4,7 @@ export const ARMOR_SLOTS = ['helmet', 'arms', 'chest', 'legs', 'classItem'] as c
 export type ArmorStat = (typeof ARMOR_STATS)[number];
 export type ArmorSlot = (typeof ARMOR_SLOTS)[number];
 export type DestinyClass = 'titan' | 'hunter' | 'warlock' | 'any';
+export type ArmorCalculatorMode = 'owned' | 'planning';
 export type StatVector = Record<ArmorStat, number>;
 
 export interface StatAdjustment {
@@ -94,6 +95,68 @@ export interface ArmorBuild {
         totalStats: number;
     };
 }
+
+export interface ArmorArchetype {
+    id: string;
+    name: string;
+    primaryStat: ArmorStat;
+    secondaryStat: ArmorStat;
+}
+
+export interface ArmorRollProfile {
+    id: string;
+    archetype: ArmorArchetype;
+    tertiaryStat: ArmorStat;
+    baseStats: StatVector;
+    statModOptions: StatAdjustment[];
+    tuningOptions: StatAdjustment[];
+}
+
+export interface PlanArmorInput {
+    dumpStat?: ArmorStat | undefined;
+    allowBalancedTuning?: boolean | undefined;
+    statTargets: Partial<StatVector>;
+    statBonuses?: Partial<StatVector> | undefined;
+    maxResults?: number | undefined;
+}
+
+export type ArmorPlanStatCapsInput = Omit<PlanArmorInput, 'maxResults'>;
+
+export interface PlannedArmorPiece {
+    roll: ArmorRollProfile;
+    statMod?: StatAdjustment | undefined;
+    tuning?: StatAdjustment | undefined;
+}
+
+export interface ArmorPlan {
+    pieces: Record<ArmorSlot, PlannedArmorPiece>;
+    stats: StatVector;
+    score: {
+        wastedStats: number;
+        totalStats: number;
+    };
+}
+
+interface PlanArmorResultBase {
+    validPlanCount: number;
+    returnedPlanCount: number;
+    resultLimitReached: boolean;
+    searchedRollCombinations: number;
+    rejectedRollCombinations: number;
+}
+
+export interface PlanArmorSuccess extends PlanArmorResultBase {
+    ok: true;
+    plans: ArmorPlan[];
+}
+
+export interface PlanArmorFailure extends PlanArmorResultBase {
+    ok: false;
+    reason: string;
+}
+
+export type PlanArmorResult = PlanArmorSuccess | PlanArmorFailure;
+export type PlanArmorProgress = PlanArmorSuccess;
 
 interface SolveArmorResultBase {
     validBuildCount: number;

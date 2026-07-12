@@ -24,6 +24,18 @@ export interface EngineProfileInput {
     items: EngineItemInput[];
 }
 
+export interface EnginePlanningRollInput {
+    sourceIndex: number;
+    stableId: string;
+    baseStats: EngineStats;
+    statMods: EngineAdjustmentInput[];
+    tunings: EngineAdjustmentInput[];
+}
+
+export interface EnginePlanningProfileInput {
+    rolls: EnginePlanningRollInput[];
+}
+
 export interface EngineSetRequirement {
     setId: number;
     requiredPieces: number;
@@ -78,6 +90,10 @@ export interface EngineCapOutput {
 export interface EngineProfileSummary {
     itemCount: number;
     slotCounts: [number, number, number, number, number];
+}
+
+export interface EnginePlanningProfileSummary {
+    rollCount: number;
 }
 
 export interface MaterializedCaps {

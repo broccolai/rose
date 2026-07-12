@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorBuildSort, type ArmorStat, type StatVector } from '@armor-domain';
+import { ARMOR_STATS, type ArmorBuildSort, type ArmorCalculatorMode, type ArmorStat, type StatVector } from '@armor-domain';
 
 import { type AppTheme, sanitizeAppTheme } from '@/features/armor/app-theme';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';
@@ -10,6 +10,7 @@ export const MAX_TWO_PIECE_SET_SELECTIONS = 2;
 
 export type CalculatorPreferences = {
     appTheme?: AppTheme | undefined;
+    calculatorMode?: ArmorCalculatorMode | undefined;
     selectedCharacterId?: string | undefined;
     selectedExoticItemHash?: string | undefined;
     armorSetDisplayMode?: ArmorSetDisplayMode | undefined;
@@ -95,6 +96,7 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
     const candidate = value as CalculatorPreferences;
     return {
         appTheme: sanitizeAppTheme(candidate.appTheme),
+        calculatorMode: sanitizeCalculatorMode(candidate.calculatorMode),
         selectedCharacterId: typeof candidate.selectedCharacterId === 'string' ? candidate.selectedCharacterId : undefined,
         selectedExoticItemHash: typeof candidate.selectedExoticItemHash === 'string' ? candidate.selectedExoticItemHash : undefined,
         armorSetDisplayMode: sanitizeArmorSetDisplayMode(candidate.armorSetDisplayMode),
@@ -109,6 +111,10 @@ export function sanitizeCalculatorPreferences(value: unknown): CalculatorPrefere
         otherSetsCollapsed: candidate.otherSetsCollapsed === true,
         resultSort: sanitizeResultSort(candidate.resultSort)
     };
+}
+
+export function sanitizeCalculatorMode(value: unknown): ArmorCalculatorMode {
+    return value === 'planning' ? 'planning' : 'owned';
 }
 
 export function sanitizeArmorSetDisplayMode(value: unknown): ArmorSetDisplayMode {
