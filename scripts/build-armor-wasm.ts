@@ -2,8 +2,7 @@ import { rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const root = join(import.meta.dir, '..');
-const toolchain = '1.94.1-aarch64-apple-darwin';
-const rustc = Bun.spawnSync(['rustup', 'which', '--toolchain', toolchain, 'rustc'], {
+const rustc = Bun.spawnSync(['rustup', 'which', 'rustc'], {
     cwd: root,
     stdout: 'pipe',
     stderr: 'inherit'
