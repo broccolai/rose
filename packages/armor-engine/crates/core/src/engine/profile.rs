@@ -1,5 +1,3 @@
-//! Compiles normalized armor once into immutable item and slot indexes.
-
 use rustc_hash::FxHashSet;
 
 use crate::error::EngineError;

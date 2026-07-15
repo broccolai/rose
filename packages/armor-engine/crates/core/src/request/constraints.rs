@@ -1,5 +1,3 @@
-//! Character, stat, exotic, and armor-set constraints shared by caps and solves.
-
 use rustc_hash::FxHashSet;
 
 use crate::domain::{CharacterClass, Stat, StatValues};

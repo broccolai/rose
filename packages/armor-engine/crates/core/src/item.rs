@@ -1,5 +1,3 @@
-//! Validated, compact armor data retained by the engine.
-
 mod adjustment;
 mod compiler;
 
@@ -65,7 +63,7 @@ impl TuningOptions {
     }
 
     pub fn signature(&self) -> u64 {
-        self.signature.value()
+        self.signature.0
     }
 
     pub fn pair_index(&self, positive: Stat, negative: Stat) -> Option<usize> {
@@ -91,10 +89,6 @@ impl TuningSignature {
         });
 
         Self(pair_bits | balanced_bits)
-    }
-
-    const fn value(self) -> u64 {
-        self.0
     }
 
     fn pair_index(self, positive: Stat, negative: Stat) -> Option<usize> {

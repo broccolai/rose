@@ -1,5 +1,3 @@
-//! Fast tuning strategy where every penalty is assigned to the selected dump stat.
-
 use crate::domain::{MajorModRequirements, Stat, StatValues, remaining_major_mod_bonus};
 use crate::model::{MAX_STAT, NO_CHOICE, SLOT_COUNT};
 use crate::request::RequestedStats;
@@ -9,6 +7,7 @@ use super::plan::{apply_required_mods, compare_plans};
 use super::tuning::AppliedTunings;
 use super::{AdjustmentPlan, AdjustmentProblem, SelectedArmor};
 
+/// Solves the common path where every pair-tuning penalty uses one dump stat.
 pub(super) fn solve_restricted(
     problem: AdjustmentProblem<'_>,
     dump_stat: Stat,

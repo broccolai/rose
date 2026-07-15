@@ -1,5 +1,3 @@
-//! Traverses one armor item per slot and prunes impossible branches early.
-
 use crate::domain::StatValues;
 use crate::item::Item;
 use crate::model::SLOT_COUNT;
@@ -18,6 +16,7 @@ pub(super) trait CombinationEvaluator {
     fn evaluate(&mut self, selected: &[usize; SLOT_COUNT], base_stats: StatValues);
 }
 
+/// Walks one candidate per armor slot and prunes branches that cannot satisfy the request.
 pub(super) fn search_plan<E: CombinationEvaluator>(
     items: &[Item],
     constraints: &Constraints,
@@ -40,14 +39,14 @@ struct TraversalContext<'a> {
 
 impl TraversalContext<'_> {
     fn run<E: CombinationEvaluator>(&self, evaluator: &mut E) {
-        let mut state = SearchState::new(self.constraints.stat_bonuses);
+        let mut state = SelectionState::new(self.constraints.stat_bonuses);
         self.search_slot(evaluator, &mut state, 0);
     }
 
     fn search_slot<E: CombinationEvaluator>(
         &self,
         evaluator: &mut E,
-        state: &mut SearchState,
+        state: &mut SelectionState,
         slot: usize,
     ) {
         if evaluator.should_stop() {
@@ -89,23 +88,22 @@ impl TraversalContext<'_> {
     }
 }
 
-struct SearchState {
-    selected: [usize; SLOT_COUNT],
-    base_stats: StatValues,
-    selected_potential: StatValues,
+pub(super) struct SelectionState {
+    pub(super) selected: [usize; SLOT_COUNT],
+    pub(super) base_stats: StatValues,
+    pub(super) selected_potential: StatValues,
 }
 
-impl SearchState {
-    fn new(stat_bonuses: StatValues) -> Self {
+impl SelectionState {
+    pub(super) fn new(stat_bonuses: StatValues) -> Self {
         Self {
-            // Traversal reads only the selected prefix, so untouched slots need no sentinel.
             selected: [0; SLOT_COUNT],
             base_stats: stat_bonuses,
             selected_potential: stat_bonuses,
         }
     }
 
-    fn select(
+    pub(super) fn select(
         &mut self,
         slot: usize,
         item_index: usize,
@@ -117,7 +115,7 @@ impl SearchState {
         self.selected_potential += &potential;
     }
 
-    fn deselect(&mut self, base_stats: StatValues, potential: StatValues) {
+    pub(super) fn deselect(&mut self, base_stats: StatValues, potential: StatValues) {
         self.base_stats -= &base_stats;
         self.selected_potential -= &potential;
     }

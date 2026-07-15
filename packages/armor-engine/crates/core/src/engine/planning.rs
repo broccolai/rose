@@ -1,15 +1,14 @@
-//! Searches unordered Tier 5 roll combinations without repeating slot permutations.
-
 use crate::domain::{Stat, StatValues};
 use crate::item::Item;
 use crate::model::SLOT_COUNT;
 use crate::request::{Constraints, RequestedStats};
 
 use super::candidates::{item_potential_without_mods, target_priority};
-use super::search::CombinationEvaluator;
+use super::search::{CombinationEvaluator, SelectionState};
 
 const CAP_PRIORITY_WEIGHT: i32 = 64;
 
+/// Walks each unordered five-roll multiset exactly once.
 pub(super) fn search_planning_rolls<E: CombinationEvaluator>(
     items: &[Item],
     constraints: &Constraints,
@@ -17,7 +16,7 @@ pub(super) fn search_planning_rolls<E: CombinationEvaluator>(
     evaluator: &mut E,
 ) {
     let traversal = PlanningTraversal::new(items, constraints, requested_stats);
-    let mut state = PlanningState::new(constraints.stat_bonuses);
+    let mut state = SelectionState::new(constraints.stat_bonuses);
 
     traversal.search(evaluator, &mut state, 0, 0);
 }
@@ -58,7 +57,7 @@ impl<'a> PlanningTraversal<'a> {
     fn search<E: CombinationEvaluator>(
         &self,
         evaluator: &mut E,
-        state: &mut PlanningState,
+        state: &mut SelectionState,
         depth: usize,
         first_roll: usize,
     ) {
@@ -109,39 +108,6 @@ impl<'a> PlanningTraversal<'a> {
         }
 
         potential
-    }
-}
-
-struct PlanningState {
-    selected: [usize; SLOT_COUNT],
-    base_stats: StatValues,
-    selected_potential: StatValues,
-}
-
-impl PlanningState {
-    fn new(stat_bonuses: StatValues) -> Self {
-        Self {
-            selected: [0; SLOT_COUNT],
-            base_stats: stat_bonuses,
-            selected_potential: stat_bonuses,
-        }
-    }
-
-    fn select(
-        &mut self,
-        slot: usize,
-        item_index: usize,
-        base_stats: StatValues,
-        potential: StatValues,
-    ) {
-        self.selected[slot] = item_index;
-        self.base_stats += &base_stats;
-        self.selected_potential += &potential;
-    }
-
-    fn deselect(&mut self, base_stats: StatValues, potential: StatValues) {
-        self.base_stats -= &base_stats;
-        self.selected_potential -= &potential;
     }
 }
 

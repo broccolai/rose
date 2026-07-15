@@ -1,5 +1,3 @@
-//! Fixed six-stat storage and shared armor arithmetic.
-
 use std::ops::{AddAssign, Index, IndexMut, SubAssign};
 
 use crate::model::{MAX_STAT, SLOT_COUNT, STAT_COUNT};

@@ -1,21 +1,22 @@
-//! Serialized profile and request inputs accepted by the engine.
-
 use serde::Deserialize;
 
 use super::Stats;
 
+/// Normalized owned armor loaded once when constructing an [`crate::ArmorEngine`].
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileInput {
     pub items: Vec<ItemInput>,
 }
 
+/// Legal armor-roll templates loaded once when constructing an [`crate::ArmorPlanner`].
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanningProfileInput {
     pub rolls: Vec<PlanningRollInput>,
 }
 
+/// One legal stat roll and its available adjustments.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanningRollInput {
@@ -26,6 +27,7 @@ pub struct PlanningRollInput {
     pub tunings: Vec<AdjustmentInput>,
 }
 
+/// One normalized armor candidate.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemInput {
@@ -42,6 +44,7 @@ pub struct ItemInput {
     pub tunings: Vec<AdjustmentInput>,
 }
 
+/// One selectable mod or tuning effect.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AdjustmentInput {
@@ -49,6 +52,7 @@ pub struct AdjustmentInput {
     pub deltas: Stats,
 }
 
+/// Constraints shared by cap calculations and build solves.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ConstraintsInput {
@@ -62,6 +66,7 @@ pub struct ConstraintsInput {
     pub set_requirements: Vec<SetRequirementInput>,
 }
 
+/// Minimum number of equipped pieces required from one armor set.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SetRequirementInput {
@@ -69,6 +74,7 @@ pub struct SetRequirementInput {
     pub required_pieces: u8,
 }
 
+/// Compact result ordering supplied by the caller.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SortInput {
@@ -76,6 +82,7 @@ pub struct SortInput {
     pub descending: bool,
 }
 
+/// A build-search request.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SolveRequest {
@@ -86,6 +93,7 @@ pub struct SolveRequest {
     pub stop_when_result_limit_reached: bool,
 }
 
+/// An exact reachable-cap request for a subset of stats.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CapRequest {

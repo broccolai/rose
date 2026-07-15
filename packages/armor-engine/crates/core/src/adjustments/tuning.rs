@@ -1,5 +1,3 @@
-//! Represents tuning decisions and their applied stat effects.
-
 use std::ops::{Index, IndexMut};
 
 use crate::domain::StatValues;

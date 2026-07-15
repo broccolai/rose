@@ -1,5 +1,3 @@
-//! Computes optimistic bounds used to reject impossible search branches.
-
 use crate::domain::{MajorModRequirements, Stat, StatValues, remaining_major_mod_bonus};
 use crate::model::{MAX_STAT, SLOT_COUNT};
 use crate::request::RequestedStats;

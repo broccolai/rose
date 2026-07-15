@@ -1,5 +1,3 @@
-//! Caches equivalent dump-stat tuning outcomes for repeated five-piece profiles.
-
 use std::collections::hash_map::Entry;
 
 use rustc_hash::FxHashMap;

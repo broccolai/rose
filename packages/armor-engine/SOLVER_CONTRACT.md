@@ -14,7 +14,7 @@ This file is the source of truth for the armor engine. A behavior is not complet
 ## Normalized Profile
 
 - A profile is loaded into the engine once and retained across requests.
-- Every armor item has a stable source index, instance id, item hash, slot, class, exotic flag, optional set id, six base stats, stat-mod choices, and tuning choices.
+- Every armor item has a stable source index, instance id, item hash, slot, class, exotic flag, optional exotic variant id, optional set id, six base stats, stat-mod choices, and tuning choices.
 - Equivalent physical copies are represented by the TypeScript item behind the stable source index; the solver operates on one normalized equivalent item.
 - All hot data is stored in packed slot-oriented arrays. Strings exist only for deterministic ties and boundary diagnostics.
 - Reinitialization happens only when normalized armor changes. Targets and UI selections must not retransmit the profile.
@@ -35,6 +35,7 @@ This file is the source of truth for the armor engine. A behavior is not complet
 - Without a selected exotic hash, solve legendary-only builds.
 - With a selected exotic hash, require exactly one matching exotic roll in its native slot and legendary armor in every other slot.
 - Try every normalized roll of the selected exotic hash.
+- When an exotic variant id is selected, try every stat roll with that exact variant and exclude other variants of the same item hash.
 - Require exactly one item per slot.
 - Enforce every requested armor set count. The engine accepts generic requirements, while the UI limits users to two 2-piece sets or one 4-piece set.
 - Set bonuses constrain item counts only. Their gameplay effects do not alter stats.

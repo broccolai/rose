@@ -1,5 +1,3 @@
-//! Exact tuning strategy for balanced choices or penalties across multiple stats.
-
 use crate::domain::{Stat, StatValues, TUNING_POINTS};
 use crate::model::{MAX_STAT, NO_CHOICE, SLOT_COUNT};
 use crate::request::RequestedStats;
@@ -9,6 +7,7 @@ use super::plan::{apply_mod_counts, compare_plans};
 use super::tuning::{AppliedTunings, TuningChoice, TuningChoices, TuningDecision};
 use super::{AdjustmentPlan, AdjustmentProblem};
 
+/// Solves cross-stat pair tuning and optional balanced tuning exactly.
 pub(super) fn solve_unrestricted(problem: AdjustmentProblem<'_>) -> Option<AdjustmentPlan> {
     balanced_tuning_masks(problem)
         .filter_map(|mask| solve_tuning_variant(problem, mask))

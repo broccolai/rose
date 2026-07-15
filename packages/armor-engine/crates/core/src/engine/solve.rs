@@ -1,5 +1,3 @@
-//! Evaluates traversed armor combinations against adjustment constraints.
-
 use crate::adjustments::{AdjustmentProblem, AllocationCache, solve_adjustments};
 use crate::domain::StatValues;
 use crate::item::Item;

@@ -1,8 +1,7 @@
-//! Structured failures produced while compiling profiles and validating requests.
-
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+/// Invalid profile or request data rejected before search begins.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum EngineError {

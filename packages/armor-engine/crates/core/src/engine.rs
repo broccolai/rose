@@ -1,5 +1,3 @@
-//! Public solver facade and request pipeline.
-
 mod bounds;
 mod candidates;
 mod cap;
@@ -25,11 +23,13 @@ use self::results::SolveFailure;
 use self::search::search_plan;
 use self::solve::SolveSession;
 
+/// A reusable solver compiled from one normalized owned-armor profile.
 pub struct ArmorEngine {
     profile: CompiledProfile,
     allocation_cache: AllocationCache,
 }
 
+/// A reusable solver for future armor-roll acquisition plans.
 pub struct ArmorPlanner {
     rolls: Box<[crate::item::Item]>,
     allocation_cache: AllocationCache,
@@ -49,6 +49,7 @@ impl ArmorEngine {
         })
     }
 
+    /// Returns the retained profile size and per-slot item counts.
     #[must_use]
     pub fn summary(&self) -> ProfileSummary {
         self.profile.summary()
@@ -106,6 +107,7 @@ impl ArmorPlanner {
         })
     }
 
+    /// Returns the number of legal roll templates retained by the planner.
     #[must_use]
     pub fn summary(&self) -> PlanningProfileSummary {
         PlanningProfileSummary {

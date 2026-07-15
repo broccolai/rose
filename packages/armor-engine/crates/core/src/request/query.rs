@@ -1,5 +1,3 @@
-//! Cap selection, solve result limits, and result ordering.
-
 use std::cmp::Ordering;
 
 use crate::domain::{Stat, StatMap};

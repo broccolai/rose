@@ -1,5 +1,3 @@
-//! Assigns +5/-5 tuning choices as transfers between six stat buckets.
-
 mod matching;
 
 use crate::domain::{MAJOR_MOD_POINTS, Stat, StatMap, StatValues, minimum_tuning_steps};

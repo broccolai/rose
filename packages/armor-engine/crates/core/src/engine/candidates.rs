@@ -1,5 +1,3 @@
-//! Builds request-specific armor candidates and their optimistic suffix bounds.
-
 use crate::domain::{Stat, StatValues};
 use crate::item::Item;
 use crate::model::SLOT_COUNT;
@@ -18,6 +16,7 @@ pub(super) struct CandidatePlan {
 }
 
 impl CandidatePlan {
+    /// Builds compact per-slot candidates and optimistic suffix bounds for one request.
     pub fn for_constraints(profile: &CompiledProfile, constraints: &Constraints) -> Option<Self> {
         let mut slots = legendary_candidates(profile, constraints);
 

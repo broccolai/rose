@@ -1,5 +1,3 @@
-//! Applies stat mods and ranks complete adjustment plans.
-
 use std::cmp::{Ordering, Reverse};
 
 use crate::domain::{MAJOR_MOD_POINTS, MINOR_MOD_POINTS, MajorModRequirements, Stat, StatValues};

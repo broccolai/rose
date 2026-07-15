@@ -1,5 +1,3 @@
-//! Validated, zero-cost value types shared by the solver.
-
 mod index;
 mod stats;
 

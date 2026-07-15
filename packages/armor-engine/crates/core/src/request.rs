@@ -1,5 +1,3 @@
-//! Validates serialized requests into domain-level solver queries.
-
 mod constraints;
 mod query;
 

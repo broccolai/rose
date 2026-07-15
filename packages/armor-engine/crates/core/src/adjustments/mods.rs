@@ -1,5 +1,3 @@
-//! Represents one shared five-piece stat-mod budget.
-
 use std::ops::{Index, IndexMut};
 
 use crate::domain::Stat;

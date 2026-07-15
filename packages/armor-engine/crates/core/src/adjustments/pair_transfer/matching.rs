@@ -1,5 +1,3 @@
-//! Matches required stat transfers to legal tuning choices on the selected armor.
-
 use crate::domain::{Stat, StatMap, StatValues, TUNING_POINTS, minimum_tuning_steps};
 use crate::model::SLOT_COUNT;
 

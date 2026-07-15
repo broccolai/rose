@@ -1,5 +1,3 @@
-//! Named indexes and compatibility values compiled from boundary integers.
-
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u8)]
 pub(crate) enum Stat {

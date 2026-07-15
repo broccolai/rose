@@ -1,8 +1,14 @@
 [package]
 name = "rose-armor-engine"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "A fast, deterministic solver for Destiny 2's current armor system"
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords = ["destiny", "armor", "optimizer", "solver"]
+categories = ["algorithms", "game-development"]
 publish = false
 
 [dependencies]

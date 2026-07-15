@@ -1,5 +1,3 @@
-//! Classifies normalized manifest adjustments into supported modern choices.
-
 use crate::domain::{MAJOR_MOD_POINTS, MINOR_MOD_POINTS, Stat, TUNING_POINTS};
 use crate::error::EngineError;
 use crate::model::{AdjustmentInput, STAT_COUNT};

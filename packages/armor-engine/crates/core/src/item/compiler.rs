@@ -1,5 +1,3 @@
-//! Validates normalized armor input and builds its retained representation.
-
 use crate::domain::{ArmorSlot, ClassCompatibility};
 use crate::error::EngineError;
 use crate::model::{ItemInput, STAT_COUNT};

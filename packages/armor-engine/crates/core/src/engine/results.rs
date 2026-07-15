@@ -1,5 +1,3 @@
-//! Owns bounded build retention, ranking, and solve-result materialization.
-
 use std::cmp::Ordering;
 
 use crate::adjustments::AdjustmentPlan;

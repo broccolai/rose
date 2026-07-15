@@ -1,9 +1,8 @@
-//! Serialized summaries and calculation results returned by the engine.
-
 use serde::{Serialize, Serializer};
 
 use super::{SLOT_COUNT, Stats};
 
+/// Summary of the compiled owned-armor profile.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileSummary {
@@ -11,12 +10,14 @@ pub struct ProfileSummary {
     pub slot_counts: [usize; SLOT_COUNT],
 }
 
+/// Summary of the compiled planning-roll catalog.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanningProfileSummary {
     pub roll_count: usize,
 }
 
+/// Number of complete and pruned combinations visited by a calculation.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchMetrics {
@@ -34,6 +35,7 @@ impl SearchMetrics {
     }
 }
 
+/// Exact displayed caps and their search metrics.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CapOutput {
     pub caps: Stats,
@@ -62,6 +64,7 @@ struct CapOutputWire<'a> {
     rejected_combinations: u64,
 }
 
+/// One compact build returned by the solver.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildOutput {
@@ -73,6 +76,7 @@ pub struct BuildOutput {
     pub total_stats: i16,
 }
 
+/// Build results and aggregate search information.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolveOutput {
     pub ok: bool,

@@ -1,5 +1,3 @@
-//! Coordinates stat mods and tuning after an armor combination is selected.
-
 mod cache;
 mod mods;
 mod pair_transfer;
@@ -86,6 +84,7 @@ impl<'a> SelectedArmor<'a> {
     }
 }
 
+/// Finds the best legal mod and tuning assignment for one selected armor set.
 pub(crate) fn solve_adjustments(
     problem: AdjustmentProblem<'_>,
     cache: &mut AllocationCache,
@@ -96,6 +95,7 @@ pub(crate) fn solve_adjustments(
     }
 }
 
+/// Updates exact requested caps using the same adjustment rules as a full solve.
 pub(crate) fn update_adjustment_caps(
     caps: &mut StatValues,
     requested: RequestedStats,

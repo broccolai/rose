@@ -1,5 +1,3 @@
-//! Tracks exact reachable stat caps produced by armor traversal.
-
 use crate::adjustments::{AdjustmentProblem, AllocationCache, update_adjustment_caps};
 use crate::domain::{Stat, StatValues};
 use crate::item::Item;

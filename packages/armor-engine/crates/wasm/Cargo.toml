@@ -1,15 +1,21 @@
 [package]
 name = "rose-armor-wasm"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "WebAssembly bindings for rose-armor-engine"
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords = ["destiny", "armor", "optimizer", "wasm"]
+categories = ["algorithms", "game-development", "wasm"]
 publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-rose-armor-engine = { path = "../core" }
+rose-armor-engine = { version = "0.1.0", path = "../core" }
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 wasm-bindgen.workspace = true
