@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.json",
+    "include": [
+        "src/features/armor",
+        "src/features/bungie",
+        "src/features/storage",
+        "src/routes/index.tsx",
+        "src/components/product-nav.tsx",
+        "src/app-version.ts"
+    ],
+    "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

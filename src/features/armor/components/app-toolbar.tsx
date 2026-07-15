@@ -3,6 +3,7 @@ import { Eclipse, FileUp, Hamburger, LogOut, Moon, RefreshCw, Settings, Sun } fr
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
+import { ProductNav } from '@/components/product-nav';
 import { APP_THEME_LABELS, type AppTheme, VISIBLE_APP_THEMES } from '@/features/armor/app-theme';
 import { useArmorCalculator } from '@/features/armor/armor-calculator-context';
 import { AdvancedControlsBody } from '@/features/armor/components/advanced-controls';
@@ -382,6 +383,7 @@ function BrandMark(props: { theme: AppTheme }) {
                 <TitleProduct>{isBurger() ? 'BURGER' : 'ARMOR'}</TitleProduct>
                 <VersionBadge>{APP_VERSION}</VersionBadge>
             </Title>
+            <ProductNav active="armor" />
         </HeadingGroup>
     );
 }

@@ -1,0 +1,5 @@
+{
+    "extends": "./tsconfig.json",
+    "include": ["src/app.tsx", "src/entry-client.tsx", "src/entry-server.tsx", "src/app-version.ts", "app.config.ts", "panda.config.ts"],
+    "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}
