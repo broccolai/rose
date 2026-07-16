@@ -309,9 +309,7 @@ function filterPlugChoices(
             .map((stat) => `${stat.statTypeHash}:${stat.value}`)
             .sort()
             .join(',');
-        const enhanced =
-            plug.plug?.plugCategoryIdentifier.toLowerCase().includes('enhance') ||
-            plug.displayProperties.name.toLowerCase().includes('enhanced');
+        const enhanced = isEnhancedPlugDefinition(plug);
         const key = `${plug.plug?.plugCategoryIdentifier ?? ''}|${plug.displayProperties.name}|${stats}|${enhanced}`;
         if (!unique.has(key) || plug.hash === initialPlugHash) unique.set(key, plug);
     }
@@ -359,13 +357,21 @@ function compactPlug(definition: DestinyInventoryItemDefinition): WeaponPlug {
         icon: definition.displayProperties.icon,
         category,
         label: definition.itemTypeDisplayName,
-        enhanced: category.toLowerCase().includes('enhance') || definition.displayProperties.name.toLowerCase().includes('enhanced'),
+        enhanced: isEnhancedPlugDefinition(definition),
         stats: Object.fromEntries(
             definition.investmentStats
                 .filter((stat) => stat.isConditionallyActive === false && stat.value !== 0)
                 .map((stat) => [String(stat.statTypeHash), stat.value])
         )
     };
+}
+
+function isEnhancedPlugDefinition(definition: DestinyInventoryItemDefinition) {
+    return (
+        definition.plug?.plugCategoryIdentifier.toLowerCase().includes('enhance') === true ||
+        definition.displayProperties.name.toLowerCase().includes('enhanced') ||
+        /^Enhanced(?:\s|$)/i.test(definition.itemTypeDisplayName)
+    );
 }
 
 function mostUsefulCategory(plugs: DestinyInventoryItemDefinition[]) {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { calculateManifestStats, createDefaultSelection, reconcileSelection } from './catalog';
+import { calculateManifestStats, createDefaultSelection, plugChoicesForSocket, reconcileSelection } from './catalog';
 import type { WeaponCatalog, WeaponDefinition } from './types';
 
 const rose: WeaponDefinition = {
@@ -91,6 +91,42 @@ describe('weapon catalog model', () => {
                 effects: { '100': 3, '999': 5 }
             }).effects
         ).toEqual({ '100': 3 });
+    });
+
+    test('combines normal and enhanced plugs into one enhanced-first choice', () => {
+        const enhancedCatalog: WeaponCatalog = {
+            ...catalog,
+            plugs: {
+                ...catalog.plugs,
+                '12': {
+                    hash: 12,
+                    name: 'Base',
+                    description: 'Improved base perk.',
+                    icon: '',
+                    category: 'frames',
+                    label: 'Enhanced Trait',
+                    enhanced: false,
+                    stats: { '900': 5 }
+                }
+            },
+            plugSets: [[10, 11, 12]]
+        };
+        const socket = rose.sockets[0];
+        expect(socket).toBeDefined();
+        if (!socket) return;
+
+        expect(plugChoicesForSocket(enhancedCatalog, socket)).toEqual([
+            { hash: 12, hashes: [10, 12], enhanced: true },
+            { hash: 11, hashes: [11], enhanced: false }
+        ]);
+        expect(createDefaultSelection(enhancedCatalog, rose).plugs).toEqual({ '1': 12 });
+        expect(
+            reconcileSelection(enhancedCatalog, rose, {
+                weaponHash: rose.hash,
+                plugs: { '1': 10 },
+                effects: { '10': 2 }
+            })
+        ).toEqual({ weaponHash: rose.hash, plugs: { '1': 12 }, effects: { '12': 2 } });
     });
 
     test('interpolates investment stat changes into Bungie display values', () => {

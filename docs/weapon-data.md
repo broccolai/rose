@@ -113,10 +113,11 @@ can grant a 0-10 point PvP overshield on class ability use. Rose therefore
 models the Weapons bonus as a linear 1.00-1.06 scalar and exposes overshield as
 an explicit target input.
 
-The default target health is 230, inherited from the former maximum-Resilience
-baseline used by Oracle. The current exact baseline was not stated directly in
-the source above, so health remains editable and this value is an assumption,
-not a hidden constant presented as confirmed fact.
+Guardian base health is fixed at 230 in the PvP model. Armor 3.0 Health does
+not alter PvP health: Bungie applies the former 100-Resilience benefits to all
+Guardians by default, while Health's additional shield capacity is explicitly
+limited to combatants. Rose therefore exposes only additional shields as a
+variable target-health input.
 
 ## Product References
 

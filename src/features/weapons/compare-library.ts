@@ -98,7 +98,6 @@ function sanitizeScenario(value: unknown): WeaponScenario {
     const candidate = value as Partial<WeaponScenario>;
     return {
         mode: candidate.mode === 'pve' ? 'pve' : 'pvp',
-        targetHealth: boundedInteger(candidate.targetHealth, 1, 500, DEFAULT_WEAPON_SCENARIO.targetHealth),
         overshield: boundedInteger(candidate.overshield, 0, 100, DEFAULT_WEAPON_SCENARIO.overshield),
         weaponsStat: boundedInteger(candidate.weaponsStat, 100, 200, DEFAULT_WEAPON_SCENARIO.weaponsStat)
     };

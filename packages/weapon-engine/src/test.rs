@@ -186,6 +186,88 @@ fn test_target_health_ttk_inputs_are_monotonic() {
     });
 }
 
+#[test]
+fn test_stopping_power_automatically_changes_low_health_ttk() {
+    setup_pulse();
+    map_perks();
+    PERS_DATA.with(|perm_data| {
+        let mut weapon = perm_data.borrow().weapon.clone();
+        let baseline_firing = weapon.calc_firing_data(Some(weapon.static_calc_input()), None, true);
+        let baseline_ttk = crate::weapons::ttk_calc::calc_ttk_at_health(&weapon, 32.0, 0.0, 1.0);
+
+        weapon.add_perk(Perk {
+            hash: Perks::StoppingPower.into(),
+            raw_hash: Perks::StoppingPower.into(),
+            ..Default::default()
+        });
+
+        let stopping_power_firing =
+            weapon.calc_firing_data(Some(weapon.static_calc_input()), None, true);
+        let stopping_power_ttk =
+            crate::weapons::ttk_calc::calc_ttk_at_health(&weapon, 32.0, 0.0, 1.0);
+
+        assert_eq!(
+            stopping_power_firing.pvp_impact_damage,
+            baseline_firing.pvp_impact_damage
+        );
+        assert!(stopping_power_ttk.body_ttk.bodyshots < baseline_ttk.body_ttk.bodyshots);
+        assert!(stopping_power_ttk.body_ttk.time_taken < baseline_ttk.body_ttk.time_taken);
+    });
+}
+
+#[test]
+fn test_multimach_stopping_power_and_target_lock_stack() {
+    map_perks();
+
+    let make_multimach = |perks: &[Perks]| {
+        let mut weapon =
+            Weapon::generate_weapon(3026836571, 24, 1458010786, 1, 3373582085).unwrap();
+        let mut stats = HashMap::new();
+        stats.insert(StatHashes::IMPACT.into(), Stat::from(15));
+        stats.insert(StatHashes::MAGAZINE.into(), Stat::from(41));
+        stats.insert(StatHashes::RPM.into(), Stat::from(900));
+        weapon.set_stats(stats);
+
+        for perk in perks {
+            weapon.add_perk(Perk {
+                hash: (*perk).into(),
+                raw_hash: (*perk).into(),
+                ..Default::default()
+            });
+        }
+
+        weapon
+    };
+
+    let baseline =
+        crate::weapons::ttk_calc::calc_ttk_at_health(&make_multimach(&[]), 230.0, 0.0, 1.06);
+    let stopping_power = crate::weapons::ttk_calc::calc_ttk_at_health(
+        &make_multimach(&[Perks::StoppingPower]),
+        230.0,
+        0.0,
+        1.06,
+    );
+    let target_lock = crate::weapons::ttk_calc::calc_ttk_at_health(
+        &make_multimach(&[Perks::TargetLock]),
+        230.0,
+        0.0,
+        1.06,
+    );
+    let combined = crate::weapons::ttk_calc::calc_ttk_at_health(
+        &make_multimach(&[Perks::StoppingPower, Perks::TargetLock]),
+        230.0,
+        0.0,
+        1.06,
+    );
+
+    assert_eq!(baseline.optimal_ttk.headshots, 11);
+    assert_eq!(stopping_power.optimal_ttk.headshots, 11);
+    assert_eq!(target_lock.optimal_ttk.time_taken, 2.0 / 3.0);
+    assert_eq!(combined.optimal_ttk.time_taken, 2.0 / 3.0);
+    assert_eq!(combined.optimal_ttk.headshots, 9);
+    assert_eq!(combined.optimal_ttk.bodyshots, 2);
+}
+
 fn setup_bow() {
     let vec = Vec::<u8>::from("harm".to_string());
     let mut hash = 0;

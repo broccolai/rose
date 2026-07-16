@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { WeaponCatalog, WeaponDefinition, WeaponPlug } from '@rose/weapon-model';
-import { EMPTY_WEAPON_FILTERS, filterWeapons } from '@/features/weapons/search';
+import { EMPTY_WEAPON_FILTERS, filterWeapons, rankWeaponResults } from '@/features/weapons/search';
 
 function createWeapon(overrides: Partial<WeaponDefinition>): WeaponDefinition {
     return {
@@ -99,5 +99,12 @@ describe('weapon query search', () => {
         expect(filterWeapons(catalog, { query: 'weapon:"hand cannon" -source:crucible' })).toEqual([austringer, palindrome]);
         expect(filterWeapons(catalog, { query: 'unknown:rose' })).toEqual([]);
         expect(filterWeapons(catalog, { query: 'source:' })).toEqual(catalog.weapons);
+    });
+
+    test('ranks exact names before prefixes and incidental substrings', () => {
+        const compassRose = createWeapon({ hash: 4, name: 'Compass Rose' });
+        const prospector = createWeapon({ hash: 5, name: 'Prospector' });
+
+        expect(rankWeaponResults([compassRose, prospector, rose], 'rose')).toEqual([rose, compassRose, prospector]);
     });
 });

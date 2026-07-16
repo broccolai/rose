@@ -1,41 +1,84 @@
-import type { WeaponCatalog, WeaponDefinition, WeaponSelection, WeaponSocket, WeaponStat } from './types';
+import type { WeaponCatalog, WeaponDefinition, WeaponPlug, WeaponPlugChoice, WeaponSelection, WeaponSocket, WeaponStat } from './types';
 
-export function plugHashesForSocket(catalog: WeaponCatalog, socket: WeaponSocket) {
+export const plugHashesForSocket = (catalog: WeaponCatalog, socket: WeaponSocket): number[] => {
     return catalog.plugSets[socket.plugSet] ?? [];
-}
+};
 
-export function createDefaultSelection(catalog: WeaponCatalog, weapon: WeaponDefinition): WeaponSelection {
+export const isEnhancedPlug = (plug: WeaponPlug): boolean => {
+    return plug.enhanced || /^Enhanced(?:\s|$)/i.test(plug.label);
+};
+
+export const plugChoicesForSocket = (catalog: WeaponCatalog, socket: WeaponSocket): WeaponPlugChoice[] => {
+    const hashes = plugHashesForSocket(catalog, socket);
+    const families = new Map<string, number[]>();
+
+    for (const hash of hashes) {
+        const plug = catalog.plugs[String(hash)];
+        const family = plug?.name.trim().toLocaleLowerCase() || `#${hash}`;
+        const members = families.get(family) ?? [];
+        members.push(hash);
+        families.set(family, members);
+    }
+
+    return [...families.values()].flatMap((members): WeaponPlugChoice[] => {
+        const enhancedMembers = members.filter((hash) => {
+            const plug = catalog.plugs[String(hash)];
+            return plug ? isEnhancedPlug(plug) : false;
+        });
+        if (enhancedMembers.length === 0) {
+            return members.map((hash) => ({ hash, hashes: [hash], enhanced: false }));
+        }
+
+        const initialEnhancedHash = enhancedMembers.find((hash) => hash === socket.initialPlugHash);
+        const selectedHash = initialEnhancedHash ?? enhancedMembers[0];
+        return selectedHash === undefined ? [] : [{ hash: selectedHash, hashes: members, enhanced: true }];
+    });
+};
+
+export const createDefaultSelection = (catalog: WeaponCatalog, weapon: WeaponDefinition): WeaponSelection => {
     return {
         weaponHash: weapon.hash,
         plugs: Object.fromEntries(
             weapon.sockets.flatMap((socket) => {
-                const hashes = plugHashesForSocket(catalog, socket);
-                const selected = socket.initialPlugHash && hashes.includes(socket.initialPlugHash) ? socket.initialPlugHash : hashes[0];
+                const choices = plugChoicesForSocket(catalog, socket);
+                const initialChoice = choices.find((choice) =>
+                    socket.initialPlugHash === null ? false : choice.hashes.includes(socket.initialPlugHash)
+                );
+                const selected = initialChoice?.hash ?? choices[0]?.hash;
                 return selected ? [[String(socket.index), selected]] : [];
             })
         ),
         effects: {}
     };
-}
+};
 
-export function reconcileSelection(catalog: WeaponCatalog, weapon: WeaponDefinition, selection: WeaponSelection) {
+export const reconcileSelection = (catalog: WeaponCatalog, weapon: WeaponDefinition, selection: WeaponSelection): WeaponSelection => {
     const defaults = createDefaultSelection(catalog, weapon);
+    const canonicalHashes = new Map<number, number>();
     const plugs = Object.fromEntries(
         weapon.sockets.flatMap((socket) => {
-            const hashes = plugHashesForSocket(catalog, socket);
+            const choices = plugChoicesForSocket(catalog, socket);
+            for (const choice of choices) {
+                for (const hash of choice.hashes) canonicalHashes.set(hash, choice.hash);
+            }
             const requested = selection.plugs[String(socket.index)];
-            const selected = requested && hashes.includes(requested) ? requested : defaults.plugs[String(socket.index)];
+            const selected = requested ? choices.find((choice) => choice.hashes.includes(requested))?.hash : undefined;
             return selected ? [[String(socket.index), selected]] : [];
         })
     );
+    for (const [socketIndex, hash] of Object.entries(defaults.plugs)) {
+        plugs[socketIndex] ??= hash;
+    }
     const selectedHashes = new Set([...Object.values(plugs), ...(weapon.intrinsicHash === null ? [] : [weapon.intrinsicHash])]);
-    const effects = Object.fromEntries(
-        Object.entries(selection.effects).filter(
-            ([hash, value]) => selectedHashes.has(Number(hash)) && Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff
-        )
-    );
+    const effects: Record<string, number> = {};
+    for (const [hash, value] of Object.entries(selection.effects)) {
+        const canonicalHash = canonicalHashes.get(Number(hash)) ?? Number(hash);
+        if (selectedHashes.has(canonicalHash) && Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff) {
+            effects[String(canonicalHash)] = value;
+        }
+    }
     return { weaponHash: weapon.hash, plugs, effects } satisfies WeaponSelection;
-}
+};
 
 export function selectedPlugHashes(weapon: WeaponDefinition, selection: WeaponSelection) {
     return weapon.sockets.flatMap((socket) => {

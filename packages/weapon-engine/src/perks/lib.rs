@@ -7,6 +7,12 @@ use crate::{
 use serde::Serialize;
 use std::{cell::RefCell, collections::HashMap, ops::Mul};
 
+#[derive(Debug, Clone, Copy)]
+pub struct TargetState {
+    pub starting_health: f64,
+    pub remaining_health: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct CalculationInput<'a> {
     pub intrinsic_hash: u32,
@@ -29,6 +35,7 @@ pub struct CalculationInput<'a> {
     pub enemy_type: &'a EnemyType,
     pub perk_value_map: &'a HashMap<u32, u32>,
     pub has_overshield: bool,
+    pub target_state: Option<TargetState>,
 }
 impl<'a> CalculationInput<'a> {
     //stuff like mag size can use this, not reload, damage, etc.
@@ -68,6 +75,7 @@ impl<'a> CalculationInput<'a> {
             enemy_type: &EnemyType::BOSS,
             perk_value_map: _perk_value_map,
             has_overshield: false,
+            target_state: None,
         }
     }
     #[allow(clippy::too_many_arguments)]
@@ -105,6 +113,7 @@ impl<'a> CalculationInput<'a> {
             enemy_type: &EnemyType::PLAYER,
             perk_value_map: _perk_value_map,
             has_overshield: _has_overshield,
+            target_state: None,
         }
     }
     #[allow(clippy::too_many_arguments)]
@@ -131,6 +140,7 @@ impl<'a> CalculationInput<'a> {
             enemy_type: &EnemyType::ENCLAVE,
             perk_value_map: &weapon.perk_value_map,
             has_overshield: false,
+            target_state: None,
         }
     }
 }

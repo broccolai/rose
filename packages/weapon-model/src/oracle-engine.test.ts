@@ -32,26 +32,24 @@ describe('weapon effect values', () => {
         expect(clampWeaponEffectValue(undefined, 1)).toBe(0);
     });
 
-    test('preserves Oracle modeling limitations on conditional options', () => {
+    test('normalizes automatic effects without exposing a control', () => {
         expect(
             normalizeWeaponEffectOptions(
                 new Map([
                     [
                         1_517_798_362,
                         {
-                            stacks: [0, 3],
-                            options: ['None', 'Low health', 'Critical', 'Near death'],
-                            optionType: 'OPTIONS',
-                            modelingNote: '  Shields are ignored; Aim Assist is not calculated.  '
+                            stacks: [0, 0],
+                            options: [],
+                            optionType: 'STATIC'
                         }
                     ]
                 ])
             )['1517798362']
         ).toEqual({
-            stacks: [0, 3],
-            options: ['None', 'Low health', 'Critical', 'Near death'],
-            optionType: 'OPTIONS',
-            modelingNote: 'Shields are ignored; Aim Assist is not calculated.'
+            stacks: [0, 0],
+            options: [],
+            optionType: 'STATIC'
         });
     });
 });

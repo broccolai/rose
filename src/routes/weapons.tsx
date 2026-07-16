@@ -22,21 +22,21 @@ import {
     calculateManifestStats,
     createDefaultSelection,
     loadWeaponCatalog,
-    plugHashesForSocket,
+    plugChoicesForSocket,
     reconcileSelection,
     selectedPlugHashes
 } from '@/features/weapons/catalog';
 import { addWeaponCompare, readWeaponCompare, writeWeaponCompare } from '@/features/weapons/compare-library';
 import { AnalysisPanel } from '@/features/weapons/components/analysis-panel';
 import { WeaponAppShell } from '@/features/weapons/components/app-shell';
-import { ExplorerPanel } from '@/features/weapons/components/explorer-panel';
 import { RollEditor } from '@/features/weapons/components/roll-editor';
+import { WeaponSearch } from '@/features/weapons/components/weapon-search';
 import { WeaponToolbar } from '@/features/weapons/components/weapon-toolbar';
-import { EMPTY_WEAPON_FILTERS, filterWeapons, primeWeaponSearch } from '@/features/weapons/search';
+import { EMPTY_WEAPON_FILTERS, filterWeapons, primeWeaponSearch, rankWeaponResults } from '@/features/weapons/search';
 import { decodeWeaponScenario, decodeWeaponSelection, encodeWeaponSelection, selectionUrl } from '@/features/weapons/selection-url';
 
 const DEFAULT_WEAPON_HASH = 1041028434;
-const RESULT_WINDOW = 80;
+const SEARCH_RESULT_LIMIT = 24;
 
 const StatePane = styled('div', {
     base: {
@@ -91,14 +91,12 @@ export default function WeaponsPage() {
     const [catalog, setCatalog] = createSignal<WeaponCatalog | null>(null);
     const [catalogError, setCatalogError] = createSignal('');
     const [filters, setFilters] = createSignal<WeaponFilterState>({ ...EMPTY_WEAPON_FILTERS });
-    const [visibleLimit, setVisibleLimit] = createSignal(RESULT_WINDOW);
     const [selection, setSelection] = createSignal<WeaponSelection | null>(null);
     const [mode, setMode] = createSignal<WeaponMode>('pvp');
     const [calculation, setCalculation] = createSignal<WeaponEngineCalculation | null>(null);
     const [effectOptions, setEffectOptions] = createSignal<Record<string, WeaponEffectOption>>({});
     const [effectOptionsWeaponHash, setEffectOptionsWeaponHash] = createSignal<number | null>(null);
     const [calculationStatus, setCalculationStatus] = createSignal<'idle' | 'loading' | 'ready' | 'error'>('idle');
-    const [targetHealth, setTargetHealthSignal] = createSignal(CURRENT_GUARDIAN_HEALTH);
     const [overshield, setOvershieldSignal] = createSignal(0);
     const [weaponsStat, setWeaponsStatSignal] = createSignal(100);
     const [theme, setTheme] = createSignal<AppTheme>(DEFAULT_APP_THEME);
@@ -115,12 +113,12 @@ export default function WeaponsPage() {
     });
     const allFilteredWeapons = createMemo(() => {
         const currentCatalog = catalog();
-        return currentCatalog ? filterWeapons(currentCatalog, filters()) : [];
+        const currentFilters = filters();
+        return currentCatalog ? rankWeaponResults(filterWeapons(currentCatalog, currentFilters), currentFilters.query) : [];
     });
-    const visibleWeapons = createMemo(() => allFilteredWeapons().slice(0, visibleLimit()));
+    const visibleWeapons = createMemo(() => (filters().query.trim() ? allFilteredWeapons().slice(0, SEARCH_RESULT_LIMIT) : []));
     const scenario = createMemo<WeaponScenario>(() => ({
         mode: mode(),
-        targetHealth: targetHealth(),
         overshield: overshield(),
         weaponsStat: weaponsStat()
     }));
@@ -156,7 +154,6 @@ export default function WeaponsPage() {
         const weapon = selectedWeapon();
         const currentSelection = selection();
         const currentMode = mode();
-        const currentTargetHealth = targetHealth();
         const currentOvershield = overshield();
         const currentWeaponsStat = weaponsStat();
         if (!currentCatalog || !weapon || !currentSelection) return;
@@ -173,7 +170,7 @@ export default function WeaponsPage() {
             weapon,
             selection: currentSelection,
             mode: currentMode,
-            targetHealth: currentTargetHealth,
+            targetHealth: CURRENT_GUARDIAN_HEALTH,
             overshield: currentOvershield,
             weaponsStat: currentWeaponsStat
         })
@@ -228,7 +225,6 @@ export default function WeaponsPage() {
             weapon ?? currentCatalog.weapons.find((candidate) => candidate.rarity === 'legendary') ?? currentCatalog.weapons[0];
         if (!fallback) return;
         setMode(requestedScenario.mode);
-        setTargetHealthSignal(requestedScenario.targetHealth);
         setOvershieldSignal(requestedScenario.overshield);
         setWeaponsStatSignal(requestedScenario.weaponsStat);
         setSelection(
@@ -240,7 +236,6 @@ export default function WeaponsPage() {
 
     function changeFilters(next: Partial<WeaponFilterState>) {
         setFilters((current) => ({ ...current, ...next }));
-        setVisibleLimit(RESULT_WINDOW);
     }
 
     function chooseWeapon(weapon: WeaponDefinition) {
@@ -291,8 +286,9 @@ export default function WeaponsPage() {
             weaponHash: weapon.hash,
             plugs: Object.fromEntries(
                 weapon.sockets.flatMap((socket) => {
-                    const hashes = plugHashesForSocket(currentCatalog, socket);
-                    return hashes.length > 0 ? [[String(socket.index), hashes[randomIndex(hashes.length)]]] : [];
+                    const choices = plugChoicesForSocket(currentCatalog, socket);
+                    const choice = choices[randomIndex(choices.length)];
+                    return choice ? [[String(socket.index), choice.hash]] : [];
                 })
             ),
             effects: {}
@@ -349,7 +345,6 @@ export default function WeaponsPage() {
         const weapon = currentCatalog.weapons.find((candidate) => candidate.hash === roll.selection.weaponHash);
         if (!weapon) return;
         setMode(roll.scenario.mode);
-        setTargetHealthSignal(roll.scenario.targetHealth);
         setOvershieldSignal(roll.scenario.overshield);
         setWeaponsStatSignal(roll.scenario.weaponsStat);
         setSelection(reconcileSelection(currentCatalog, weapon, roll.selection));
@@ -388,6 +383,20 @@ export default function WeaponsPage() {
         <WeaponAppShell
             toolbar={
                 <WeaponToolbar
+                    search={
+                        <WeaponSearch
+                            filters={filters()}
+                            weapons={visibleWeapons()}
+                            total={allFilteredWeapons().length}
+                            selectedHash={selection()?.weaponHash}
+                            loading={!catalog() && !catalogError()}
+                            error={catalogError()}
+                            onFiltersChange={changeFilters}
+                            onClearFilters={() => changeFilters({ ...EMPTY_WEAPON_FILTERS })}
+                            onRetry={refreshCatalog}
+                            onSelect={chooseWeapon}
+                        />
+                    }
                     theme={theme()}
                     copied={copied()}
                     compareCount={compareRolls().length}
@@ -400,26 +409,6 @@ export default function WeaponsPage() {
                     onPin={pinCurrentRoll}
                     onNavigateAway={navigateToArmor}
                 />
-            }
-            explorer={
-                <Show
-                    when={catalog()}
-                    fallback={<CatalogState error={catalogError()} loadingLabel="Loading arsenal" onRetry={refreshCatalog} />}
-                >
-                    {(_loaded) => (
-                        <ExplorerPanel
-                            filters={filters()}
-                            weapons={visibleWeapons()}
-                            total={allFilteredWeapons().length}
-                            selectedHash={selection()?.weaponHash}
-                            hasMore={visibleLimit() < allFilteredWeapons().length}
-                            onFiltersChange={changeFilters}
-                            onClearFilters={() => changeFilters({ ...EMPTY_WEAPON_FILTERS })}
-                            onSelect={chooseWeapon}
-                            onShowMore={() => setVisibleLimit((current) => current + RESULT_WINDOW)}
-                        />
-                    )}
-                </Show>
             }
             editor={
                 <Show
@@ -451,12 +440,10 @@ export default function WeaponsPage() {
                             calculation={calculation()}
                             calculationStatus={calculationStatus()}
                             mode={mode()}
-                            targetHealth={targetHealth()}
                             overshield={overshield()}
                             weaponsStat={weaponsStat()}
                             rolls={compareRolls()}
                             compareError={compareError()}
-                            onTargetHealthChange={(value) => setTargetHealthSignal(Math.round(clampNumber(value, 1, 500)))}
                             onOvershieldChange={(value) => setOvershieldSignal(Math.round(clampNumber(value, 0, 100)))}
                             onWeaponsStatChange={(value) => setWeaponsStatSignal(Math.round(clampNumber(value, 100, 200)))}
                             onLoadRoll={loadSavedRoll}

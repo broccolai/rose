@@ -32,6 +32,12 @@ export type WeaponSocket = {
     plugSet: number;
 };
 
+export interface WeaponPlugChoice {
+    hash: number;
+    hashes: number[];
+    enhanced: boolean;
+}
+
 export type WeaponDefinition = {
     hash: number;
     name: string;
@@ -83,7 +89,6 @@ export type WeaponMode = 'pvp' | 'pve';
 
 export type WeaponScenario = {
     mode: WeaponMode;
-    targetHealth: number;
     overshield: number;
     weaponsStat: number;
 };

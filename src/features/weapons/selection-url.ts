@@ -2,7 +2,6 @@ import type { WeaponScenario, WeaponSelection } from '@rose/weapon-model';
 
 export const DEFAULT_WEAPON_SCENARIO: WeaponScenario = {
     mode: 'pvp',
-    targetHealth: 230,
     overshield: 0,
     weaponsStat: 100
 };
@@ -15,7 +14,6 @@ export function encodeWeaponSelection(selection: WeaponSelection, scenario?: Wea
     if (plugs) params.set('p', plugs);
     if (effects) params.set('e', effects);
     if (scenario?.mode === 'pve') params.set('m', 'pve');
-    if (scenario && scenario.targetHealth !== DEFAULT_WEAPON_SCENARIO.targetHealth) params.set('hp', String(scenario.targetHealth));
     if (scenario && scenario.overshield !== DEFAULT_WEAPON_SCENARIO.overshield) params.set('os', String(scenario.overshield));
     if (scenario && scenario.weaponsStat !== DEFAULT_WEAPON_SCENARIO.weaponsStat) params.set('ws', String(scenario.weaponsStat));
     return params;
@@ -34,7 +32,6 @@ export function decodeWeaponSelection(params: URLSearchParams): WeaponSelection 
 export function decodeWeaponScenario(params: URLSearchParams): WeaponScenario {
     return {
         mode: params.get('m') === 'pve' ? 'pve' : 'pvp',
-        targetHealth: parseBoundedInteger(params.get('hp'), 1, 500, DEFAULT_WEAPON_SCENARIO.targetHealth),
         overshield: parseBoundedInteger(params.get('os'), 0, 100, DEFAULT_WEAPON_SCENARIO.overshield),
         weaponsStat: parseBoundedInteger(params.get('ws'), 100, 200, DEFAULT_WEAPON_SCENARIO.weaponsStat)
     };

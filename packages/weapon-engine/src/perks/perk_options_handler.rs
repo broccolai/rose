@@ -329,14 +329,7 @@ fn hash_to_perk_option_data(_hash: u32) -> Option<PerkOptionData> {
         Perks::TimelostMagazine => Some(PerkOptionData::toggle()),
 
         // year 8
-        Perks::StoppingPower => Some(PerkOptionData::options_with_note(
-            vec![
-                "Low health (<30% PvE / <33 HP PvP): +7%",
-                "Below 23% underlying health: +10%",
-                "Below 18% underlying health: +15%",
-            ],
-            "Manual target-health tier: shields are ignored. Oracle applies the selected damage bonus to the whole calculation; stagger and the 2-second Aim Assist benefit are not calculated because its amount is unknown.",
-        )),
+        Perks::StoppingPower => Some(PerkOptionData::static_()),
 
         //exotics
         Perks::CranialSpike => Some(PerkOptionData::stacking(5)),
@@ -513,22 +506,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stopping_power_exposes_manual_tiers_and_modeling_limitations() {
+    fn stopping_power_is_automatic() {
         let option = hash_to_perk_option_data(1_517_798_362).unwrap();
 
-        assert_eq!(option.stacks, (0, 3));
-        assert_eq!(
-            option.options,
-            vec![
-                "None",
-                "Low health (<30% PvE / <33 HP PvP): +7%",
-                "Below 23% underlying health: +10%",
-                "Below 18% underlying health: +15%",
-            ]
-        );
-        assert!(option
-            .modeling_note
-            .unwrap()
-            .contains("shields are ignored"));
+        assert_eq!(option.stacks, (0, 0));
+        assert!(option.options.is_empty());
+        assert!(matches!(option.option_type, PerkValueVariant::STATIC));
+        assert!(option.modeling_note.is_none());
     }
 }

@@ -72,6 +72,21 @@ export function filterWeapons(catalog: WeaponCatalog, filters: WeaponFilterState
     return catalog.weapons.filter((weapon) => clauses.every((clause) => matchesClause(catalog, weapon, clause)));
 }
 
+export const rankWeaponResults = (weapons: WeaponDefinition[], query: string): WeaponDefinition[] => {
+    const terms = tokenizeQuery(query).flatMap((token) => {
+        if (token.startsWith('-') || token.includes(':')) return [];
+        const normalized = normalizeSearch(token);
+        return normalized ? [normalized] : [];
+    });
+    if (terms.length === 0) return weapons;
+
+    const originalOrder = new Map(weapons.map((weapon, index) => [weapon.hash, index]));
+    return [...weapons].sort((left, right) => {
+        const scoreDifference = resultNameScore(left.name, terms) - resultNameScore(right.name, terms);
+        return scoreDifference || (originalOrder.get(left.hash) ?? 0) - (originalOrder.get(right.hash) ?? 0);
+    });
+};
+
 export function primeWeaponSearch(catalog: WeaponCatalog) {
     if (typeof window === 'undefined' || primedCatalogs.has(catalog)) return;
     primedCatalogs.add(catalog);
@@ -259,6 +274,20 @@ function searchCache(catalog: WeaponCatalog) {
 function includesSearchText(candidate: NormalizedSearchText, normalizedQuery: string) {
     return candidate.spaced.includes(normalizedQuery) || candidate.compact.includes(normalizedQuery.replaceAll(' ', ''));
 }
+
+const resultNameScore = (name: string, terms: string[]): number => {
+    const normalized = normalizeSearch(name);
+    const words = normalized.split(' ');
+    const compact = normalized.replaceAll(' ', '');
+    return terms.reduce((score, term) => {
+        if (normalized === term) return score;
+        if (normalized.startsWith(term)) return score + 1;
+        if (words.some((word) => word.startsWith(term))) return score + 2;
+        if (normalized.includes(term)) return score + 3;
+        if (compact.includes(term.replaceAll(' ', ''))) return score + 4;
+        return score + 5;
+    }, 0);
+};
 
 function toSearchText(value: string): NormalizedSearchText {
     const spaced = normalizeSearch(value);

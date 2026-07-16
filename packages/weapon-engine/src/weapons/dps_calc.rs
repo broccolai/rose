@@ -199,6 +199,7 @@ pub fn complex_dps_calc(_weapon: Weapon, _enemy: Enemy, _pl_dmg_mult: f64) -> Dp
                 handling_data,
                 num_reloads: num_reloads as f64,
                 has_overshield: false,
+                target_state: None,
             };
             let dmg_mods = get_dmg_modifier(
                 perks.clone(),
@@ -301,6 +302,7 @@ pub fn complex_dps_calc(_weapon: Weapon, _enemy: Enemy, _pl_dmg_mult: f64) -> Dp
                 handling_data,
                 num_reloads: num_reloads as f64,
                 has_overshield: false,
+                target_state: None,
             };
             ///////////////////////////////
 
@@ -409,6 +411,7 @@ pub fn complex_dps_calc(_weapon: Weapon, _enemy: Enemy, _pl_dmg_mult: f64) -> Dp
             handling_data,
             num_reloads: num_reloads as f64,
             has_overshield: false,
+            target_state: None,
         };
         let reload_responses =
             weapon.calc_reload_time(Some(reload_input_data), Some(&mut pers_calc_data), false);

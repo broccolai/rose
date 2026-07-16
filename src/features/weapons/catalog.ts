@@ -3,6 +3,8 @@ import type { WeaponCatalog } from '@rose/weapon-model';
 export {
     calculateManifestStats,
     createDefaultSelection,
+    isEnhancedPlug,
+    plugChoicesForSocket,
     plugHashesForSocket,
     reconcileSelection,
     selectedPlugHashes,

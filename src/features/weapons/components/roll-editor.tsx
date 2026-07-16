@@ -13,7 +13,7 @@ import CheckCircle2 from 'lucide-solid/icons/check-circle-2';
 import LoaderCircle from 'lucide-solid/icons/loader-circle';
 import Minus from 'lucide-solid/icons/minus';
 import { createMemo, For, Index, Show } from 'solid-js';
-import { bungieAssetUrl, calculateManifestStats, plugHashesForSocket } from '@/features/weapons/catalog';
+import { bungieAssetUrl, calculateManifestStats, plugChoicesForSocket } from '@/features/weapons/catalog';
 import { MutedText, SectionHeading, SegmentButton, SegmentedControl, SelectInput } from '@/features/weapons/components/primitives';
 
 type RollEditorProps = {
@@ -570,33 +570,38 @@ function SocketPicker(props: {
     layout: 'column' | 'row';
     onPlugChange: (socketIndex: number, plugHash: number) => void;
 }) {
-    const hashes = () => plugHashesForSocket(props.catalog, props.socket);
+    const choices = () => plugChoicesForSocket(props.catalog, props.socket);
     const selectedHash = () => props.selection.plugs[String(props.socket.index)];
     const selectedPlug = () => props.catalog.plugs[String(selectedHash())];
     const label = () => displaySocketLabel(props.weapon, props.socket);
-    const choices = () => (
+    const picker = () => (
         <PlugGrid
             data-layout={props.layout}
             role="radiogroup"
             aria-label={`${label()} perks`}
             aria-orientation={props.layout === 'column' ? 'vertical' : 'horizontal'}
         >
-            <For each={hashes()}>
-                {(hash, index) => {
-                    const plug = () => props.catalog.plugs[String(hash)];
-                    const plugName = () => plug()?.name ?? `Plug ${hash}`;
-                    const accessibleName = () => (plug()?.enhanced ? `${plugName()} (enhanced)` : plugName());
+            <For each={choices()}>
+                {(choice, index) => {
+                    const plug = () => props.catalog.plugs[String(choice.hash)];
+                    const plugName = () => plug()?.name ?? `Plug ${choice.hash}`;
+                    const accessibleName = () => (choice.enhanced ? `${plugName()} (enhanced)` : plugName());
+                    const selected = () => choice.hashes.includes(selectedHash());
                     return (
                         <PlugButton
                             class="weapon-plug-button"
                             type="button"
                             role="radio"
                             aria-label={accessibleName()}
-                            aria-checked={selectedHash() === hash}
-                            tabIndex={selectedHash() === hash || (!hashes().includes(selectedHash()) && index() === 0) ? 0 : -1}
-                            data-enhanced={plug()?.enhanced}
+                            aria-checked={selected()}
+                            tabIndex={
+                                selected() || (!choices().some((candidate) => candidate.hashes.includes(selectedHash())) && index() === 0)
+                                    ? 0
+                                    : -1
+                            }
+                            data-enhanced={choice.enhanced}
                             title={`${accessibleName()}\n${plug()?.description ?? ''}`}
-                            onClick={() => props.onPlugChange(props.socket.index, hash)}
+                            onClick={() => props.onPlugChange(props.socket.index, choice.hash)}
                             onKeyDown={movePlugFocus}
                         >
                             <Show when={plug()?.icon} fallback={<Minus aria-hidden="true" />}>
@@ -618,7 +623,7 @@ function SocketPicker(props: {
                         {selectedPlug()?.name ?? 'None'}
                     </SelectedName>
                 </SocketColumnHeader>
-                {choices()}
+                {picker()}
             </SocketColumn>
         );
     }
@@ -629,7 +634,7 @@ function SocketPicker(props: {
                 <SocketName>{label()}</SocketName>
                 <SelectedName title={selectedPlug()?.description}>{selectedPlug()?.name ?? 'None'}</SelectedName>
             </SocketLabel>
-            {choices()}
+            {picker()}
         </UpgradeRow>
     );
 }

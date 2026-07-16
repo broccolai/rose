@@ -1,6 +1,6 @@
 import { styled } from '@panda/jsx';
 import type { SavedWeaponRoll, WeaponCatalog, WeaponEngineCalculation, WeaponMode } from '@rose/weapon-model';
-import { weaponsStatDamageScalar } from '@rose/weapon-model';
+import { CURRENT_GUARDIAN_HEALTH, weaponsStatDamageScalar } from '@rose/weapon-model';
 import AlertTriangle from 'lucide-solid/icons/alert-triangle';
 import ArrowDown from 'lucide-solid/icons/arrow-down';
 import ArrowUp from 'lucide-solid/icons/arrow-up';
@@ -14,12 +14,10 @@ type AnalysisPanelProps = {
     calculation: WeaponEngineCalculation | null;
     calculationStatus: 'idle' | 'loading' | 'ready' | 'error';
     mode: WeaponMode;
-    targetHealth: number;
     overshield: number;
     weaponsStat: number;
     rolls: SavedWeaponRoll[];
     compareError: string;
-    onTargetHealthChange: (value: number) => void;
     onOvershieldChange: (value: number) => void;
     onWeaponsStatChange: (value: number) => void;
     onLoadRoll: (roll: SavedWeaponRoll) => void;
@@ -458,7 +456,7 @@ function formatShots(headshots: number | undefined, bodyshots: number | undefine
 }
 
 function scenarioSummary(roll: SavedWeaponRoll) {
-    const totalHealth = roll.scenario.targetHealth + roll.scenario.overshield;
+    const totalHealth = CURRENT_GUARDIAN_HEALTH + roll.scenario.overshield;
     return roll.scenario.mode === 'pvp' ? `${totalHealth} HP · W${roll.scenario.weaponsStat}` : 'PvE profile';
 }
 
@@ -505,7 +503,13 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
             <Section>
                 <HeadingRow>
                     <SectionHeading>{props.mode === 'pvp' ? 'TTK' : 'Damage'}</SectionHeading>
-                    <PvpLabel>{props.mode === 'pvp' ? `PvP · ${props.targetHealth + props.overshield} HP` : 'PvE profile'}</PvpLabel>
+                    <PvpLabel>
+                        {props.mode === 'pvp'
+                            ? props.overshield > 0
+                                ? `PvP · ${CURRENT_GUARDIAN_HEALTH} base + ${props.overshield} shield`
+                                : `PvP · ${CURRENT_GUARDIAN_HEALTH} base HP`
+                            : 'PvE profile'}
+                    </PvpLabel>
                 </HeadingRow>
                 <Show when={props.mode === 'pvp'}>
                     <Show
@@ -546,27 +550,6 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
                     </Show>
 
                     <TargetControls>
-                        <TargetRow>
-                            <TargetLabel for="weapon-target-health">Target health</TargetLabel>
-                            <RangeInput
-                                id="weapon-target-health"
-                                type="range"
-                                min="1"
-                                max="500"
-                                step="1"
-                                value={props.targetHealth}
-                                aria-label="Target health slider"
-                                onInput={(event) => props.onTargetHealthChange(Number(event.currentTarget.value))}
-                            />
-                            <NumberInput
-                                type="number"
-                                min="1"
-                                max="500"
-                                value={props.targetHealth}
-                                aria-label="Target health value"
-                                onChange={(event) => props.onTargetHealthChange(Number(event.currentTarget.value))}
-                            />
-                        </TargetRow>
                         <TargetRow>
                             <TargetLabel for="weapon-overshield">Overshield</TargetLabel>
                             <RangeInput

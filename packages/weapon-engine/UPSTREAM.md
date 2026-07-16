@@ -16,9 +16,8 @@ The original project is dual-dedicated/licensed under the included
 - Return whether a weapon formula was found when configuring the engine.
 - Expose checks against the actual registered trait modifiers for honest
   partial-support UI.
-- Add Stopping Power's manifest-backed low-health damage tiers as a manual
-  scenario control, with stagger and its unknown Aim Assist amount explicitly
-  marked as unmodeled.
+- Model Stopping Power automatically per projectile from the target's live
+  underlying health, including its PvP absolute-health thresholds.
 - Add target-health TTK calculations with explicit overshield health and a
   caller-supplied global damage scalar.
 - Include the initial charge and inter-volley cooldown in Fusion Rifle and

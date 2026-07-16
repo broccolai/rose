@@ -5,7 +5,10 @@ use serde::Serialize;
 use crate::{
     d2_enums::WeaponType,
     logging::extern_log,
-    perks::{get_dmg_modifier, get_firing_modifier, lib::CalculationInput},
+    perks::{
+        get_dmg_modifier, get_firing_modifier,
+        lib::{CalculationInput, TargetState},
+    },
 };
 
 use super::{FiringData, Weapon};
@@ -154,12 +157,16 @@ fn calc_ttk_for_healths(
             persistent_data.insert("empowering".to_string(), 1.0);
             persistent_data.insert("debuff".to_string(), 1.0);
             persistent_data.insert("surge".to_string(), 1.0);
-            let calc_input = _weapon.pvp_calc_input(
+            let mut calc_input = _weapon.pvp_calc_input(
                 opt_bullets_fired,
                 opt_bullets_hit,
                 opt_time_taken,
                 (overshield - opt_damage_dealt) > 0.0,
             );
+            calc_input.target_state = Some(TargetState {
+                starting_health: *base_health,
+                remaining_health: (health - opt_damage_dealt).max(0.0),
+            });
             let dmg_mods = get_dmg_modifier(
                 _weapon.list_perks().clone(),
                 &calc_input,
@@ -270,12 +277,16 @@ fn calc_ttk_for_healths(
             persistent_data.insert("empowering".to_string(), 1.0);
             persistent_data.insert("debuff".to_string(), 1.0);
             persistent_data.insert("surge".to_string(), 1.0);
-            let calc_input = _weapon.pvp_calc_input(
+            let mut calc_input = _weapon.pvp_calc_input(
                 bdy_bullets_fired,
                 bdy_bullets_hit,
                 bdy_time_taken,
                 (overshield - bdy_damage_dealt) > 0.0,
             );
+            calc_input.target_state = Some(TargetState {
+                starting_health: *base_health,
+                remaining_health: (health - bdy_damage_dealt).max(0.0),
+            });
             let dmg_mods = get_dmg_modifier(
                 _weapon.list_perks().clone(),
                 &calc_input,

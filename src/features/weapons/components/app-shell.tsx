@@ -3,7 +3,6 @@ import type { JSX } from 'solid-js';
 
 type WeaponAppShellProps = {
     toolbar: JSX.Element;
-    explorer: JSX.Element;
     editor: JSX.Element;
     analysis: JSX.Element;
 };
@@ -21,27 +20,20 @@ const Page = styled('main', {
 const Surface = styled('div', {
     base: {
         display: 'grid',
-        gridTemplateAreas: '"toolbar" "explorer" "editor" "analysis"',
+        gridTemplateAreas: '"toolbar" "editor" "analysis"',
         gridTemplateColumns: 'minmax(0, 1fr)',
-        gridTemplateRows: 'max-content max-content max-content max-content',
+        gridTemplateRows: 'max-content max-content max-content',
         minH: '100dvh',
         w: '100%',
         minW: 0,
-        '@media (min-width: 48rem)': {
-            gridTemplateAreas: '"toolbar toolbar" "explorer editor" "analysis analysis"',
-            gridTemplateColumns: '18rem minmax(0, 1fr)',
-            gridTemplateRows: 'max-content minmax(0, 1fr) max-content',
+        '@media (min-width: 64rem)': {
+            gridTemplateAreas: '"toolbar toolbar" "editor analysis"',
+            gridTemplateColumns: 'minmax(0, 1fr) 21rem',
+            gridTemplateRows: 'max-content minmax(0, 1fr)',
             h: '100dvh',
             overflow: 'hidden'
         },
-        '@media (min-width: 80rem)': {
-            gridTemplateAreas: '"toolbar toolbar toolbar" "explorer editor analysis"',
-            gridTemplateColumns: '20rem minmax(30rem, 1fr) 22rem',
-            gridTemplateRows: 'max-content minmax(0, 1fr)'
-        },
-        '@media (min-width: 112rem)': {
-            gridTemplateColumns: '23rem minmax(38rem, 1fr) 25rem'
-        }
+        '@media (min-width: 90rem)': { gridTemplateColumns: 'minmax(0, 1fr) 23rem' }
     }
 });
 
@@ -51,25 +43,9 @@ const ToolbarPane = styled('header', {
         position: 'relative',
         zIndex: 20,
         minW: 0,
-        p: { base: '0.75rem 1rem', md: '0.8rem 1.25rem' },
+        p: { base: '0.7rem 0.85rem', md: '0.75rem 1rem' },
         borderBottom: '1px solid var(--rose-border)',
         bg: 'var(--rose-bg)'
-    }
-});
-
-const ExplorerPane = styled('aside', {
-    base: {
-        gridArea: 'explorer',
-        minW: 0,
-        minH: 0,
-        borderBottom: '1px solid var(--rose-border)',
-        '@media (min-width: 48rem)': {
-            borderRight: '1px solid var(--rose-border)',
-            overflow: 'hidden'
-        },
-        '@media (min-width: 80rem)': {
-            borderBottom: 0
-        }
     }
 });
 
@@ -79,10 +55,8 @@ const EditorPane = styled('section', {
         minW: 0,
         minH: 0,
         borderBottom: '1px solid var(--rose-border)',
-        '@media (min-width: 48rem)': {
-            overflow: 'auto'
-        },
-        '@media (min-width: 80rem)': {
+        '@media (min-width: 64rem)': {
+            overflow: 'auto',
             borderRight: '1px solid var(--rose-border)',
             borderBottom: 0
         }
@@ -94,11 +68,7 @@ const AnalysisPane = styled('aside', {
         gridArea: 'analysis',
         minW: 0,
         minH: 0,
-        '@media (min-width: 48rem)': {
-            maxH: '42dvh',
-            overflow: 'auto'
-        },
-        '@media (min-width: 80rem)': {
+        '@media (min-width: 64rem)': {
             maxH: 'none',
             overflow: 'auto'
         }
@@ -110,7 +80,6 @@ export function WeaponAppShell(props: WeaponAppShellProps) {
         <Page>
             <Surface>
                 <ToolbarPane>{props.toolbar}</ToolbarPane>
-                <ExplorerPane aria-label="Weapon arsenal">{props.explorer}</ExplorerPane>
                 <EditorPane id="weapon-editor" aria-label="Roll editor" tabIndex={-1}>
                     {props.editor}
                 </EditorPane>

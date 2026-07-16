@@ -9,7 +9,7 @@ import RotateCcw from 'lucide-solid/icons/rotate-ccw';
 import Share2 from 'lucide-solid/icons/share-2';
 import Shuffle from 'lucide-solid/icons/shuffle';
 import Sun from 'lucide-solid/icons/sun';
-import { Match, Switch } from 'solid-js';
+import { type JSX, Match, Switch } from 'solid-js';
 
 import { APP_VERSION } from '@/app-version';
 import { ProductNav } from '@/components/product-nav';
@@ -17,6 +17,7 @@ import { APP_THEME_LABELS, type AppTheme, VISIBLE_APP_THEMES } from '@/features/
 import { IconButton } from '@/features/weapons/components/primitives';
 
 type WeaponToolbarProps = {
+    search: JSX.Element;
     theme: AppTheme;
     copied: boolean;
     compareCount: number;
@@ -33,24 +34,31 @@ type WeaponToolbarProps = {
 const Bar = styled('div', {
     base: {
         display: 'grid',
-        gridTemplateColumns: { base: 'minmax(0, 1fr)', md: 'auto minmax(0, 1fr)' },
+        gridTemplateAreas: { base: '"brand" "search" "actions"', sm: '"brand actions" "search search"' },
+        gridTemplateColumns: { base: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) auto' },
         alignItems: 'center',
-        gap: '0.75rem 1rem'
+        gap: '0.65rem 1rem',
+        '@media (min-width: 72rem)': {
+            gridTemplateAreas: '"brand search actions"',
+            gridTemplateColumns: 'minmax(17rem, 1fr) minmax(20rem, 34rem) minmax(17rem, 1fr)'
+        }
     }
 });
 
 const Brand = styled('div', {
     base: {
-        display: 'grid',
-        gap: '0.35rem',
-        justifyItems: 'start'
+        gridArea: 'brand',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.8rem',
+        minW: 0
     }
 });
 
 const Title = styled('div', {
     base: {
         display: 'inline-grid',
-        gridTemplateColumns: '2.15rem auto auto',
+        gridTemplateColumns: '1.9rem auto auto',
         alignItems: 'center',
         gap: '0.5rem',
         minW: 0
@@ -59,8 +67,8 @@ const Title = styled('div', {
 
 const Mark = styled('img', {
     base: {
-        w: '2.15rem',
-        h: '2.15rem',
+        w: '1.9rem',
+        h: '1.9rem',
         objectFit: 'contain',
         opacity: 0.9
     }
@@ -68,7 +76,7 @@ const Mark = styled('img', {
 
 const ProductName = styled('span', {
     base: {
-        fontSize: { base: '1.18rem', md: '1.35rem' },
+        fontSize: { base: '1.05rem', md: '1.15rem' },
         fontWeight: 800,
         lineHeight: 1,
         letterSpacing: '0.055em'
@@ -86,12 +94,22 @@ const Version = styled('span', {
 
 const Actions = styled('div', {
     base: {
+        gridArea: 'actions',
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
-        justifyContent: { base: 'flex-start', md: 'flex-end' },
+        justifyContent: { base: 'flex-start', sm: 'flex-end' },
         gap: '0.4rem',
         minW: 0
+    }
+});
+
+const SearchSlot = styled('div', {
+    base: {
+        gridArea: 'search',
+        justifySelf: 'stretch',
+        minW: 0,
+        w: '100%'
     }
 });
 
@@ -156,6 +174,7 @@ export function WeaponToolbar(props: WeaponToolbarProps) {
                     }}
                 />
             </Brand>
+            <SearchSlot>{props.search}</SearchSlot>
             <Actions>
                 <IconButton type="button" disabled={props.disabled} aria-label="Reset roll" title="Reset roll" onClick={props.onReset}>
                     <RotateCcw aria-hidden="true" />

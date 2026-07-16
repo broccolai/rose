@@ -22,14 +22,10 @@ describe('weapon selection URL codec', () => {
     });
 
     test('round trips the calculation scenario and sanitizes its bounds', () => {
-        const params = encodeWeaponSelection(
-            { weaponHash: 1, plugs: {}, effects: {} },
-            { mode: 'pve', targetHealth: 300, overshield: 40, weaponsStat: 175 }
-        );
-        expect(decodeWeaponScenario(params)).toEqual({ mode: 'pve', targetHealth: 300, overshield: 40, weaponsStat: 175 });
+        const params = encodeWeaponSelection({ weaponHash: 1, plugs: {}, effects: {} }, { mode: 'pve', overshield: 40, weaponsStat: 175 });
+        expect(decodeWeaponScenario(params)).toEqual({ mode: 'pve', overshield: 40, weaponsStat: 175 });
         expect(decodeWeaponScenario(new URLSearchParams('m=nope&hp=999&os=-1&ws=201'))).toEqual({
             mode: 'pvp',
-            targetHealth: 230,
             overshield: 0,
             weaponsStat: 100
         });
