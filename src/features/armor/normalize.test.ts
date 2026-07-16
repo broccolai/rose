@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-
-import { ARMOR_STATS } from '@armor-domain';
+import { BenchmarkArmorEngine } from '@rose/armor-bench/wasm-engine';
+import { ARMOR_STATS } from '@rose/armor-domain';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';
 import { getAvailableArmorSets, makeArmorBySlotForClass, normalizeVaultExport } from '@/features/armor/normalize';
 import { ARMOR_STAT_HASHES } from '@/features/armor/stat-hashes';
 import type { ManifestResolver, VaultExportSnapshot } from '@/features/armor/types';
-import { BenchmarkArmorEngine } from '../../../packages/armor-bench/src/wasm-engine';
 
 const privateBundlePath = 'data/private/rose-loaded-benchmark-bundle-2026-07-04T14-56-53-877Z.json';
 

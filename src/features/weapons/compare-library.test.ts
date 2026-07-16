@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-
+import type { SavedWeaponRoll } from '@rose/weapon-model';
 import {
     addWeaponCompare,
     MAX_COMPARE_ROLLS,
@@ -8,7 +8,6 @@ import {
     writeWeaponCompare
 } from '@/features/weapons/compare-library';
 import { DEFAULT_WEAPON_SCENARIO } from '@/features/weapons/selection-url';
-import type { SavedWeaponRoll } from '@/features/weapons/types';
 
 function roll(id: string): SavedWeaponRoll {
     return {

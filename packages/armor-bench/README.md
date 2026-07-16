@@ -10,19 +10,19 @@ Network, OAuth, manifest download, and normalization time are intentionally excl
 ## Commands
 
 ```sh
-bun run bench:workloads
+bun run bench
 ```
 
 The default matrix measures one cold call and one warm call for each operation. The full slider sequence runs once because it already contains several consecutive interactions.
 
 ```sh
-ROSE_BENCH_ITERATIONS=5 ROSE_BENCH_WARMUPS=1 bun run bench:workloads
-ROSE_BENCH_SCENARIO=warlock-open-dump-health bun run bench:workloads
-ROSE_BENCH_SCENARIO=warlock-open-dump-health,titan-no-dump bun run bench:workloads
-ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-high-weapons bun run bench:workloads
-ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-two-high-stats bun run bench:workloads
-ROSE_BENCH_INCLUDE_STRESS=1 bun run bench:workloads
-bun run bench:workloads --json
+ROSE_BENCH_ITERATIONS=5 ROSE_BENCH_WARMUPS=1 bun run bench
+ROSE_BENCH_SCENARIO=warlock-open-dump-health bun run bench
+ROSE_BENCH_SCENARIO=warlock-open-dump-health,titan-no-dump bun run bench
+ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-high-weapons bun run bench
+ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-two-high-stats bun run bench
+ROSE_BENCH_INCLUDE_STRESS=1 bun run bench
+bun run bench --json
 ```
 
 ## Measurements

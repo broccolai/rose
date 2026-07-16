@@ -20,12 +20,7 @@ const viteLocalHttps = hasLocalHttpsFiles
           key: readFileSync(localKeyFile)
       }
     : undefined;
-const viteHttpsPlugin =
-    useDevHttps && !hasLocalHttpsFiles
-        ? {
-              plugin: basicSsl()
-          }
-        : undefined;
+const viteHttpsPlugin = useDevHttps && !hasLocalHttpsFiles ? basicSsl() : undefined;
 const privateDataDir = fileURLToPath(new URL('./data/private', import.meta.url));
 
 const latestLocalTestDataPath = (): string | null => {
@@ -73,13 +68,12 @@ export default defineConfig({
         resolve: {
             alias: {
                 '@': fileURLToPath(new URL('./src', import.meta.url)),
-                '@armor-domain': fileURLToPath(new URL('./packages/armor-domain/src/index.ts', import.meta.url)),
                 '@panda': fileURLToPath(new URL('./.panda', import.meta.url))
             }
         },
         server: {
             https: viteLocalHttps
         },
-        plugins: [roseDevTestDataPlugin(), ...(viteHttpsPlugin ? [viteHttpsPlugin.plugin] : [])]
+        plugins: [roseDevTestDataPlugin(), ...(viteHttpsPlugin ? [viteHttpsPlugin] : [])]
     }
 });

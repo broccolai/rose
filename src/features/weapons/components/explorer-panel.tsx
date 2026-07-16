@@ -1,11 +1,10 @@
 import { styled } from '@panda/jsx';
+import type { WeaponDefinition, WeaponFilterState } from '@rose/weapon-model';
 import RotateCcw from 'lucide-solid/icons/rotate-ccw';
 import Search from 'lucide-solid/icons/search';
 import { For, onCleanup, onMount, Show } from 'solid-js';
-
 import { bungieAssetUrl } from '@/features/weapons/catalog';
 import { IconButton, MutedText, SectionHeading, TextInput } from '@/features/weapons/components/primitives';
-import type { WeaponDefinition, WeaponFilterState } from '@/features/weapons/types';
 
 type ExplorerPanelProps = {
     filters: WeaponFilterState;

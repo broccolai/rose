@@ -7,7 +7,7 @@ import {
     type ArmorRollProfile,
     type PlanArmorInput,
     type PlanArmorResult
-} from '@armor-domain';
+} from '@rose/armor-domain';
 
 import type {
     EngineBuildOutput,

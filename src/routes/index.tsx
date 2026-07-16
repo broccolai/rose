@@ -13,7 +13,7 @@ import {
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector
-} from '@armor-domain';
+} from '@rose/armor-domain';
 import { createEventListener } from '@solid-primitives/event-listener';
 import { debounce } from '@solid-primitives/scheduled';
 import type { DestinyInventoryItemDefinition } from 'bungie-api-ts/destiny2';

@@ -6,4 +6,4 @@ if (!app) {
     throw new Error('Missing #app mount target.');
 }
 
-mount(() => <StartClient />, app);
+export default mount(() => <StartClient />, app);

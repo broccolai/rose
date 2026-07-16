@@ -4,17 +4,17 @@ This pass keeps rose on current packages and moves the project toward stricter, 
 
 ## Package Posture
 
-Updated to current latest versions reported by `bun outdated`:
+Updated to current versions reported by `bun outdated`, within the versions supported by the active SolidStart toolchain:
 
 - TypeScript 6
-- Vite 8
+- Vite 6.4, matching Vinxi's runtime dependency
 - Solid 1.9 latest
 - Solid Router 0.16 latest
 - SolidStart 1.x latest
 - Panda CSS and Biome latest
 - Node types latest
 
-SolidStart latest no longer exposes the old Vite plugin used by this project. The app now uses `app.config.ts`, SolidStart's current config entrypoint, with the existing Vite options nested under the `vite` key.
+SolidStart latest no longer exposes the old Vite plugin used by this project. The app now uses `app.config.ts`, SolidStart's current config entrypoint, with the existing Vite options nested under the `vite` key. The root Vite version intentionally follows Vinxi instead of installing a second, newer Vite that the build does not execute.
 
 ## TypeScript Config
 

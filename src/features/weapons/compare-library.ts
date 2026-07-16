@@ -1,5 +1,5 @@
+import type { SavedWeaponRoll, WeaponScenario, WeaponSelection } from '@rose/weapon-model';
 import { DEFAULT_WEAPON_SCENARIO } from '@/features/weapons/selection-url';
-import type { SavedWeaponRoll, WeaponScenario, WeaponSelection } from '@/features/weapons/types';
 
 export const WEAPON_COMPARE_KEY = 'rose.weapon-compare.v1';
 export const MAX_COMPARE_ROLLS = 6;

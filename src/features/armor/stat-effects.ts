@@ -1,4 +1,4 @@
-import type { ArmorStat } from '@armor-domain';
+import type { ArmorStat } from '@rose/armor-domain';
 
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 

@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { initSync, WasmArmorEngine, WasmArmorPlanner } from '../../../src/features/armor/wasm/generated/rose_armor_wasm.js';
 import {
     ARMOR_STATS,
     type ArmorInventoryBySlot,
@@ -12,15 +11,16 @@ import {
     type SolveArmorInput,
     type SolveArmorResult,
     type StatVector
-} from '../../armor-domain/src';
+} from '@rose/armor-domain';
 import {
     ArmorEngineAdapter,
     ArmorPlanningAdapter,
     type EnginePlanningProfileSummary,
     type EngineProfileSummary
-} from '../../armor-engine/ts';
+} from '@rose/armor-engine/ts';
+import { initSync, WasmArmorEngine, WasmArmorPlanner } from '@rose/armor-engine/wasm';
 
-const wasmPath = fileURLToPath(new URL('../../../src/features/armor/wasm/generated/rose_armor_wasm_bg.wasm', import.meta.url));
+const wasmPath = fileURLToPath(import.meta.resolve('@rose/armor-engine/wasm-binary'));
 
 let wasmMemory: WebAssembly.Memory | null = null;
 

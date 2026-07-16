@@ -1,5 +1,3 @@
-import initWasm, { WasmArmorEngine, WasmArmorPlanner } from '@/features/armor/wasm/generated/rose_armor_wasm.js';
-
 import type {
     EngineCapOutput,
     EngineCapRequest,
@@ -9,7 +7,8 @@ import type {
     EngineProfileSummary,
     EngineSolveOutput,
     EngineSolveRequest
-} from '../../../packages/armor-engine/ts';
+} from '@rose/armor-engine/ts';
+import initWasm, { WasmArmorEngine, WasmArmorPlanner } from '@rose/armor-engine/wasm';
 
 export type SolverWorkerRequest =
     | {

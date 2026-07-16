@@ -1,5 +1,5 @@
 #!/bin/sh
 set -eu
 
-bun scripts/bump-version.ts
+bun run version:bump
 git add src/app-version.ts

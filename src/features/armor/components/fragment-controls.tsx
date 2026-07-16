@@ -1,5 +1,5 @@
-import { ARMOR_STATS, type ArmorStat } from '@armor-domain';
 import { styled } from '@panda/jsx';
+import { ARMOR_STATS, type ArmorStat } from '@rose/armor-domain';
 import { For } from 'solid-js';
 
 import { CollapsibleSection, CustomSelect, SecondaryButton } from '@/features/armor/components/calculator-control-primitives';

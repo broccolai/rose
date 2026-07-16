@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import { ARMOR_STATS, type ArmorStat, type ArmorStatTargetCapsInput, type SolveArmorInput, type StatVector } from '../../armor-domain/src';
+import { ARMOR_STATS, type ArmorStat, type ArmorStatTargetCapsInput, type SolveArmorInput, type StatVector } from '@rose/armor-domain';
 import { prepareScenario } from './armor';
 import type {
     BenchmarkRunOptions,

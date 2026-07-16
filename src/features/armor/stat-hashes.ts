@@ -1,4 +1,4 @@
-import type { ArmorStat, DestinyClass } from '@armor-domain';
+import type { ArmorStat, DestinyClass } from '@rose/armor-domain';
 
 export const ARMOR_STAT_HASHES: Record<ArmorStat, number> = {
     health: 392767087,

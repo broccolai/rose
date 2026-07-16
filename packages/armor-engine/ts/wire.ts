@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type StatAdjustment, type StatVector } from '@armor-domain';
+import { ARMOR_STATS, type StatAdjustment, type StatVector } from '@rose/armor-domain';
 
 import type { EngineAdjustmentInput, EngineStats } from './types';
 

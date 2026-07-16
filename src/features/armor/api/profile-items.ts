@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@rose/armor-domain';
 import type { DestinyItemComponent } from 'bungie-api-ts/destiny2';
 import type { UserMembershipData } from 'bungie-api-ts/user';
 

@@ -20,10 +20,9 @@
         "types": ["@solidjs/start/env", "vite/client", "node", "bun"],
         "paths": {
             "@/*": ["./src/*"],
-            "@armor-domain": ["./packages/armor-domain/src/index.ts"],
             "@panda/*": ["./.panda/*"]
         }
     },
     "include": ["src", "functions", "packages", "scripts", "app.config.ts", "panda.config.ts"],
-    "exclude": ["dist", ".panda", "node_modules", "tests", "**/*.test.ts", "**/*.test.tsx"]
+    "exclude": ["dist", ".panda", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }

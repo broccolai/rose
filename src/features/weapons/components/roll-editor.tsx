@@ -1,12 +1,4 @@
 import { styled } from '@panda/jsx';
-import AlertTriangle from 'lucide-solid/icons/alert-triangle';
-import CheckCircle2 from 'lucide-solid/icons/check-circle-2';
-import LoaderCircle from 'lucide-solid/icons/loader-circle';
-import Minus from 'lucide-solid/icons/minus';
-import { createMemo, For, Index, Show } from 'solid-js';
-
-import { bungieAssetUrl, calculateManifestStats, plugHashesForSocket } from '@/features/weapons/catalog';
-import { MutedText, SectionHeading, SegmentButton, SegmentedControl, SelectInput } from '@/features/weapons/components/primitives';
 import type {
     WeaponCatalog,
     WeaponDefinition,
@@ -15,7 +7,14 @@ import type {
     WeaponMode,
     WeaponSelection,
     WeaponSocket
-} from '@/features/weapons/types';
+} from '@rose/weapon-model';
+import AlertTriangle from 'lucide-solid/icons/alert-triangle';
+import CheckCircle2 from 'lucide-solid/icons/check-circle-2';
+import LoaderCircle from 'lucide-solid/icons/loader-circle';
+import Minus from 'lucide-solid/icons/minus';
+import { createMemo, For, Index, Show } from 'solid-js';
+import { bungieAssetUrl, calculateManifestStats, plugHashesForSocket } from '@/features/weapons/catalog';
+import { MutedText, SectionHeading, SegmentButton, SegmentedControl, SelectInput } from '@/features/weapons/components/primitives';
 
 type RollEditorProps = {
     catalog: WeaponCatalog;

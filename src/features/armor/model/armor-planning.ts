@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorPlan, type ArmorSlot } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorPlan, type ArmorSlot } from '@rose/armor-domain';
 
 import { type AvailableArmorSet, type AvailableExotic, getPlanningSetSlotAssignments } from '@/features/armor/calculator-view-model';
 

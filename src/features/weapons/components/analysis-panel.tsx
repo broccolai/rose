@@ -1,14 +1,13 @@
 import { styled } from '@panda/jsx';
+import type { SavedWeaponRoll, WeaponCatalog, WeaponEngineCalculation, WeaponMode } from '@rose/weapon-model';
+import { weaponsStatDamageScalar } from '@rose/weapon-model';
 import AlertTriangle from 'lucide-solid/icons/alert-triangle';
 import ArrowDown from 'lucide-solid/icons/arrow-down';
 import ArrowUp from 'lucide-solid/icons/arrow-up';
 import LoaderCircle from 'lucide-solid/icons/loader-circle';
 import X from 'lucide-solid/icons/x';
 import { For, Show } from 'solid-js';
-
-import { weaponsStatDamageScalar } from '@/features/weapons/calculations';
 import { IconButton, NumberInput, SectionHeading } from '@/features/weapons/components/primitives';
-import type { SavedWeaponRoll, WeaponCatalog, WeaponEngineCalculation, WeaponMode } from '@/features/weapons/types';
 
 type AnalysisPanelProps = {
     catalog: WeaponCatalog;

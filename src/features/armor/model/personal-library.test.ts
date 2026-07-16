@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot, type StatVector } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot, type StatVector } from '@rose/armor-domain';
 import {
     EMPTY_PERSONAL_ARMOR_LIBRARY,
     isArmorBuildSaved,

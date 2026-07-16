@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorSlot } from '@rose/armor-domain';
 
 import { createBungieManifestResolver } from '@/features/armor/manifest';
 import type { LoadedManifestDefinition, VaultExportSnapshot } from '@/features/armor/types';

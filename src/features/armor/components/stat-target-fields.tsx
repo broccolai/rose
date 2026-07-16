@@ -1,5 +1,5 @@
-import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-domain';
 import { styled } from '@panda/jsx';
+import { ARMOR_STATS, type ArmorStat, type StatVector } from '@rose/armor-domain';
 import { createEffect, createSignal, For, Show } from 'solid-js';
 
 import { HoverTooltip } from '@/features/armor/components/help-tooltip';

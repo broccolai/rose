@@ -6,7 +6,7 @@ import {
     createTierFiveTuningOptions,
     dedupeEquivalentArmorItems,
     NO_TUNING
-} from '../../armor-domain/src';
+} from '@rose/armor-domain';
 import type { BenchmarkScenario, LoadedBenchmarkBundle, PreparedScenario } from './types';
 
 export function prepareScenario(bundle: LoadedBenchmarkBundle, scenario: BenchmarkScenario): PreparedScenario {

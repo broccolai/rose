@@ -2,7 +2,7 @@
 
 Benchmark taken after adding the set-aware frontier reachability/cap path and batching stat-cap worker requests.
 
-- Command: `for i in 1 2 3 4 5; do bun run bench:slider-caps; done`
+- Command: `for i in 1 2 3 4 5; do bun run --filter @rose/armor-bench bench:sliders; done`
 - Median-ish result from five one-shot runs:
 
 ```text
@@ -36,7 +36,7 @@ all caps via calculateArmorStatTargetCaps: 82.83ms -> 81.51ms
 
 Interactive solve benchmark after disabling the materialized result-frontier path:
 
-- Command: `for i in 1 2 3; do bun run bench:interactive-solve; done`
+- Command: `for i in 1 2 3; do bun run --filter @rose/armor-bench bench:interactive; done`
 - Median-ish result from three one-shot runs:
 
 ```text

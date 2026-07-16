@@ -1,5 +1,5 @@
-import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@armor-domain';
 import { styled } from '@panda/jsx';
+import { ARMOR_SLOTS, ARMOR_STATS, type ArmorBuild, type ArmorItem, type ArmorSlot } from '@rose/armor-domain';
 import { debounce } from '@solid-primitives/scheduled';
 import { Shield } from 'lucide-solid';
 import { createSignal, For, Show } from 'solid-js';

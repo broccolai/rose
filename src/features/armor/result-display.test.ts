@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { ARMOR_SLOTS, type ArmorBuild } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorBuild } from '@rose/armor-domain';
 
 import {
     type ArmorBonusDefinitionSet,

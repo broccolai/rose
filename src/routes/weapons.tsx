@@ -1,13 +1,23 @@
 import { styled } from '@panda/jsx';
-import { useLocation, useNavigate } from '@solidjs/router';
+import type {
+    SavedWeaponRoll,
+    WeaponCatalog,
+    WeaponDefinition,
+    WeaponEffectOption,
+    WeaponEngineCalculation,
+    WeaponFilterState,
+    WeaponMode,
+    WeaponScenario,
+    WeaponSelection
+} from '@rose/weapon-model';
+import { CURRENT_GUARDIAN_HEALTH, calculateWeapon, clampNumber, clampWeaponEffectValue } from '@rose/weapon-model';
+import { useLocation } from '@solidjs/router';
 import AlertTriangle from 'lucide-solid/icons/alert-triangle';
 import LoaderCircle from 'lucide-solid/icons/loader-circle';
 import RefreshCw from 'lucide-solid/icons/refresh-cw';
 import { createEffect, createMemo, createSignal, onCleanup, onMount, Show, untrack } from 'solid-js';
-
 import { type AppTheme, DEFAULT_APP_THEME, sanitizeAppTheme } from '@/features/armor/app-theme';
 import { readCalculatorPreferences, writeCalculatorPreferences } from '@/features/armor/calculator-preferences';
-import { CURRENT_GUARDIAN_HEALTH, clampNumber } from '@/features/weapons/calculations';
 import {
     calculateManifestStats,
     createDefaultSelection,
@@ -22,20 +32,8 @@ import { WeaponAppShell } from '@/features/weapons/components/app-shell';
 import { ExplorerPanel } from '@/features/weapons/components/explorer-panel';
 import { RollEditor } from '@/features/weapons/components/roll-editor';
 import { WeaponToolbar } from '@/features/weapons/components/weapon-toolbar';
-import { calculateWeapon, clampWeaponEffectValue } from '@/features/weapons/oracle-engine';
 import { EMPTY_WEAPON_FILTERS, filterWeapons, primeWeaponSearch } from '@/features/weapons/search';
 import { decodeWeaponScenario, decodeWeaponSelection, encodeWeaponSelection, selectionUrl } from '@/features/weapons/selection-url';
-import type {
-    SavedWeaponRoll,
-    WeaponCatalog,
-    WeaponDefinition,
-    WeaponEffectOption,
-    WeaponEngineCalculation,
-    WeaponFilterState,
-    WeaponMode,
-    WeaponScenario,
-    WeaponSelection
-} from '@/features/weapons/types';
 
 const DEFAULT_WEAPON_HASH = 1041028434;
 const RESULT_WINDOW = 80;
@@ -87,7 +85,6 @@ function CatalogState(props: { error: string; loadingLabel: string; onRetry: () 
 
 export default function WeaponsPage() {
     const location = useLocation();
-    const navigate = useNavigate();
     let calculationRequest = 0;
     let copiedTimer: ReturnType<typeof setTimeout> | undefined;
     let browserReady = false;
@@ -151,7 +148,7 @@ export default function WeaponsPage() {
         const pathname = location.pathname;
         if (!browserReady || !current || !/^\/weapons\/?$/.test(pathname)) return;
         const params = encodeWeaponSelection(current, scenario());
-        untrack(() => navigate(`/weapons?${params.toString()}`, { replace: true, scroll: false }));
+        untrack(() => window.history.replaceState(window.history.state, '', `/weapons?${params.toString()}`));
     });
 
     createEffect(() => {
@@ -383,10 +380,8 @@ export default function WeaponsPage() {
 
     function navigateToArmor(event: MouseEvent) {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        event.preventDefault();
         browserReady = false;
         calculationRequest += 1;
-        navigate('/');
     }
 
     return (

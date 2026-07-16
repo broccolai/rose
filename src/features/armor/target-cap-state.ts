@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorStat, type StatVector } from '@armor-domain';
+import { ARMOR_STATS, type ArmorStat, type StatVector } from '@rose/armor-domain';
 
 import { clampTarget } from '@/features/armor/calculator-preferences';
 

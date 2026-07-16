@@ -1,0 +1,21 @@
+{
+    "name": "@rose/armor-engine",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./ts": "./ts/index.ts",
+        "./wasm": "./generated/rose_armor_wasm.js",
+        "./wasm-binary": "./generated/rose_armor_wasm_bg.wasm"
+    },
+    "scripts": {
+        "build": "bun ../../scripts/run-rust.ts wasm-pack build crates/wasm --target web --out-dir ../../generated --release --no-pack",
+        "postbuild": "rm -f generated/.gitignore",
+        "format": "bun ../../scripts/run-rust.ts cargo fmt --all",
+        "format:check": "bun ../../scripts/run-rust.ts cargo fmt --all -- --check",
+        "lint": "bun ../../scripts/run-rust.ts cargo clippy --workspace --all-targets --all-features -- -D warnings",
+        "test": "bun ../../scripts/run-rust.ts cargo test --workspace"
+    },
+    "dependencies": {
+        "@rose/armor-domain": "workspace:*"
+    }
+}

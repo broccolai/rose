@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorItem } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorItem } from '@rose/armor-domain';
 
 import type { NormalizedArmorProfile } from '@/features/armor/types';
 

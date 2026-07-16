@@ -1,4 +1,4 @@
-import type { StatVector } from '@armor-domain';
+import type { StatVector } from '@rose/armor-domain';
 
 export type EngineStats = [number, number, number, number, number, number];
 

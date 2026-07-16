@@ -6,14 +6,13 @@
         "indentWidth": 4,
         "lineWidth": 140
     },
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
     "files": {
-        "includes": [
-            "**",
-            "!**/target",
-            "!src/app/styles/panda.css",
-            "!src/features/armor/wasm/generated",
-            "!src/features/weapons/wasm/generated"
-        ]
+        "includes": ["**", "!**/target", "!public", "!packages/armor-engine/generated", "!packages/weapon-engine/generated"]
     },
     "javascript": {
         "formatter": {

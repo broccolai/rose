@@ -1,4 +1,4 @@
-import type { WeaponScenario, WeaponSelection } from '@/features/weapons/types';
+import type { WeaponScenario, WeaponSelection } from '@rose/weapon-model';
 
 export const DEFAULT_WEAPON_SCENARIO: WeaponScenario = {
     mode: 'pvp',

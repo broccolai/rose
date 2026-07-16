@@ -3,12 +3,14 @@
 Rose's Weapons page is split into three layers so catalog refreshes, formula
 work, and interface changes can move independently:
 
-- `scripts/build-weapon-catalog.ts` compacts the live English Bungie manifest
+- `packages/weapon-catalog/src/build.ts` compacts the live English Bungie manifest
   into `public/data/weapon-catalog.json`.
 - `packages/weapon-engine` vendors D2Foundry's Oracle Engine and exposes its
   stat and TTK calculations through WebAssembly.
-- `src/features/weapons` owns selection URLs, filtering, compare persistence,
-  calculation coverage, and the Solid UI.
+- `packages/weapon-model` owns the shared catalog schema, selection model,
+  calculation coverage, and typed Oracle adapter.
+- `src/features/weapons` owns browser catalog loading, selection URLs, filtering,
+  compare persistence, and the Solid UI.
 
 The browser needs no Bungie login. Catalog generation needs
 `VITE_BUNGIE_API_KEY`, but the generated catalog is served as a static asset.
@@ -38,7 +40,7 @@ source text come from the current Bungie manifest. Generate a fresh catalog
 after a manifest update:
 
 ```sh
-bun run weapons:catalog
+bun run generate:catalog
 ```
 
 The generated file records the manifest version and generation time. Socket
@@ -77,7 +79,7 @@ traits. Rose does not convert perk description text into guessed math.
 Rebuild the checked-in browser module with:
 
 ```sh
-bun run weapons:wasm
+bun run generate:wasm
 ```
 
 TTK is a PvP result. PvE mode reports the Oracle damage profile and weapon
@@ -90,7 +92,7 @@ charge/cooldown; ordinary weapons retain zero time to the first projectile.
 Run the production adapter against every catalog entry in both modes with:
 
 ```sh
-bun run weapons:audit
+bun run audit:weapons
 ```
 
 For manifest `244213.26.06.29.2000-1-bnet.65583`, generated 2026-07-14, the
@@ -98,7 +100,7 @@ audit checked 2,208 weapons with zero invariant errors: 332 full, 1,641
 partial, and 235 unavailable, for 1,973 usable formulas (89.4%). The unavailable
 set includes all 109 Swords because Oracle does not model sword attacks, plus
 unsupported new frames and specialty projectile/exotic damage profiles. The
-audit also reports 249 catalog plugs with implemented modifiers and 196
+audit also reports 250 catalog plugs with implemented modifiers and 197
 interactive effect definitions. These counts describe the pinned Oracle
 revision, not a claim that unsupported formulas have been guessed.
 

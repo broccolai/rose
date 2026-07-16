@@ -37,5 +37,5 @@ Across these runs, compact profiles were 42.8-122.5 KiB, cap requests were 194-2
 Run the comparison with:
 
 ```sh
-bun run bench:rust
+bun run --filter @rose/armor-bench bench:wasm
 ```

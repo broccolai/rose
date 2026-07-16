@@ -1,0 +1,14 @@
+{
+    "name": "@rose/weapon-model",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "test": "bun test src"
+    },
+    "dependencies": {
+        "@rose/weapon-engine": "workspace:*"
+    }
+}

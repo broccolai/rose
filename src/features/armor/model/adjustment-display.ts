@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type StatAdjustment } from '@armor-domain';
+import { ARMOR_STATS, type StatAdjustment } from '@rose/armor-domain';
 
 import { STAT_LABELS } from '@/features/armor/display-metadata';
 

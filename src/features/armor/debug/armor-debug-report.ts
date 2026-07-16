@@ -1,4 +1,4 @@
-import type { ArmorBuild, StatVector } from '@armor-domain';
+import type { ArmorBuild, StatVector } from '@rose/armor-domain';
 import type {
     DestinyInventoryItemDefinition,
     DestinyItemInstanceComponent,

@@ -8,7 +8,7 @@ import type {
     PlanArmorResult,
     SolveArmorResult,
     StatVector
-} from '@armor-domain';
+} from '@rose/armor-domain';
 import { type Accessor, createContext, type JSX, useContext } from 'solid-js';
 
 import type { SetSelectionValue } from '@/features/armor/calculator-preferences';

@@ -5,7 +5,7 @@ Fixture: `rose-debug-vault-export-2026-07-11T10-56-08-018Z.json`
 Run with:
 
 ```sh
-ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-high-weapons ROSE_BENCH_ITERATIONS=3 bun run bench:workloads
+ROSE_BENCH_SCENARIO=hunter-stompees-health-dump-high-weapons ROSE_BENCH_ITERATIONS=3 bun run bench
 ```
 
 The scenario preserves the captured Hunter configuration that affects the search:

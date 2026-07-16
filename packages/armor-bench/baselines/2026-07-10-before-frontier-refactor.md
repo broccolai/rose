@@ -4,7 +4,7 @@ Baseline taken before starting the solver/frontier refactor.
 
 - Commit: `f38a357`
 - Working tree: included the exact add-on fallback patch in `packages/armor-calc/src/solver.ts`
-- Command: `bun run bench:slider-caps`
+- Command: `bun run --filter @rose/armor-bench bench:sliders`
 
 ```text
 $ bun packages/armor-bench/src/slider-caps-cli.ts
@@ -19,7 +19,7 @@ all caps via calculateArmorStatTargetCaps: 82.83ms
 batch caps: {"health":0,"melee":0,"grenade":155,"super":0,"class":0,"weapons":60}
 ```
 
-`bun run bench:d2ap` could not be used for this baseline because the local D2AP sourcemap fixture was missing:
+`bun run --filter @rose/armor-bench bench:d2ap` could not be used for this baseline because the local D2AP sourcemap fixture was missing:
 
 ```text
 ENOENT: no such file or directory, open '/private/tmp/d2armorpicker-main.js.map'

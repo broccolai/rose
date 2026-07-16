@@ -1,4 +1,4 @@
-import type { WeaponCatalog, WeaponDefinition, WeaponFilterState } from '@/features/weapons/types';
+import type { WeaponCatalog, WeaponDefinition, WeaponFilterState } from '@rose/weapon-model';
 
 export const EMPTY_WEAPON_FILTERS: WeaponFilterState = {
     query: ''

@@ -11,7 +11,7 @@ import {
     type DestinyClass,
     type SolveArmorInput,
     type SolveArmorResult
-} from '@armor-domain';
+} from '@rose/armor-domain';
 
 import type {
     EngineBuildOutput,

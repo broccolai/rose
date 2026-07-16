@@ -10,15 +10,10 @@ import type {
     SolveArmorProgress,
     SolveArmorResult,
     StatVector
-} from '@armor-domain';
+} from '@rose/armor-domain';
+import type { EngineCapOutput, EnginePlanningProfileSummary, EngineProfileSummary, EngineSolveOutput } from '@rose/armor-engine/ts';
+import { ArmorEngineAdapter, ArmorPlanningAdapter } from '@rose/armor-engine/ts';
 import type { SolverWorkerRequest, SolverWorkerResponse } from '@/features/armor/solver-worker';
-import type {
-    EngineCapOutput,
-    EnginePlanningProfileSummary,
-    EngineProfileSummary,
-    EngineSolveOutput
-} from '../../../packages/armor-engine/ts';
-import { ArmorEngineAdapter, ArmorPlanningAdapter } from '../../../packages/armor-engine/ts';
 
 const DEV_SOLVER_TIMING = Boolean(import.meta.env.DEV);
 

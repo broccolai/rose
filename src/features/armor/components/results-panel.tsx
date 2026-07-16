@@ -1,5 +1,5 @@
-import type { ArmorBuild, ArmorPlan } from '@armor-domain';
 import { styled } from '@panda/jsx';
+import type { ArmorBuild, ArmorPlan } from '@rose/armor-domain';
 import { createMemo, Show } from 'solid-js';
 
 import { useArmorCalculator } from '@/features/armor/armor-calculator-context';

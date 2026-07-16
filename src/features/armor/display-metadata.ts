@@ -1,4 +1,4 @@
-import type { ArmorSlot, ArmorStat } from '@armor-domain';
+import type { ArmorSlot, ArmorStat } from '@rose/armor-domain';
 
 export const STAT_LABELS: Record<ArmorStat, string> = {
     health: 'Health',

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-
+import type { WeaponCatalog, WeaponDefinition, WeaponPlug } from '@rose/weapon-model';
 import { EMPTY_WEAPON_FILTERS, filterWeapons } from '@/features/weapons/search';
-import type { WeaponCatalog, WeaponDefinition, WeaponPlug } from '@/features/weapons/types';
 
 function createWeapon(overrides: Partial<WeaponDefinition>): WeaponDefinition {
     return {

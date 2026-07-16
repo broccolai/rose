@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorStat, type StatVector } from '../../armor-domain/src';
+import { ARMOR_STATS, type ArmorStat, type StatVector } from '@rose/armor-domain';
 import { groupArmorBySlot, rawSlotProduct } from './armor';
 import { loadLatestBenchmarkBundle } from './bundle';
 import { BenchmarkArmorEngine } from './wasm-engine';

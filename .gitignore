@@ -5,14 +5,13 @@ dist
 .solid
 .panda
 target
-playwright-report
-test-results
 .env
 .env.*
 !.env.example
 .cert
 data/private
-
+*.tsbuildinfo
+/tmp/
 *.log
 .DS_Store
 *.swp

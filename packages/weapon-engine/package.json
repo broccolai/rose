@@ -1,0 +1,16 @@
+{
+    "name": "@rose/weapon-engine",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./wasm": "./generated/rose_weapon_engine.js"
+    },
+    "scripts": {
+        "build": "bun ../../scripts/run-rust.ts wasm-pack build . --target web --out-dir generated --release --no-pack",
+        "postbuild": "rm -f generated/.gitignore",
+        "format": "bun ../../scripts/run-rust.ts cargo fmt",
+        "format:check": "bun ../../scripts/run-rust.ts cargo fmt -- --check",
+        "lint": "bun ../../scripts/run-rust.ts cargo clippy --all-targets --all-features -- -D warnings",
+        "test": "bun ../../scripts/run-rust.ts cargo test"
+    }
+}

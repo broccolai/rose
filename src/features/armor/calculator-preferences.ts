@@ -1,4 +1,4 @@
-import { ARMOR_STATS, type ArmorBuildSort, type ArmorCalculatorMode, type ArmorStat, type StatVector } from '@armor-domain';
+import { ARMOR_STATS, type ArmorBuildSort, type ArmorCalculatorMode, type ArmorStat, type StatVector } from '@rose/armor-domain';
 
 import { type AppTheme, sanitizeAppTheme } from '@/features/armor/app-theme';
 import { type ArmorSetDisplayMode, DEFAULT_RESULT_SORT } from '@/features/armor/result-display';

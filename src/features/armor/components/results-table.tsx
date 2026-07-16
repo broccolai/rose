@@ -1,5 +1,5 @@
-import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } from '@armor-domain';
 import { styled } from '@panda/jsx';
+import { ARMOR_STATS, type ArmorBuild, type ArmorBuildSort, type ArmorStat } from '@rose/armor-domain';
 import { For, type JSX, Show } from 'solid-js';
 
 import { DataTable, DataTableFrame } from '@/features/armor/components/data-table';

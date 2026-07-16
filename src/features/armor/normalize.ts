@@ -15,7 +15,7 @@ import {
     type StatAdjustment,
     type StatVector,
     subtractStats
-} from '@armor-domain';
+} from '@rose/armor-domain';
 import type {
     DestinyEquipableItemSetDefinition,
     DestinyInventoryItemDefinition,

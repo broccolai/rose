@@ -54,7 +54,7 @@ Build a standalone web package from this directory with:
 wasm-pack build crates/wasm --target web --release
 ```
 
-Rose checks the generated JS and Wasm into its web app so production does not require a Rust toolchain. Run `bun run armor:wasm` from the repository root to refresh those assets.
+Rose checks the generated JS and Wasm into its web app so production does not require a Rust toolchain. Run `bun run generate:wasm` from the repository root to refresh both engines, or `bun run --filter @rose/armor-engine build` to refresh only Armor.
 
 ## Development
 

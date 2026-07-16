@@ -16,17 +16,17 @@ const Panel = styled('section', {
     base: {
         w: 'min(560px, 100%)',
         p: '24px',
-        bg: 'panel',
-        border: '1px solid token(colors.line)',
+        bg: 'var(--rose-surface)',
+        border: '1px solid var(--rose-border)',
         borderRadius: '8px',
-        boxShadow: '0 20px 50px rgba(22, 24, 29, 0.08)'
+        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.28)'
     }
 });
 
 const Text = styled('p', {
     base: {
         m: 0,
-        color: 'muted',
+        color: 'var(--rose-muted)',
         lineHeight: 1.6
     }
 });

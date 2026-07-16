@@ -2,7 +2,7 @@
 
 Fixture: `rose-debug-vault-export-2026-07-06T00-25-57-760Z.json`
 
-The fixture contains 276 normalized items with real tuning options. Timings below are representative warm values from `bun run bench:workloads`; slider sequences are single cold runs.
+The fixture contains 276 normalized items with real tuning options. Timings below are representative warm values from `bun run bench`; slider sequences are single cold runs.
 
 | Scenario | Single slider | Combined caps | UI refresh | Sequence | Solve | First 25 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |

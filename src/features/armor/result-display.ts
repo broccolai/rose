@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, type ArmorBuild, type ArmorBuildSort } from '@armor-domain';
+import { ARMOR_SLOTS, type ArmorBuild, type ArmorBuildSort } from '@rose/armor-domain';
 
 export { COMPACT_STAT_LABELS } from '@/features/armor/display-metadata';
 

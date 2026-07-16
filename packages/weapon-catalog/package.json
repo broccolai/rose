@@ -1,0 +1,15 @@
+{
+    "name": "@rose/weapon-catalog",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "bun src/build.ts",
+        "audit": "bun src/audit.ts",
+        "test": "bun test src"
+    },
+    "dependencies": {
+        "@rose/weapon-engine": "workspace:*",
+        "@rose/weapon-model": "workspace:*",
+        "bungie-api-ts": "^5.10.0"
+    }
+}
